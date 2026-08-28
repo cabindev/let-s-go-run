@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireUserAction, requireAdminAction } from "@/lib/auth-helpers"
 import { saveImage } from "@/lib/upload"
-import { submissionWindow, submitState } from "@/lib/vr"
+import { submissionWindow, submitState, targetOf } from "@/lib/vr"
 import { recalculateUserStats } from "@/lib/stats"
 import { unlockAchievements } from "@/lib/achievements"
 import type { ActionResult } from "./registration"
@@ -33,7 +33,11 @@ export async function submitRun(formData: FormData): Promise<ActionResult> {
 
         const reg = await prisma.registration.findUnique({
             where: { id: d.registrationId },
-            include: { event: true },
+            include: {
+                event: true,
+                category: { select: { distance: true } },
+                submissions: { select: { distance: true } },
+            },
         })
 
         if (!reg || reg.userId !== user.id) return { ok: false, error: "ไม่พบรายการลงทะเบียน" }
@@ -42,6 +46,13 @@ export async function submitRun(formData: FormData): Promise<ActionResult> {
 
         const state = submitState(reg.event)
         if (!state.open) return { ok: false, error: state.reason }
+
+        // สะสมครบเป้าหมายแล้ว ไม่ต้องส่งเพิ่ม
+        const target = targetOf({ category: reg.category, event: reg.event })
+        const total = reg.submissions.reduce((s, x) => s + x.distance, 0)
+        if (target > 0 && total >= target) {
+            return { ok: false, error: "สะสมครบเป้าหมายแล้ว ไม่ต้องส่งผลเพิ่ม" }
+        }
 
         // วันที่วิ่งต้องอยู่ในช่วงกิจกรรม และไม่เป็นอนาคต
         const runDate = new Date(d.runDate)
@@ -54,11 +65,13 @@ export async function submitRun(formData: FormData): Promise<ActionResult> {
         }
         if (runDate > new Date()) return { ok: false, error: "วันที่วิ่งเป็นอนาคตไม่ได้" }
 
-        let evidenceUrl: string | null = null
+        // บังคับแนบหลักฐานทุกครั้ง — กันการกรอกตัวเลขลอยๆ โดยไม่มีอะไรยืนยัน (อ้างอิงเงื่อนไขของ ThaiRun
+        // ที่กำหนดให้ต้องบันทึกผลผ่านแอป/อุปกรณ์ที่กำหนดจึงจะนับระยะได้)
         const file = formData.get("evidence")
-        if (file instanceof File && file.size > 0) {
-            evidenceUrl = (await saveImage(file, "results")).url
+        if (!(file instanceof File) || file.size === 0) {
+            return { ok: false, error: "กรุณาแนบภาพหลักฐาน (จากนาฬิกา แอปวิ่ง หรือหน้าจอลู่วิ่ง)" }
         }
+        const evidenceUrl = (await saveImage(file, "results")).url
 
         await prisma.runSubmission.create({
             data: {

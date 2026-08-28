@@ -62,6 +62,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
                     submissions={reg.submissions}
                     minDate={formatDateInput(start)}
                     maxDate={formatDateInput(new Date() < end ? new Date() : end)}
+                    finished={target > 0 && total >= target}
                 />
             ) : (
                 <Notice tone="move" title="ส่งผลไม่ได้ในตอนนี้">{state.reason}</Notice>

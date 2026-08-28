@@ -15,10 +15,10 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
     return (
         <Link
             href={event.type === "VIRTUAL" ? `/virtual/${event.id}` : `/events/${event.id}`}
-            className="group flex gap-4 sm:gap-5 bg-paper border border-line rounded-3xl p-4 hover:border-ink-mute transition-colors"
+            className="group flex flex-col bg-paper border border-line rounded-3xl overflow-hidden hover:border-ink-mute transition-colors"
         >
-            {/* ภาพปก */}
-            <div className="relative w-28 sm:w-44 shrink-0 aspect-[4/3] rounded-2xl overflow-hidden bg-paper-3">
+            {/* ภาพปก — เต็มความกว้าง 16:9 */}
+            <div className="relative w-full aspect-video shrink-0 bg-paper-3">
                 {event.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -27,19 +27,18 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                     />
                 ) : (
-                    <span className="absolute inset-0 flex items-center justify-center numeral text-2xl sm:text-4xl text-ink-mute/30">
+                    <span className="absolute inset-0 flex items-center justify-center numeral text-4xl text-ink-mute/30">
                         {headlineDistance(event, event.categories)}
                     </span>
                 )}
+                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                    <EventStatusBadge status={event.status} date={event.type === "VIRTUAL" ? (event.endDate ?? event.date) : event.date} />
+                    <Badge tone="outline" className="bg-paper/90 backdrop-blur-sm">{EVENT_TYPE_LABEL[event.type]}</Badge>
+                </div>
             </div>
 
             {/* เนื้อหา */}
-            <div className="min-w-0 flex-1 flex flex-col">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <EventStatusBadge status={event.status} date={event.type === "VIRTUAL" ? (event.endDate ?? event.date) : event.date} />
-                    <Badge tone="outline">{EVENT_TYPE_LABEL[event.type]}</Badge>
-                </div>
-
+            <div className="min-w-0 flex-1 flex flex-col p-4">
                 <h3 className="display text-base sm:text-lg line-clamp-2 group-hover:text-ink-soft transition-colors">
                     {event.title}
                 </h3>

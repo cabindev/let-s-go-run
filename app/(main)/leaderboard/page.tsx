@@ -65,7 +65,7 @@ export default async function LeaderboardPage() {
                                         {isMe && <span className="ml-2 text-[11px] font-medium text-move">คุณ</span>}
                                     </p>
                                     <p className="text-[11px] text-ink-mute mt-0.5 tnum">
-                                        {level.current.icon} {level.current.name} · {u._count.registrations} กิจกรรม
+                                        {level.current.name} · {u._count.registrations} กิจกรรม
                                     </p>
                                 </div>
                                 <p className="numeral text-base shrink-0">

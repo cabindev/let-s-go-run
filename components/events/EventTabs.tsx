@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils"
 
 const TYPES = [
     { key: "", label: "ทุกประเภท" },
-    { key: "ONSITE", label: "วิ่งในงาน" },
-    { key: "VIRTUAL", label: "วิ่งสะสมระยะ" },
+    { key: "ONSITE", label: "Run" },
+    { key: "VIRTUAL", label: "VR Run" },
 ]
 
 const TABS = [

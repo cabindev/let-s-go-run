@@ -20,9 +20,11 @@ interface Props {
     /** ช่วงวันที่ที่ส่งผลได้ (yyyy-mm-dd) */
     minDate: string
     maxDate: string
+    /** สะสมครบเป้าหมายแล้ว — ซ่อนฟอร์ม ไม่ต้องส่งเพิ่ม */
+    finished: boolean
 }
 
-export function SubmitRunForm({ registrationId, target, total, submissions, minDate, maxDate }: Props) {
+export function SubmitRunForm({ registrationId, target, total, submissions, minDate, maxDate, finished }: Props) {
     const router = useRouter()
     const formRef = useRef<HTMLFormElement>(null)
     const [pending, startTransition] = useTransition()
@@ -73,11 +75,16 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                 </div>
                 <Bar value={percent} color={percent >= 100 ? "var(--ring-lime)" : "var(--color-ink)"} className="mt-4" />
                 <p className="text-[11px] text-ink-mute mt-3 tnum">
-                    {remaining > 0 ? `เหลืออีก ${formatNumber(remaining, 2)} กม.` : "สะสมครบเป้าหมายแล้ว 🎉 ส่งเพิ่มได้อีก"}
+                    {remaining > 0 ? `เหลืออีก ${formatNumber(remaining, 2)} กม.` : "สะสมครบเป้าหมายแล้ว 🎉"}
                 </p>
             </Card>
 
-            {/* ฟอร์มส่งผล */}
+            {/* ฟอร์มส่งผล — ซ่อนถ้าสะสมครบเป้าหมายแล้ว */}
+            {finished ? (
+                <Notice tone="lime" title="สะสมครบเป้าหมายแล้ว">
+                    ไม่ต้องส่งผลเพิ่มอีก ขอบคุณที่เข้าร่วมกิจกรรม
+                </Notice>
+            ) : (
             <form ref={formRef} onSubmit={onSubmit} className="space-y-7">
                 <p className="eyebrow">ส่งผลวิ่ง</p>
 
@@ -96,7 +103,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                 </div>
 
                 <div>
-                    <p className="eyebrow mb-2">หลักฐาน (ถ้ามี)</p>
+                    <p className="eyebrow mb-2">หลักฐาน</p>
                     <label
                         htmlFor="evidence"
                         className="flex flex-col items-center justify-center gap-2 w-full min-h-32 p-5 rounded-3xl border border-dashed border-line hover:border-ink-mute cursor-pointer transition-colors"
@@ -121,12 +128,16 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                         type="file"
                         name="evidence"
                         accept="image/jpeg,image/png,image/webp"
+                        required
                         className="sr-only"
                         onChange={(e) => {
                             const f = e.target.files?.[0]
                             setPreview(f ? URL.createObjectURL(f) : null)
                         }}
                     />
+                    <p className="text-[11px] text-ink-mute mt-2">
+                        ต้องแนบหลักฐานทุกครั้งจึงจะนับระยะได้ — ผู้จัดงานสงวนสิทธิ์ตัดสิทธิ์หากพบผลวิ่งไม่ตรงความจริง
+                    </p>
                 </div>
 
                 <TextArea label="บันทึกเพิ่มเติม" name="note" rows={2} maxLength={200} placeholder="เช่น วิ่งรอบสวนตอนเช้า" />
@@ -138,6 +149,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                     {pending ? <Spinner /> : "ส่งผล"}
                 </Button>
             </form>
+            )}
 
             {/* ประวัติการส่งผล */}
             <section>

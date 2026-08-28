@@ -3,6 +3,7 @@ import { deleteAchievement } from "@/app/actions/admin"
 import { ACHIEVEMENT_TYPE_LABEL, ACHIEVEMENT_UNIT } from "@/lib/achievements"
 import { Card } from "@/components/ui/Card"
 import { EmptyState } from "@/components/ui/EmptyState"
+import { AchievementIcon } from "@/components/ui/AchievementIcon"
 import { AchievementForm } from "@/components/admin/AchievementForm"
 import { ConfirmAction } from "@/components/admin/ConfirmAction"
 import { formatNumber } from "@/lib/utils"
@@ -32,9 +33,7 @@ export default async function AdminAchievementsPage() {
                 <ul className="divide-y divide-line">
                     {achievements.map((a) => (
                         <li key={a.id} className="flex items-center gap-4 py-4">
-                            <span className="w-12 h-12 rounded-2xl bg-paper-2 flex items-center justify-center text-2xl shrink-0">
-                                {a.icon || "•"}
-                            </span>
+                            <AchievementIcon icon={a.icon} size="sm" />
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold tracking-tight">{a.name}</p>
                                 {a.description && <p className="text-[11px] text-ink-mute truncate">{a.description}</p>}

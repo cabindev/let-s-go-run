@@ -3,7 +3,7 @@ import type { Event, Registration } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireUser } from "@/lib/auth-helpers"
 import { getUserStats } from "@/lib/stats"
-import { getAchievementBoard } from "@/lib/achievements"
+import { getAchievementBoard, ACHIEVEMENT_UNIT } from "@/lib/achievements"
 import { getLevel } from "@/lib/levels"
 import { Card, SectionTitle, MoreLink } from "@/components/ui/Card"
 import { Avatar } from "@/components/ui/Avatar"
@@ -11,12 +11,14 @@ import { Bar } from "@/components/ui/Rings"
 import { Stat } from "@/components/ui/Stat"
 import { RegStatusBadge } from "@/components/ui/Badge"
 import { EmptyState } from "@/components/ui/EmptyState"
+import { AchievementIcon } from "@/components/ui/AchievementIcon"
+import { LevelIcon } from "@/components/ui/LevelIcon"
 import { ButtonLink } from "@/components/ui/Button"
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog"
 import SignOutButton from "@/components/auth/SignOutButton"
 import { eventHref, isEventOver } from "@/lib/events"
 import { expireStaleRegistrations, isAwaitingPayment, isExpired, formatTimeLeft, timeLeft } from "@/lib/expiry"
-import { formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
+import { cn, formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "โปรไฟล์ · Run Club" }
@@ -61,7 +63,7 @@ export default async function ProfilePage() {
                 <p className="text-sm text-ink-mute mt-2 break-all">{user.email}</p>
 
                 <div className="flex items-center gap-2 mt-4">
-                    <span className="text-xl">{level.current.icon}</span>
+                    <LevelIcon name={level.current.name} size="sm" />
                     <span className="text-sm font-semibold tracking-tight">{level.current.name}</span>
                 </div>
 
@@ -140,31 +142,39 @@ export default async function ProfilePage() {
             <section id="achievements" className="scroll-mt-24">
                 <SectionTitle title={`ความสำเร็จ ${unlocked.length}/${achievements.length}`} />
 
-                {/*
-                  * แสดงเฉพาะที่ปลดล็อกแล้ว
-                  * เดิมมีรายการ "ยังไม่ปลดล็อก" ทั้งหมดต่อท้าย แต่ผู้ใช้ใหม่จะเจอแถบ 0%
-                  * เรียงยาวตั้งแต่ยังไม่ได้เริ่ม ซึ่งดูท้อมากกว่าจูงใจ
-                  */}
-                {unlocked.length === 0 ? (
+                {achievements.length === 0 ? (
                     <Card>
-                        <EmptyState
-                            title="ยังไม่มีความสำเร็จ"
-                            description={
-                                achievements.length > 0
-                                    ? `เข้าร่วมกิจกรรมให้สำเร็จเพื่อปลดล็อกจาก ${achievements.length} ความสำเร็จ`
-                                    : "ผู้ดูแลระบบยังไม่ได้ตั้งค่าความสำเร็จ"
-                            }
-                            actionLabel={achievements.length > 0 ? "หางานวิ่ง" : undefined}
-                            actionHref={achievements.length > 0 ? "/" : undefined}
-                        />
+                        <EmptyState title="ยังไม่มีความสำเร็จ" description="ผู้ดูแลระบบยังไม่ได้ตั้งค่าความสำเร็จ" />
                     </Card>
                 ) : (
+                    // แสดงทุกระดับเป็นไกด์ให้เห็นภาพรวม — ที่ยังไม่ปลดล็อกทำให้จางลงแทนที่จะซ่อนไป
+                    // เพื่อไม่ให้ดูเหมือนแถบ 0% ที่ท้อ แต่ยังบอกเป้าหมายที่เหลือให้เห็น
                     <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-3">
-                        {unlocked.map((a) => (
-                            <div key={a.id} className="bg-paper border border-line rounded-2xl p-4 text-center" title={a.description ?? undefined}>
-                                <span className="text-3xl block">{a.icon || "•"}</span>
-                                <span className="block text-[11px] font-medium mt-2 leading-tight line-clamp-2">{a.name}</span>
-                                {a.unlockedAt && <span className="block text-[10px] text-ink-mute mt-1 tnum">{formatDate(a.unlockedAt)}</span>}
+                        {achievements.map((a) => (
+                            <div
+                                key={a.id}
+                                className={cn(
+                                    "bg-paper border border-line rounded-2xl p-4 text-center",
+                                    !a.unlocked && "border-dashed"
+                                )}
+                                title={a.description ?? undefined}
+                            >
+                                <AchievementIcon icon={a.icon} unlocked={a.unlocked} className="mx-auto" />
+                                <span
+                                    className={cn(
+                                        "block text-[11px] font-medium mt-2 leading-tight line-clamp-2",
+                                        !a.unlocked && "text-ink-mute"
+                                    )}
+                                >
+                                    {a.name}
+                                </span>
+                                {a.unlocked && a.unlockedAt ? (
+                                    <span className="block text-[10px] text-ink-mute mt-1 tnum">{formatDate(a.unlockedAt)}</span>
+                                ) : (
+                                    <span className="block text-[10px] text-ink-mute/70 mt-1 tnum">
+                                        {formatNumber(a.threshold)} {ACHIEVEMENT_UNIT[a.type]}
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </div>

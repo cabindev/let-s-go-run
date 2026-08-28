@@ -35,9 +35,9 @@ export function Badge({
 }
 
 export const EVENT_STATUS: Record<EventStatus, { label: string; tone: Tone }> = {
-    OPEN: { label: "เปิดรับสมัคร", tone: "lime" },
-    CLOSED: { label: "ปิดรับสมัคร", tone: "neutral" },
-    CANCELLED: { label: "ยกเลิก", tone: "move" },
+    OPEN: { label: "Open", tone: "lime" },
+    CLOSED: { label: "Closed", tone: "neutral" },
+    CANCELLED: { label: "Cancelled", tone: "move" },
 }
 
 export const REG_STATUS: Record<RegistrationStatus, { label: string; tone: Tone }> = {
@@ -52,7 +52,7 @@ export const REG_STATUS: Record<RegistrationStatus, { label: string; tone: Tone 
 /** ถ้ากิจกรรมผ่านวันไปแล้วให้ขึ้น "จัดไปแล้ว" ไม่ว่า status จะเป็นอะไร */
 export function EventStatusBadge({ status, date }: { status: EventStatus; date?: Date | string }) {
     if (status !== "CANCELLED" && date && new Date(date) < new Date()) {
-        return <Badge tone="neutral">จัดไปแล้ว</Badge>
+        return <Badge tone="neutral">Ended</Badge>
     }
     const s = EVENT_STATUS[status]
     return <Badge tone={s.tone}>{s.label}</Badge>

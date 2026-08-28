@@ -97,8 +97,8 @@ export function eventHref(event: { id: string; type: "ONSITE" | "VIRTUAL" }) {
 }
 
 export const EVENT_TYPE_LABEL = {
-    ONSITE: "วิ่งในงาน",
-    VIRTUAL: "วิ่งที่ไหนก็ได้",
+    ONSITE: "Run",
+    VIRTUAL: "VR Run",
 } as const
 
 export const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const

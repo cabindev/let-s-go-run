@@ -77,7 +77,7 @@ export default async function HomePage({
                 ) : (
                     <>
                         <p className="eyebrow tnum">{events.length} งาน</p>
-                        <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {events.map((e) => <EventListCard key={e.id} event={e} />)}
                         </div>
                     </>
@@ -108,7 +108,7 @@ async function UserStrip({ userId, name }: { userId: string; name?: string | nul
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
                 <Mini label="ระยะทางรวม" value={`${formatNumber(stats.totalDistance, 1)} กม.`} />
                 <Mini label="กิจกรรมที่จบ" value={formatNumber(stats.completedEvents)} />
-                <Mini label="ระดับ" value={`${level.current.icon} ${level.current.name}`} />
+                <Mini label="ระดับ" value={level.current.name} />
                 <Mini label="อันดับ" value={stats.rank ? `#${stats.rank}` : "—"} />
                 {stats.pendingPayments > 0 && (
                     <ButtonLink href="/profile#registrations" size="sm" variant="solid" className="ml-auto">
