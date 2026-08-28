@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum EventStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+/** วิ่งในงาน (มีสถานที่จริง) หรือ วิ่งที่ไหนก็ได้ (virtual) */
+enum EventType {
+  ONSITE
+  VIRTUAL
+}
+
+enum RegistrationStatus {
+  PENDING   // ลงทะเบียนแล้ว รอชำระเงิน
+  WAITING   // แจ้งโอนแล้ว รอแอดมินตรวจสลิป
+  PAID      // ยืนยันการชำระเงินแล้ว
+  REJECTED  // สลิปไม่ผ่าน
+  EXPIRED   // ไม่ชำระเงินภายในเวลาที่กำหนด ระบบคืนที่นั่งอัตโนมัติ
+  CANCELLED // ผู้สมัครยกเลิกเอง หรือผู้ดูแลระบบยกเลิกให้
+}
+
+// เกณฑ์ปลดล็อกความสำเร็จ
+enum AchievementType {
+  EVENT_COUNT    // เข้าร่วมกิจกรรมครบ N ครั้ง
+  TOTAL_DISTANCE // ระยะทางสะสมครบ N กม.
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  image         String?
+  role          Role      @default(USER)
+  dateOfBirth   DateTime?
+  phone         String?
+  bio           String?   @db.Text
+
+  // Stats (คำนวณใหม่ทุกครั้งที่มีการยืนยันการชำระเงิน)
+  totalDistance Float     @default(0)
+
+  registrations Registration[]
+  achievements  UserAchievement[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  title           String
+  description     String      @db.Text
+  date            DateTime                  // วันและ "เวลาเริ่ม" ของกิจกรรม
+  endDate         DateTime?                 // วัน/เวลาสิ้นสุด (ถ้ามี)
+  location        String
+  province        String?                   // ใช้กรองในหน้าแรก
+  organizer       String?                   // "จัดโดย ..."
+  type            EventType   @default(ONSITE)
+
+  // ค่าเริ่มต้นของงาน — ใช้เมื่อยังไม่ได้สร้างประเภทการแข่งขัน
+  distance        Float
+  price           Float
+  maxParticipants Int?                      // จำนวนรับสมัครรวมทั้งงาน (null = ไม่จำกัด)
+
+  // ช่วงเปิดรับสมัคร (null = ยึดตามสถานะและวันจัดงาน)
+  registerOpenAt  DateTime?
+  registerCloseAt DateTime?
+
+  image           String?                   // รูปปก (แบนเนอร์)
+  status          EventStatus @default(OPEN)
+
+  // ตัวนับ BIB ล่าสุดของงานนี้ — เพิ่มค่าแบบ atomic (increment) ตอนออกเลข กันเลขชนกันแม้มีคน
+  // ยืนยันการชำระเงินพร้อมกันหลายคน (เผื่อเกิดช่องว่างในลำดับได้ถ้ามีรายการที่ออกเลขแล้วแต่บันทึกไม่สำเร็จ)
+  bibCounter      Int         @default(0)
+
+  // ข้อมูลเสริมที่พบบนหน้างานจริง
+  rewards         String?     @db.Text       // สิ่งที่ผู้สมัครจะได้รับ (เสื้อ/เหรียญ/ของที่ระลึก)
+  contactUrl      String?                    // ลิงก์ติดตามรายละเอียด (เพจ/เว็บผู้จัด)
+  announceAt      DateTime?                  // วันประกาศผล
+
+  images        EventImage[]
+  categories    RaceCategory[]
+  registrations Registration[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, date])
+  @@index([province])
+}
+
+/** หมวดของรูปประกอบ — ใช้จัดกลุ่มทั้งตอนอัปโหลดและตอนแสดงผล */
+enum ImageCategory {
+  SHIRT       // เสื้อ (แนะนำหน้า–หลัง)
+  MEDAL       // เหรียญ
+  ROUTE       // แผนที่เส้นทาง
+  SIZE_GUIDE  // ตารางไซส์
+  ATMOSPHERE  // บรรยากาศงาน
+  OTHER       // อื่น ๆ
+}
+
+/**
+ * รูปประกอบของงาน (นอกเหนือจากรูปปก)
+ * แยกเป็นตารางเพื่อให้เพิ่ม/ลบ/เรียงลำดับได้ โดยไม่ต้องเก็บ HTML จากผู้ใช้
+ */
+model EventImage {
+  id        String        @id @default(cuid())
+  eventId   String
+  url       String
+  caption   String?
+  category  ImageCategory @default(OTHER)
+  sortOrder Int           @default(0)
+
+  // ขนาดจริงของไฟล์ — ใช้จองพื้นที่ก่อนรูปโหลด กันหน้ากระโดด
+  width     Int?
+  height    Int?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([eventId, category])
+}
+
+/** ประเภทการแข่งขันของงานหนึ่ง ๆ เช่น "Early Bird 10 กม." / "Fuji Solo" */
+model RaceCategory {
+  id        String  @id @default(cuid())
+  eventId   String
+  name      String
+  distance  Float
+  price     Float
+  maxSlots  Int?                  // จำนวนรับของประเภทนี้ (null = ไม่จำกัด)
+  sortOrder Int     @default(0)
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model Registration {
+  id           String             @id @default(cuid())
+  userId       String
+  eventId      String
+  categoryId   String?                      // ประเภทที่เลือก (null = ใช้ค่าของงาน)
+  bib          String?                      // ออกให้อัตโนมัติเมื่อยืนยันการชำระเงิน
+  status       RegistrationStatus @default(PENDING)
+  slipUrl      String?
+  note         String?            @db.Text  // เหตุผลที่สลิปไม่ผ่าน
+  registeredAt DateTime           @default(now())
+  paidAt       DateTime?
+
+  // ร่องรอยการจ่ายผ่าน Stripe — ไว้ตรวจสอบ/reconcile ย้อนหลังกับ Stripe Dashboard เท่านั้น
+  // ไม่มีผลต่อ business logic ใดๆ (null = ยังไม่เคยเริ่ม checkout หรือจ่ายผ่านโอนสลิปแทน)
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String?
+  paymentMethod         String? // "card" | "promptpay" — ค่าจริงที่ใช้จ่ายตอนสำเร็จ
+
+  // กำหนดเวลาที่ต้องชำระเงินให้เสร็จ — เลยเวลานี้ระบบคืนที่นั่งอัตโนมัติ
+  // null = ไม่มีกำหนด (จ่ายแล้ว หรือรอแอดมินตรวจสลิปอยู่)
+  expiresAt    DateTime?
+
+  // ข้อมูลผู้สมัคร ณ เวลาที่สมัคร (แยกจากโปรไฟล์ เพราะอาจสมัครแทนคนอื่น/เปลี่ยนภายหลัง)
+  fullName       String?
+  phone          String?
+  shirtSize      String?
+  address        String?  @db.Text
+  emergencyName  String?
+  emergencyPhone String?
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category    RaceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  submissions RunSubmission[]
+
+  @@unique([userId, eventId])
+  @@unique([eventId, bib])
+  @@index([userId])
+  @@index([eventId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([status, expiresAt])
+}
+
+/**
+ * ผลวิ่งที่ผู้สมัครส่งเข้ามา — ใช้เฉพาะงานประเภท VIRTUAL
+ * งานวิ่งในงาน (ONSITE) ไม่ต้องส่งผล ระบบนับระยะให้เมื่อกิจกรรมจบและยืนยันการชำระเงินแล้ว
+ * ส่งแล้วขึ้นทันที ผู้ดูแลระบบลบออกภายหลังได้ถ้าพบว่าไม่ถูกต้อง
+ */
+model RunSubmission {
+  id             String   @id @default(cuid())
+  registrationId String
+  distance       Float                 // ระยะทางของการวิ่งครั้งนี้ (กม.)
+  runDate        DateTime              // วันที่วิ่งจริง
+  evidenceUrl    String?               // ภาพจากนาฬิกา/แอปวิ่ง
+  note           String?
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId])
+  @@index([runDate])
+}
+
+model Achievement {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  type        AchievementType @default(EVENT_COUNT)
+  threshold   Float           @default(1)   // ค่าที่ต้องถึงจึงปลดล็อก
+
+  users       UserAchievement[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+}
