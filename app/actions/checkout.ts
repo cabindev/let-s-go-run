@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { stripe } from "@/lib/stripe"
 import { requireUserAction } from "@/lib/auth-helpers"
 import { isExpired, PAYABLE_STATUS } from "@/lib/expiry"
+import { amountWithFee, FEE_LABEL, type PaymentMethodChoice } from "@/lib/checkout-fees"
 import type { ActionResult } from "./registration"
 
 /** ป้ายกำกับสุ่ม 8 ตัวอักษร — ใช้แยก session ในการดู/เทียบ checkout flow บน Stripe Dashboard */
@@ -13,8 +14,12 @@ function randomLabelSuffix() {
     return Array.from({ length: 8 }, () => letters[Math.floor(Math.random() * letters.length)]).join("")
 }
 
-/** สร้าง Stripe Checkout Session แล้วพาไปหน้าชำระเงินของ Stripe */
-export async function createCheckoutSession(registrationId: string): Promise<ActionResult> {
+/**
+ * สร้าง Stripe Checkout Session แล้วพาไปหน้าชำระเงินของ Stripe
+ * @param method ผู้จ่ายเลือกวิธีจ่ายบนหน้าเราก่อนแล้ว (ไม่ใช่บนหน้า Stripe) เพราะยอดที่เรียกเก็บ
+ *   บวกค่าธรรมเนียม Stripe ของแต่ละวิธีเข้าไปด้วย — ให้ผู้จัดงานได้รับเต็มค่าสมัคร ผู้จ่ายรับภาระค่าธรรมเนียมแทน
+ */
+export async function createCheckoutSession(registrationId: string, method: PaymentMethodChoice): Promise<ActionResult> {
     let checkoutUrl: string
     try {
         const user = await requireUserAction()
@@ -31,24 +36,27 @@ export async function createCheckoutSession(registrationId: string): Promise<Act
         const amount = reg.category?.price ?? reg.event.price
         if (amount <= 0) return { ok: false, error: "รายการนี้ไม่มีค่าใช้จ่าย" }
 
+        const total = amountWithFee(amount, method)
         const origin = process.env.NEXTAUTH_URL || "http://localhost:3000"
         const productName = reg.category ? `${reg.event.title} · ${reg.category.name}` : reg.event.title
 
         const session = await stripe.checkout.sessions.create({
             mode: "payment",
-            // ไม่ระบุ payment_method_types — ปล่อยให้ Stripe เลือกวิธีจ่ายที่เหมาะสมให้เอง (dynamic
-            // payment methods) ตามสกุลเงิน/ที่ตั้งลูกค้า จัดการเปิด-ปิดวิธีจ่ายได้จาก Dashboard โดยไม่ต้องแก้โค้ด
+            // ล็อกวิธีจ่ายตามที่เลือกไว้บนหน้าเรา (ยอดรวมค่าธรรมเนียมคำนวณมาสำหรับวิธีนี้โดยเฉพาะแล้ว)
+            // ใช้ excluded_payment_method_types แทน payment_method_types ตามแนวทางของ Stripe เพราะ
+            // ยังคงพึ่งการตั้งค่าเปิด-ปิดวิธีจ่ายจาก Dashboard อยู่ แค่ตัดวิธีอื่นออกสำหรับ session นี้
+            excluded_payment_method_types: [method === "card" ? "promptpay" : "card"],
             integration_identifier: `activerun_registration_${randomLabelSuffix()}`,
             customer_email: user.email ?? undefined,
             client_reference_id: reg.id,
-            metadata: { registrationId: reg.id },
+            metadata: { registrationId: reg.id, baseAmount: String(amount), paymentMethodChoice: method },
             line_items: [
                 {
                     quantity: 1,
                     price_data: {
                         currency: "thb",
-                        unit_amount: Math.round(amount * 100),
-                        product_data: { name: productName },
+                        unit_amount: Math.round(total * 100),
+                        product_data: { name: `${productName} (รวมค่าธรรมเนียม ${FEE_LABEL[method]})` },
                     },
                 },
             ],

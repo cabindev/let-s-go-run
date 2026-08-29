@@ -128,7 +128,7 @@ export default async function PaymentPage({
                 </Card>
             )}
 
-            {canPay && <CheckoutButton registrationId={registration.id} />}
+            {canPay && <CheckoutButton registrationId={registration.id} amount={amount} />}
         </div>
     )
 }
