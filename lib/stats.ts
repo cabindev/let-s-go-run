@@ -54,11 +54,28 @@ export async function getUserStats(userId: string) {
             where: { userId, status: "PAID" },
             select: SCORE_SELECT,
         }),
+        // "รอชำระเงิน" ต้องเช็ค expiresAt ด้วย ไม่ใช่แค่ status — ไม่งั้นรายการที่หมดเวลาไปแล้ว
+        // แต่ยังไม่ถูกกวาดเป็น EXPIRED (ยังไม่มีใครไปเปิดหน้าที่ trigger expireStaleRegistrations)
+        // จะยังถูกนับว่า "รอชำระเงิน" อยู่ ทั้งที่จริงหมดเวลาไปแล้ว
         prisma.registration.count({
-            where: { userId, status: { in: ["PENDING", "PAID"] }, event: { date: { gte: now } } },
+            where: {
+                userId,
+                event: { date: { gte: now } },
+                OR: [
+                    { status: "PAID" },
+                    { status: "PENDING", expiresAt: null },
+                    { status: "PENDING", expiresAt: { gt: now } },
+                ],
+            },
         }),
         prisma.registration.count({
-            where: { userId, status: "PENDING" },
+            where: {
+                userId,
+                OR: [
+                    { status: "PENDING", expiresAt: null },
+                    { status: "PENDING", expiresAt: { gt: now } },
+                ],
+            },
         }),
     ])
 
