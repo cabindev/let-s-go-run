@@ -40,6 +40,15 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
         setError(null)
         setSuccess(null)
         const fd = new FormData(e.currentTarget)
+
+        // เช็กเองแทนพึ่ง required ของ browser เพราะ input ไฟล์ถูกซ่อนด้วย sr-only
+        // (ธรรมชาติของ browser จะไม่ dispatch submit event เลยถ้า required field ว่าง ฟอร์มจึงดูเหมือนกดแล้วไม่มีอะไรเกิดขึ้น)
+        const evidence = fd.get("evidence")
+        if (!(evidence instanceof File) || evidence.size === 0) {
+            setError("กรุณาแนบภาพหลักฐาน")
+            return
+        }
+
         fd.set("registrationId", registrationId)
 
         startTransition(async () => {
@@ -128,7 +137,6 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                         type="file"
                         name="evidence"
                         accept="image/jpeg,image/png,image/webp"
-                        required
                         className="sr-only"
                         onChange={(e) => {
                             const f = e.target.files?.[0]

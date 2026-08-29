@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma"
 import { heldSeatWhere, expireStaleRegistrations, paymentDeadline } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
 import { registerState, toOptions, SHIRT_SIZES } from "@/lib/events"
-import { withBib } from "@/lib/vr"
 import type { ActionResult } from "./registration"
 
 const schema = z.object({
@@ -63,22 +62,6 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
         const chosen = options.find((o) => (o.id ?? "") === (d.categoryId ?? ""))
         if (!chosen) return { ok: false, error: "กรุณาเลือกประเภทการแข่งขัน" }
 
-        // ที่นั่งของประเภทนั้นเต็มหรือยัง
-        if (chosen.id && chosen.maxSlots) {
-            const taken = await prisma.registration.count({
-                where: { categoryId: chosen.id, ...heldSeatWhere() },
-            })
-            if (taken >= chosen.maxSlots) return { ok: false, error: `ประเภท "${chosen.name}" เต็มแล้ว` }
-        }
-
-        const existing = await prisma.registration.findUnique({
-            where: { userId_eventId: { userId: user.id, eventId: d.eventId } },
-        })
-        // สมัครใหม่ได้ถ้ารายการเดิมถูกยกเลิกหรือหมดเวลาไปแล้ว
-        if (existing && !["CANCELLED", "EXPIRED"].includes(existing.status)) {
-            return { ok: false, error: "คุณสมัครงานนี้ไว้แล้ว" }
-        }
-
         // ฟรี = ยืนยันทันที / มีค่าสมัคร = รอชำระเงิน
         const needsPayment = chosen.price > 0
         const status = needsPayment ? "PENDING" : "PAID"
@@ -101,24 +84,73 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             paidAt: needsPayment ? null : new Date(),
         } as const
 
-        const save = (bib: string | null) =>
-            existing
-                ? prisma.registration.update({
+        // เช็กที่นั่งว่าง + สมัครซ้ำ + บันทึก ทั้งหมดในทรานแซกชันเดียว ล็อกแถวงานไว้ก่อน (FOR UPDATE)
+        // กันคนสมัครพร้อมกันแย่งที่นั่งเกินจำนวนที่กำหนด (ทั้งของงานรวมและของประเภท — race condition
+        // แบบเดียวกับที่เคยพบใน BIB counter: เดิมนับที่นั่งแล้วค่อยเช็ค ไม่ atomic จึงเผื่อคนเข้าพร้อมกันเกินโควตาได้)
+        const outcome = await prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`SELECT id FROM Event WHERE id = ${d.eventId} FOR UPDATE`
+
+            if (event.maxParticipants) {
+                const joined = await tx.registration.count({
+                    where: { eventId: d.eventId, ...heldSeatWhere() },
+                })
+                if (joined >= event.maxParticipants) {
+                    return { ok: false as const, error: "จำนวนผู้สมัครเต็มแล้ว" }
+                }
+            }
+
+            if (chosen.id && chosen.maxSlots) {
+                const taken = await tx.registration.count({
+                    where: { categoryId: chosen.id, ...heldSeatWhere() },
+                })
+                if (taken >= chosen.maxSlots) {
+                    return { ok: false as const, error: `ประเภท "${chosen.name}" เต็มแล้ว` }
+                }
+            }
+
+            const existing = await tx.registration.findUnique({
+                where: { userId_eventId: { userId: user.id, eventId: d.eventId } },
+            })
+            // สมัครใหม่ได้ถ้ารายการเดิมถูกยกเลิกหรือหมดเวลาไปแล้ว
+            if (existing && !["CANCELLED", "EXPIRED"].includes(existing.status)) {
+                return { ok: false as const, error: "คุณสมัครงานนี้ไว้แล้ว" }
+            }
+
+            // งานฟรียืนยันทันที จึงออก BIB ให้เลย — เพิ่มเลขในทรานแซกชันเดียวกัน (ไม่เรียก issueBib
+            // เพราะมันเปิด connection แยก จะไปรอแถว Event ที่ทรานแซกชันนี้ล็อกไว้เองจนเดดล็อก)
+            let bib: string | null = null
+            if (!needsPayment) {
+                if (existing?.bib) {
+                    bib = existing.bib
+                } else {
+                    const updated = await tx.event.update({
+                        where: { id: d.eventId },
+                        data: { bibCounter: { increment: 1 } },
+                        select: { bibCounter: true },
+                    })
+                    bib = String(updated.bibCounter).padStart(4, "0")
+                }
+            }
+
+            const reg = existing
+                ? await tx.registration.update({
                     where: { id: existing.id },
                     data: { ...baseData, bib, registeredAt: new Date() },
                 })
-                : prisma.registration.create({
+                : await tx.registration.create({
                     data: { ...baseData, bib, userId: user.id, eventId: d.eventId },
                 })
 
-        // งานฟรียืนยันทันที จึงออก BIB ให้เลย — ใช้ withBib กันเลขชนกันถ้ามีคนสมัครพร้อมกัน
-        const reg = needsPayment ? await save(null) : await withBib(d.eventId, existing?.bib ?? null, save)
+            return { ok: true as const, reg }
+        })
+
+        if (!outcome.ok) return { ok: false, error: outcome.error }
 
         revalidatePath(`/events/${d.eventId}`)
         revalidatePath("/profile")
         revalidatePath("/")
 
-        return { ok: true, registrationId: reg.id, needsPayment }
+        return { ok: true, registrationId: outcome.reg.id, needsPayment }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "สมัครไม่สำเร็จ" }
     }

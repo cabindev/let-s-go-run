@@ -133,7 +133,7 @@ export default async function AdminDashboard() {
                                                 {e.maxParticipants ? `/${e.maxParticipants}` : ""} คน
                                             </p>
                                         </div>
-                                        <EventStatusBadge status={e.status} date={e.date} />
+                                        <EventStatusBadge status={e.status} date={e.type === "VIRTUAL" ? (e.endDate ?? e.date) : e.date} />
                                     </Link>
                                 </li>
                             ))}

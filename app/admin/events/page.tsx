@@ -72,7 +72,7 @@ export default async function AdminEventsPage() {
                                     )}
                                 </p>
                                 <div className="mt-2">
-                                    <EventStatusBadge status={e.status} date={e.date} />
+                                    <EventStatusBadge status={e.status} date={e.type === "VIRTUAL" ? (e.endDate ?? e.date) : e.date} />
                                 </div>
                             </div>
 
