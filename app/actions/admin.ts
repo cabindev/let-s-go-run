@@ -8,9 +8,6 @@ import { saveImage } from "@/lib/upload"
 import { IMAGE_GROUPS, groupField } from "@/lib/image-groups"
 import type { ImageCategory } from "@prisma/client"
 import { recalculateUserStats } from "@/lib/stats"
-import { unlockAchievements } from "@/lib/achievements"
-import { withBib } from "@/lib/vr"
-import { paymentDeadline } from "@/lib/expiry"
 import type { ActionResult } from "./registration"
 
 const eventSchema = z.object({
@@ -285,65 +282,6 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
         return { ok: true, message: "ลบกิจกรรมแล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "ลบไม่สำเร็จ" }
-    }
-}
-
-/** อนุมัติสลิป → PAID + คำนวณระยะทางสะสมใหม่ + ปลดล็อกความสำเร็จ */
-export async function approveSlip(registrationId: string): Promise<ActionResult> {
-    try {
-        await requireAdminAction()
-
-        const before = await prisma.registration.findUnique({
-            where: { id: registrationId },
-            select: { eventId: true, bib: true },
-        })
-        if (!before) return { ok: false, error: "ไม่พบรายการลงทะเบียน" }
-
-        // ออกเลข BIB ให้ตอนยืนยันการชำระเงิน (ถ้ายังไม่มี) — กันเลขชนกันถ้ามีคำขออื่นแข่งอยู่
-        const reg = await withBib(before.eventId, before.bib, (bib) =>
-            prisma.registration.update({
-                where: { id: registrationId },
-                data: { status: "PAID", paidAt: new Date(), note: null, bib, expiresAt: null },
-                select: { userId: true, eventId: true },
-            })
-        )
-
-        await recalculateUserStats(reg.userId)
-        await unlockAchievements(reg.userId)
-
-        revalidatePath("/admin/slips")
-        revalidatePath("/admin")
-        revalidatePath("/profile")
-        revalidatePath(`/events/${reg.eventId}`)
-        revalidatePath("/leaderboard")
-        return { ok: true, message: "อนุมัติแล้ว" }
-    } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "อนุมัติไม่สำเร็จ" }
-    }
-}
-
-/** ปฏิเสธสลิป → REJECTED พร้อมเหตุผล */
-export async function rejectSlip(registrationId: string, formData: FormData): Promise<ActionResult> {
-    try {
-        await requireAdminAction()
-        const note = String(formData.get("note") || "").trim()
-        if (!note) return { ok: false, error: "กรุณาระบุเหตุผล" }
-
-        const reg = await prisma.registration.update({
-            where: { id: registrationId },
-            // สลิปไม่ผ่าน = เริ่มจับเวลาใหม่ให้ส่งสลิปที่ถูกต้องภายในกำหนด
-            data: { status: "REJECTED", note, expiresAt: paymentDeadline() },
-            select: { userId: true },
-        })
-
-        await recalculateUserStats(reg.userId)
-
-        revalidatePath("/admin/slips")
-        revalidatePath("/admin")
-        revalidatePath("/profile")
-        return { ok: true, message: "ปฏิเสธสลิปแล้ว" }
-    } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "ดำเนินการไม่สำเร็จ" }
     }
 }
 

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic"
 /** เกินกี่วันถือว่าค้างจ่ายนานผิดปกติ */
 const OVERDUE_DAYS = 3
 
-const STATUSES: RegistrationStatus[] = ["PENDING", "WAITING", "PAID", "REJECTED", "EXPIRED", "CANCELLED"]
+const STATUSES: RegistrationStatus[] = ["PENDING", "PAID", "EXPIRED", "CANCELLED"]
 
 export default async function AdminRegistrationsPage({
     searchParams,
@@ -72,7 +72,7 @@ export default async function AdminRegistrationsPage({
             </div>
 
             {/* สรุปตามสถานะ — กดเพื่อกรอง */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {STATUSES.map((s) => {
                     const active = status === s
                     const n = countOf(s)
@@ -110,7 +110,7 @@ export default async function AdminRegistrationsPage({
                             const days = Math.floor((now - r.registeredAt.getTime()) / 86400000)
                             const left = timeLeft(r, new Date(now))
                             const overdue = isAwaitingPayment(r.status) && left !== null && left < 3600_000
-                            const cancellable = r.status === "PENDING" || r.status === "REJECTED"
+                            const cancellable = r.status === "PENDING"
 
                             return (
                                 <li key={r.id} className="flex items-start gap-3 py-4">

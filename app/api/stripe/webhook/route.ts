@@ -21,7 +21,7 @@ async function resolvePaymentMethod(paymentIntentId: string | null): Promise<str
     }
 }
 
-/** ยืนยันการชำระเงินจาก Stripe → PAID (เทียบเท่า approveSlip ของแอดมิน) */
+/** ยืนยันการชำระเงินจาก Stripe → PAID */
 async function markRegistrationPaid(registrationId: string, session: Stripe.Checkout.Session) {
     const reg = await prisma.registration.findUnique({
         where: { id: registrationId },
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     // จ่ายแบบ delayed-notification แล้วไม่สำเร็จ (เช่น PromptPay QR หมดอายุ/ธนาคารปฏิเสธ) — ไม่ต้องทำอะไร
-    // registration ยังเป็น PENDING/WAITING อยู่แล้ว ผู้ใช้กลับไปลองจ่ายใหม่ได้จนกว่าจะหมดเวลา 24 ชม. ตามปกติ
+    // registration ยังเป็น PENDING อยู่แล้ว ผู้ใช้กลับไปลองจ่ายใหม่ได้จนกว่าจะหมดเวลา 24 ชม. ตามปกติ
     if (event.type === "checkout.session.async_payment_failed") {
         // no-op — เก็บไว้เป็นหลักฐานว่าเรารับรู้อีเวนต์นี้แล้ว ไม่ใช่ปล่อยผ่านโดยไม่ตั้งใจ
     }

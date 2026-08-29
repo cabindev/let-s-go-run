@@ -211,9 +211,6 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                         {/* แสดงสถานะจริง — หมดเวลาแล้วถือว่า EXPIRED แม้ยังไม่ถูกกวาดในฐานข้อมูล */}
                         <RegStatusBadge status={expired ? "EXPIRED" : reg.status} />
                     </div>
-                    {reg.status === "REJECTED" && reg.note && (
-                        <p className="text-[11px] text-move mt-1.5">{reg.note}</p>
-                    )}
                     {needsPayment && left !== null && (
                         <p className="text-[11px] text-move mt-1.5 tnum">
                             เหลือเวลาชำระเงิน {formatTimeLeft(left)}

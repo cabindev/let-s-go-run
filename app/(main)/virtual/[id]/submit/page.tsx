@@ -29,7 +29,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
 
     // ยังไม่ได้สมัคร หรือยังไม่จ่าย — พาไปหน้าที่ควรอยู่
     if (!reg || reg.status === "CANCELLED") redirect(`/virtual/${id}`)
-    if (reg.status === "PENDING" || reg.status === "REJECTED") redirect(`/payment/${reg.id}`)
+    if (reg.status === "PENDING") redirect(`/payment/${reg.id}`)
 
     const state = submitState(event)
     const { start, end } = submissionWindow(event)

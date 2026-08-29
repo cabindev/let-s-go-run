@@ -20,8 +20,8 @@ export function CheckoutButton({ registrationId }: { registrationId: string }) {
 
     return (
         <div className="space-y-3">
-            <Button type="button" size="lg" variant="outline" className="w-full" disabled={pending} onClick={onClick}>
-                {pending ? <Spinner /> : "จ่ายด้วยบัตรเครดิต/เดบิต (Stripe)"}
+            <Button type="button" size="lg" className="w-full" disabled={pending} onClick={onClick}>
+                {pending ? <Spinner /> : "ชำระเงิน (บัตรเครดิต/เดบิต หรือ PromptPay)"}
             </Button>
             {error && <Notice tone="move">{error}</Notice>}
         </div>

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { heldSeatWhere } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
-import { saveImage } from "@/lib/upload"
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; error: string }
 
@@ -39,7 +38,7 @@ export async function registerForEvent(eventId: string): Promise<ActionResult> {
         if (existing) {
             await prisma.registration.update({
                 where: { id: existing.id },
-                data: { status, slipUrl: null, note: null, paidAt: status === "PAID" ? new Date() : null, registeredAt: new Date() },
+                data: { status, note: null, paidAt: status === "PAID" ? new Date() : null, registeredAt: new Date() },
             })
         } else {
             await prisma.registration.create({
@@ -82,47 +81,5 @@ export async function cancelRegistration(registrationId: string): Promise<Action
         return { ok: true, message: "ยกเลิกการลงทะเบียนแล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "เกิดข้อผิดพลาด" }
-    }
-}
-
-/** อัปโหลดสลิปแจ้งโอนเงิน */
-export async function uploadSlip(formData: FormData): Promise<ActionResult> {
-    try {
-        const user = await requireUserAction()
-
-        const registrationId = String(formData.get("registrationId") || "")
-        const file = formData.get("slip")
-
-        if (!(file instanceof File) || file.size === 0) {
-            return { ok: false, error: "กรุณาเลือกไฟล์สลิป" }
-        }
-
-        const reg = await prisma.registration.findUnique({
-            where: { id: registrationId },
-            select: { userId: true, status: true, eventId: true, expiresAt: true },
-        })
-
-        if (!reg || reg.userId !== user.id) return { ok: false, error: "ไม่พบรายการลงทะเบียน" }
-        if (reg.status === "PAID") return { ok: false, error: "รายการนี้ยืนยันการชำระเงินแล้ว" }
-        if (reg.status === "CANCELLED") return { ok: false, error: "รายการนี้ถูกยกเลิกแล้ว" }
-        if (reg.status === "EXPIRED" || (reg.expiresAt && reg.expiresAt <= new Date())) {
-            return { ok: false, error: "หมดเวลาชำระเงินแล้ว กรุณาสมัครใหม่อีกครั้ง" }
-        }
-
-        const { url: slipUrl } = await saveImage(file, "slips")
-
-        await prisma.registration.update({
-            where: { id: registrationId },
-            // ส่งสลิปแล้ว = หยุดนาฬิกา รอแอดมินตรวจ
-            data: { slipUrl, status: "WAITING", note: null, expiresAt: null },
-        })
-
-        revalidatePath(`/payment/${registrationId}`)
-        revalidatePath(`/events/${reg.eventId}`)
-        revalidatePath("/profile")
-        revalidatePath("/admin/slips")
-        return { ok: true, message: "ส่งสลิปเรียบร้อย รอแอดมินตรวจสอบ" }
-    } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "อัปโหลดไม่สำเร็จ" }
     }
 }

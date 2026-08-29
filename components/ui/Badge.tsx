@@ -42,9 +42,7 @@ export const EVENT_STATUS: Record<EventStatus, { label: string; tone: Tone }> = 
 
 export const REG_STATUS: Record<RegistrationStatus, { label: string; tone: Tone }> = {
     PENDING: { label: "รอชำระเงิน", tone: "ink" },
-    WAITING: { label: "รอตรวจสลิป", tone: "sky" },
     PAID: { label: "ยืนยันแล้ว", tone: "lime" },
-    REJECTED: { label: "สลิปไม่ผ่าน", tone: "move" },
     EXPIRED: { label: "หมดเวลาชำระ", tone: "outline" },
     CANCELLED: { label: "ยกเลิกแล้ว", tone: "neutral" },
 }

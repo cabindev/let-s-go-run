@@ -12,13 +12,12 @@ const LINKS = [
     { href: "/admin", label: "ภาพรวม", exact: true },
     { href: "/admin/events", label: "กิจกรรม" },
     { href: "/admin/registrations", label: "ผู้สมัคร" },
-    { href: "/admin/slips", label: "ตรวจสลิป" },
     { href: "/admin/submissions", label: "ผลวิ่ง VR" },
     { href: "/admin/users", label: "ผู้ใช้งาน" },
     { href: "/admin/achievements", label: "ความสำเร็จ" },
 ]
 
-export function AdminShell({ children, pendingSlips }: { children: React.ReactNode; pendingSlips: number }) {
+export function AdminShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const [open, setOpen] = useState(false)
 
@@ -38,11 +37,6 @@ export function AdminShell({ children, pendingSlips }: { children: React.ReactNo
                                 )}
                             >
                                 {l.label}
-                                {l.href === "/admin/slips" && pendingSlips > 0 && (
-                                    <span className="px-2 py-0.5 rounded-full bg-move text-white text-[10px] font-bold tnum">
-                                        {pendingSlips}
-                                    </span>
-                                )}
                             </Link>
                         </li>
                     )

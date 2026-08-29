@@ -26,9 +26,7 @@ enum EventType {
 
 enum RegistrationStatus {
   PENDING   // ลงทะเบียนแล้ว รอชำระเงิน
-  WAITING   // แจ้งโอนแล้ว รอแอดมินตรวจสลิป
-  PAID      // ยืนยันการชำระเงินแล้ว
-  REJECTED  // สลิปไม่ผ่าน
+  PAID      // ยืนยันการชำระเงินแล้ว (ผ่าน Stripe เท่านั้น)
   EXPIRED   // ไม่ชำระเงินภายในเวลาที่กำหนด ระบบคืนที่นั่งอัตโนมัติ
   CANCELLED // ผู้สมัครยกเลิกเอง หรือผู้ดูแลระบบยกเลิกให้
 }
@@ -163,19 +161,18 @@ model Registration {
   categoryId   String?                      // ประเภทที่เลือก (null = ใช้ค่าของงาน)
   bib          String?                      // ออกให้อัตโนมัติเมื่อยืนยันการชำระเงิน
   status       RegistrationStatus @default(PENDING)
-  slipUrl      String?
-  note         String?            @db.Text  // เหตุผลที่สลิปไม่ผ่าน
+  note         String?            @db.Text  // ข้อความจากระบบ เช่น เหตุผลที่หมดเวลาชำระอัตโนมัติ
   registeredAt DateTime           @default(now())
   paidAt       DateTime?
 
   // ร่องรอยการจ่ายผ่าน Stripe — ไว้ตรวจสอบ/reconcile ย้อนหลังกับ Stripe Dashboard เท่านั้น
-  // ไม่มีผลต่อ business logic ใดๆ (null = ยังไม่เคยเริ่ม checkout หรือจ่ายผ่านโอนสลิปแทน)
+  // ไม่มีผลต่อ business logic ใดๆ (null = ยังไม่เคยเริ่ม checkout)
   stripeSessionId       String? @unique
   stripePaymentIntentId String?
   paymentMethod         String? // "card" | "promptpay" — ค่าจริงที่ใช้จ่ายตอนสำเร็จ
 
   // กำหนดเวลาที่ต้องชำระเงินให้เสร็จ — เลยเวลานี้ระบบคืนที่นั่งอัตโนมัติ
-  // null = ไม่มีกำหนด (จ่ายแล้ว หรือรอแอดมินตรวจสลิปอยู่)
+  // null = ไม่มีกำหนด (จ่ายแล้ว)
   expiresAt    DateTime?
 
   // ข้อมูลผู้สมัคร ณ เวลาที่สมัคร (แยกจากโปรไฟล์ เพราะอาจสมัครแทนคนอื่น/เปลี่ยนภายหลัง)

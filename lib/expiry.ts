@@ -10,10 +10,10 @@ export function paymentDeadline(from: Date = new Date()) {
 }
 
 /** สถานะที่ยังต้องรอผู้สมัครจ่ายเงิน จึงมีเวลานับถอยหลัง */
-const AWAITING_PAYMENT: RegistrationStatus[] = ["PENDING", "REJECTED"]
+const AWAITING_PAYMENT: RegistrationStatus[] = ["PENDING"]
 
-/** สถานะที่ยังชำระเงินได้ (รวม WAITING ที่ส่งสลิปรอตรวจอยู่ด้วย — จ่ายผ่านบัตร/PromptPay แทนได้) */
-export const PAYABLE_STATUS: RegistrationStatus[] = ["PENDING", "REJECTED", "WAITING"]
+/** สถานะที่ยังชำระเงินได้ */
+export const PAYABLE_STATUS: RegistrationStatus[] = ["PENDING"]
 
 export function isAwaitingPayment(status: RegistrationStatus) {
     return AWAITING_PAYMENT.includes(status)
@@ -47,8 +47,8 @@ export function timeLeft(
 export function heldSeatWhere(now: Date = new Date()): Prisma.RegistrationWhereInput {
     return {
         OR: [
-            // จ่ายแล้ว หรือกำลังรอแอดมินตรวจสลิป — ไม่มีเวลาหมดอายุ
-            { status: { in: ["WAITING", "PAID"] } },
+            // จ่ายแล้ว — ไม่มีเวลาหมดอายุ
+            { status: "PAID" },
             // ยังรอจ่าย และยังไม่หมดเวลา
             {
                 status: { in: AWAITING_PAYMENT },

@@ -69,16 +69,16 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
     const action = (() => {
         if (isRegistered) {
             const r = registration!
-            if (r.status === "PENDING" || r.status === "REJECTED") {
+            if (r.status === "PENDING") {
                 return (
                     <ButtonLink href={`/payment/${r.id}`} size="lg" className="w-full">
-                        {r.status === "REJECTED" ? "ส่งสลิปใหม่" : "ชำระเงิน"}
+                        ชำระเงิน
                     </ButtonLink>
                 )
             }
             return (
                 <div className="flex items-center justify-center w-full h-14 rounded-full bg-lime text-white text-sm font-bold tracking-tight">
-                    {r.status === "WAITING" ? "รอตรวจสอบสลิป" : "คุณเข้าร่วมแล้ว"}
+                    คุณเข้าร่วมแล้ว
                 </div>
             )
         }
@@ -139,16 +139,13 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
 
                     {isRegistered && (
                         <Notice
-                            tone={registration!.status === "PAID" ? "lime" : registration!.status === "REJECTED" ? "move" : "sky"}
+                            tone={registration!.status === "PAID" ? "lime" : "sky"}
                             title={`สถานะการสมัครของคุณ`}
                         >
                             <span className="flex flex-wrap items-center gap-2 mt-1">
                                 <RegStatusBadge status={registration!.status} />
                                 {registration!.category && <span>ประเภท {registration!.category.name}</span>}
                             </span>
-                            {registration!.status === "REJECTED" && registration!.note && (
-                                <p className="mt-1.5">เหตุผล: {registration!.note}</p>
-                            )}
                         </Notice>
                     )}
 

@@ -79,7 +79,6 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             address: d.address || null,
             emergencyName: d.emergencyName || null,
             emergencyPhone: d.emergencyPhone || null,
-            slipUrl: null,
             note: null,
             paidAt: needsPayment ? null : new Date(),
         } as const

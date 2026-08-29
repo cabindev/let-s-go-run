@@ -140,12 +140,10 @@ export default async function VirtualEventPage({
                             ) : (
                                 <p className="text-sm text-ink-mute">{subState.reason}</p>
                             )
-                        ) : myReg!.status === "PENDING" || myReg!.status === "REJECTED" ? (
+                        ) : (
                             <ButtonLink href={`/payment/${myReg!.id}`} size="lg" className="w-full sm:w-auto">
                                 ชำระเงินเพื่อเริ่มส่งผล
                             </ButtonLink>
-                        ) : (
-                            <p className="text-sm text-ink-mute">รอตรวจสอบสลิป จึงจะเริ่มส่งผลได้</p>
                         )}
                     </div>
                 </Card>

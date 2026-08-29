@@ -55,10 +55,10 @@ export async function getUserStats(userId: string) {
             select: SCORE_SELECT,
         }),
         prisma.registration.count({
-            where: { userId, status: { in: ["PENDING", "WAITING", "PAID"] }, event: { date: { gte: now } } },
+            where: { userId, status: { in: ["PENDING", "PAID"] }, event: { date: { gte: now } } },
         }),
         prisma.registration.count({
-            where: { userId, status: { in: ["PENDING", "WAITING"] } },
+            where: { userId, status: "PENDING" },
         }),
     ])
 

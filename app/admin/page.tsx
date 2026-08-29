@@ -13,13 +13,12 @@ export const dynamic = "force-dynamic"
 export default async function AdminDashboard() {
     const now = new Date()
 
-    const [userCount, eventCount, openEvents, paidCount, waitingCount, pendingCount, revenue, recentRegs, upcoming] =
+    const [userCount, eventCount, openEvents, paidCount, pendingCount, revenue, recentRegs, upcoming] =
         await Promise.all([
             prisma.user.count(),
             prisma.event.count(),
             prisma.event.count({ where: { status: "OPEN", date: { gte: now } } }),
             prisma.registration.count({ where: { status: "PAID" } }),
-            prisma.registration.count({ where: { status: "WAITING" } }),
             prisma.registration.count({ where: { status: "PENDING" } }),
             prisma.registration.findMany({
                 where: { status: "PAID" },
@@ -60,15 +59,8 @@ export default async function AdminDashboard() {
                 <Stat label="ผู้ใช้งาน" value={formatNumber(userCount)} href="/admin/users" />
                 <Stat label="กิจกรรม" value={formatNumber(eventCount)} href="/admin/events" />
                 <Stat label="ยืนยันแล้ว" value={formatNumber(paidCount)} accent="var(--color-lime)" />
-                <Stat label="รอตรวจสลิป" value={formatNumber(waitingCount)} accent={waitingCount ? "var(--color-move)" : undefined} href="/admin/slips" />
+                <Stat label="เปิดรับสมัคร" value={formatNumber(openEvents)} href="/admin/events" />
             </section>
-
-            <p className="eyebrow -mt-10">
-                เปิดรับสมัคร {openEvents} ·{" "}
-                <Link href="/admin/registrations?status=PENDING" className="hover:text-ink transition-colors underline underline-offset-2">
-                    รอชำระเงิน {pendingCount}
-                </Link>
-            </p>
 
             {pendingCount > 0 && (
                 <Link
@@ -79,18 +71,6 @@ export default async function AdminDashboard() {
                         <strong className="tnum">{pendingCount}</strong> รายการสมัครแล้วยังไม่ชำระเงิน
                     </span>
                     <span className="eyebrow shrink-0">ดูรายชื่อ</span>
-                </Link>
-            )}
-
-            {waitingCount > 0 && (
-                <Link
-                    href="/admin/slips"
-                    className="flex items-center justify-between gap-4 border-l-[3px] border-l-move bg-rose-50 rounded-r-2xl px-5 py-4 hover:bg-rose-100 transition-colors"
-                >
-                    <span className="text-sm">
-                        <strong className="tnum">{waitingCount}</strong> สลิปรอการตรวจสอบ
-                    </span>
-                    <span className="eyebrow shrink-0">ตรวจสอบ</span>
                 </Link>
             )}
 

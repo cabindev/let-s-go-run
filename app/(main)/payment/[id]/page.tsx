@@ -6,23 +6,15 @@ import { requireUser } from "@/lib/auth-helpers"
 import { Card } from "@/components/ui/Card"
 import { RegStatusBadge, Notice } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
-import { SlipUploadForm } from "@/components/payment/SlipUploadForm"
 import { CheckoutButton } from "@/components/payment/CheckoutButton"
 import { Countdown } from "@/components/payment/Countdown"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
-import { CopyButton } from "@/components/ui/CopyButton"
 import { eventHref } from "@/lib/events"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "แจ้งชำระเงิน · Run Club" }
-
-const BANK = {
-    name: process.env.PAYMENT_BANK_NAME || "ธนาคารกสิกรไทย",
-    account: process.env.PAYMENT_ACCOUNT_NO || "123-4-56789-0",
-    holder: process.env.PAYMENT_ACCOUNT_NAME || "Run Club Thailand",
-}
 
 export default async function PaymentPage({
     params,
@@ -48,7 +40,7 @@ export default async function PaymentPage({
     if (amount <= 0) redirect(eventHref(registration.event))
 
     const expired = isExpired(registration)
-    const canUpload = !expired && ["PENDING", "REJECTED", "WAITING"].includes(registration.status)
+    const canPay = !expired && registration.status === "PENDING"
     const fromWizard = from === "register"
     const showCountdown = !expired && isAwaitingPayment(registration.status) && !!registration.expiresAt
 
@@ -90,15 +82,15 @@ export default async function PaymentPage({
                         <Countdown deadline={registration.expiresAt!.getTime()} />
                     </p>
                     <p className="mt-1">
-                        ต้องชำระเงินและส่งสลิปภายใน {PAYMENT_WINDOW_HOURS} ชั่วโมงหลังจอง
+                        ต้องชำระเงินภายใน {PAYMENT_WINDOW_HOURS} ชั่วโมงหลังจอง
                         มิฉะนั้นระบบจะคืนที่นั่งให้ผู้สมัครคนอื่นโดยอัตโนมัติ
                     </p>
                 </Notice>
             )}
 
             {checkout === "cancel" && registration.status !== "PAID" && (
-                <Notice tone="neutral" title="ยกเลิกการชำระเงินด้วยบัตร">
-                    <p>ยังไม่ได้ตัดเงิน คุณสามารถลองชำระใหม่ หรือโอนเงินตามช่องทางด้านล่างแทนได้</p>
+                <Notice tone="neutral" title="ยกเลิกการชำระเงิน">
+                    <p>ยังไม่ได้ตัดเงิน คุณสามารถลองชำระใหม่ได้อีกครั้ง</p>
                 </Notice>
             )}
 
@@ -127,19 +119,6 @@ export default async function PaymentPage({
                 </Notice>
             )}
 
-            {registration.status === "WAITING" && (
-                <Notice tone="sky" title="รอแอดมินตรวจสอบสลิป">
-                    โดยปกติใช้เวลาไม่เกิน 1 วันทำการ หากส่งผิดสามารถอัปโหลดใหม่ทับได้
-                </Notice>
-            )}
-
-            {registration.status === "REJECTED" && (
-                <Notice tone="move" title="สลิปไม่ผ่านการตรวจสอบ">
-                    {registration.note ? <p>{registration.note}</p> : null}
-                    <p className="mt-1">กรุณาอัปโหลดสลิปใหม่อีกครั้ง</p>
-                </Notice>
-            )}
-
             {registration.status === "CANCELLED" && (
                 <Card className="p-6 text-center">
                     <p className="text-sm text-ink-soft">รายการนี้ถูกยกเลิกแล้ว</p>
@@ -149,51 +128,7 @@ export default async function PaymentPage({
                 </Card>
             )}
 
-            {canUpload && (
-                <>
-                    <CheckoutButton registrationId={registration.id} />
-
-                    <div className="flex items-center gap-3">
-                        <div className="h-px flex-1 bg-line" />
-                        <span className="text-[11px] text-ink-mute">หรือโอนเงิน</span>
-                        <div className="h-px flex-1 bg-line" />
-                    </div>
-
-                    {/* บัญชีรับโอน */}
-                    <div>
-                        <p className="eyebrow mb-4">โอนเงินมาที่</p>
-                        <dl className="divide-y divide-line">
-                            <Row label="ธนาคาร" value={BANK.name} />
-                            <Row label="เลขที่บัญชี" value={BANK.account} mono action={<CopyButton value={BANK.account.replace(/-/g, "")} />} />
-                            <Row label="ชื่อบัญชี" value={BANK.holder} />
-                        </dl>
-                    </div>
-
-                    {registration.slipUrl && (
-                        <div>
-                            <p className="eyebrow mb-3">สลิปที่ส่งล่าสุด</p>
-                            <a href={registration.slipUrl} target="_blank" rel="noreferrer" className="block">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={registration.slipUrl} alt="สลิป" className="max-h-64 rounded-2xl object-contain bg-paper-3 border border-line" />
-                            </a>
-                        </div>
-                    )}
-
-                    <SlipUploadForm registrationId={registration.id} />
-                </>
-            )}
-        </div>
-    )
-}
-
-function Row({ label, value, mono, action }: { label: string; value: string; mono?: boolean; action?: React.ReactNode }) {
-    return (
-        <div className="flex items-center justify-between gap-4 py-3.5">
-            <dt className="text-[13px] text-ink-mute">{label}</dt>
-            <dd className={`text-sm font-semibold flex items-center gap-3 ${mono ? "font-mono tnum tracking-wide" : ""}`}>
-                {value}
-                {action}
-            </dd>
+            {canPay && <CheckoutButton registrationId={registration.id} />}
         </div>
     )
 }

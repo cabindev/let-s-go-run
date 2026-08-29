@@ -37,7 +37,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ id: s
     })
     // ยกเลิกแล้ว หรือหมดเวลาชำระ = ที่นั่งถูกคืนแล้ว สมัครใหม่ได้
     if (existing && !["CANCELLED", "EXPIRED"].includes(existing.status)) {
-        if (existing.status === "PENDING" || existing.status === "REJECTED") redirect(`/payment/${existing.id}`)
+        if (existing.status === "PENDING") redirect(`/payment/${existing.id}`)
         redirect(`/events/${id}`)
     }
 

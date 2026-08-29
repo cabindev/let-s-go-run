@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Registration` DROP COLUMN `slipUrl`,
+    MODIFY `status` ENUM('PENDING', 'PAID', 'EXPIRED', 'CANCELLED') NOT NULL DEFAULT 'PENDING';
