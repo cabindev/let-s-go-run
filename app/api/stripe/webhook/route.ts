@@ -9,15 +9,18 @@ import { PAYABLE_STATUS } from "@/lib/expiry"
 
 export const dynamic = "force-dynamic"
 
-/** เช็คว่า Checkout Session จ่ายด้วยบัตรหรือ PromptPay จาก payment method ที่ใช้จริง */
-async function resolvePaymentMethod(paymentIntentId: string | null): Promise<string | null> {
-    if (!paymentIntentId) return null
+/** เช็ควิธีจ่ายจริง (บัตร/PromptPay) และดึงลิงก์ใบเสร็จที่ Stripe ออกให้อัตโนมัติจาก payment intent เดียวกัน */
+async function resolvePayment(paymentIntentId: string | null): Promise<{ method: string | null; receiptUrl: string | null }> {
+    if (!paymentIntentId) return { method: null, receiptUrl: null }
     try {
-        const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["payment_method"] })
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["payment_method", "latest_charge"] })
         const pm = pi.payment_method
-        return typeof pm === "string" ? null : (pm?.type ?? null)
+        const method = typeof pm === "string" ? null : (pm?.type ?? null)
+        const charge = pi.latest_charge
+        const receiptUrl = typeof charge === "string" ? null : (charge?.receipt_url ?? null)
+        return { method, receiptUrl }
     } catch {
-        return null
+        return { method: null, receiptUrl: null }
     }
 }
 
@@ -32,7 +35,7 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
     if (!reg || !PAYABLE_STATUS.includes(reg.status)) return
 
     const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null
-    const paymentMethod = await resolvePaymentMethod(paymentIntentId)
+    const { method: paymentMethod, receiptUrl } = await resolvePayment(paymentIntentId)
 
     await withBib(reg.eventId, reg.bib, (bib) =>
         prisma.registration.update({
@@ -46,6 +49,7 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
                 stripeSessionId: session.id,
                 stripePaymentIntentId: paymentIntentId,
                 paymentMethod,
+                receiptUrl,
             },
         })
     )

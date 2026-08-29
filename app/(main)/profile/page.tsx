@@ -228,6 +228,11 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                             ส่งผลวิ่ง
                         </ButtonLink>
                     )}
+                    {reg.status === "PAID" && reg.receiptUrl && (
+                        <ButtonLink href={reg.receiptUrl} target="_blank" size="sm" variant="ghost">
+                            ใบเสร็จ
+                        </ButtonLink>
+                    )}
                 </div>
             </div>
         </li>

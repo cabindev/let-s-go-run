@@ -170,6 +170,7 @@ model Registration {
   stripeSessionId       String? @unique
   stripePaymentIntentId String?
   paymentMethod         String? // "card" | "promptpay" — ค่าจริงที่ใช้จ่ายตอนสำเร็จ
+  receiptUrl            String? @db.Text // ใบเสร็จที่ Stripe ออกให้อัตโนมัติ (Charge.receipt_url) — null ถ้าเป็นงานฟรี
 
   // กำหนดเวลาที่ต้องชำระเงินให้เสร็จ — เลยเวลานี้ระบบคืนที่นั่งอัตโนมัติ
   // null = ไม่มีกำหนด (จ่ายแล้ว)

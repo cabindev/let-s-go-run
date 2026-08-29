@@ -113,9 +113,16 @@ export default async function PaymentPage({
             {registration.status === "PAID" && (
                 <Notice tone="lime" title="ยืนยันการชำระเงินแล้ว">
                     <p>คุณเข้าร่วมกิจกรรมนี้เรียบร้อยแล้ว แล้วเจอกันที่จุดสตาร์ท</p>
-                    <ButtonLink href={eventHref(registration.event)} size="sm" variant="outline" className="mt-3">
-                        ดูรายละเอียดกิจกรรม
-                    </ButtonLink>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                        <ButtonLink href={eventHref(registration.event)} size="sm" variant="outline">
+                            ดูรายละเอียดกิจกรรม
+                        </ButtonLink>
+                        {registration.receiptUrl && (
+                            <ButtonLink href={registration.receiptUrl} target="_blank" size="sm" variant="outline">
+                                ดาวน์โหลดใบเสร็จ
+                            </ButtonLink>
+                        )}
+                    </div>
                 </Notice>
             )}
 
