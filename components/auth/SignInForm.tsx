@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { AuthLayout } from "./AuthLayout"
+import { GoogleSignInButton } from "./GoogleSignInButton"
 import { PasswordField } from "./PasswordField"
 import { Field } from "@/components/ui/Field"
 import { Button, Spinner } from "@/components/ui/Button"
@@ -57,16 +58,26 @@ export default function SignInForm() {
                 </>
             }
         >
-            <form onSubmit={handleSubmit} className="space-y-7">
-                <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-                <PasswordField label="รหัสผ่าน" name="password" id="password" required autoComplete="current-password" placeholder="••••••" />
+            <div className="space-y-7">
+                <GoogleSignInButton callbackUrl={callbackUrl} />
 
-                {error && <Notice tone="move">{error}</Notice>}
+                <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-line" />
+                    <span className="text-[11px] text-ink-mute">หรือ</span>
+                    <div className="h-px flex-1 bg-line" />
+                </div>
 
-                <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
-                    {isLoading ? <Spinner /> : "เข้าสู่ระบบ"}
-                </Button>
-            </form>
+                <form onSubmit={handleSubmit} className="space-y-7">
+                    <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
+                    <PasswordField label="รหัสผ่าน" name="password" id="password" required autoComplete="current-password" placeholder="••••••" />
+
+                    {error && <Notice tone="move">{error}</Notice>}
+
+                    <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                        {isLoading ? <Spinner /> : "เข้าสู่ระบบ"}
+                    </Button>
+                </form>
+            </div>
         </AuthLayout>
     )
 }

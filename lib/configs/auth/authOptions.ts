@@ -1,6 +1,7 @@
 // lib/configs/auth/authOptions.ts
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { Role } from '@prisma/client';
 import { compare } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
@@ -34,6 +35,10 @@ const authOptions: NextAuthOptions = {
   // ไม่ใช้ PrismaAdapter เพราะ schema นี้ไม่มี model Account / Session / VerificationToken
   // (credentials + jwt ไม่ต้องใช้ adapter)
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -69,6 +74,23 @@ const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
+    // ไม่ใช้ PrismaAdapter จึงต้อง find-or-create User เองตอน Google ยืนยันตัวตนสำเร็จ
+    // ผูกกับบัญชี credentials เดิมอัตโนมัติถ้า email ตรงกัน (Google ยืนยัน email มาแล้วว่าเป็นเจ้าของจริง)
+    signIn: async ({ user, account }) => {
+      if (account?.provider === 'google') {
+        if (!user.email) return false;
+
+        const dbUser = await prisma.user.upsert({
+          where: { email: user.email },
+          update: { name: user.name ?? undefined, image: user.image ?? undefined },
+          create: { email: user.email, name: user.name, image: user.image, role: 'USER' },
+        });
+
+        user.id = dbUser.id;
+        user.role = dbUser.role;
+      }
+      return true;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;

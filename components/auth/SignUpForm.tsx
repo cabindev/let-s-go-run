@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { AuthLayout } from "./AuthLayout"
+import { GoogleSignInButton } from "./GoogleSignInButton"
 import { PasswordField } from "./PasswordField"
 import { Field } from "@/components/ui/Field"
 import { Button, Spinner } from "@/components/ui/Button"
@@ -60,17 +61,27 @@ export default function SignUpForm() {
                 </>
             }
         >
-            <form onSubmit={handleSubmit} className="space-y-7">
-                <Field label="ชื่อ-นามสกุล" name="name" id="name" required autoComplete="name" placeholder="ชื่อของคุณ" />
-                <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-                <PasswordField label="รหัสผ่าน" name="password" id="password" required minLength={5} autoComplete="new-password" placeholder="อย่างน้อย 5 ตัวอักษร" />
+            <div className="space-y-7">
+                <GoogleSignInButton />
 
-                {error && <Notice tone="move">{error}</Notice>}
+                <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-line" />
+                    <span className="text-[11px] text-ink-mute">หรือ</span>
+                    <div className="h-px flex-1 bg-line" />
+                </div>
 
-                <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
-                    {isLoading ? <Spinner /> : "สมัครสมาชิก"}
-                </Button>
-            </form>
+                <form onSubmit={handleSubmit} className="space-y-7">
+                    <Field label="ชื่อ-นามสกุล" name="name" id="name" required autoComplete="name" placeholder="ชื่อของคุณ" />
+                    <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
+                    <PasswordField label="รหัสผ่าน" name="password" id="password" required minLength={5} autoComplete="new-password" placeholder="อย่างน้อย 5 ตัวอักษร" />
+
+                    {error && <Notice tone="move">{error}</Notice>}
+
+                    <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                        {isLoading ? <Spinner /> : "สมัครสมาชิก"}
+                    </Button>
+                </form>
+            </div>
         </AuthLayout>
     )
 }
