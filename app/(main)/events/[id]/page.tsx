@@ -7,8 +7,6 @@ import { getSession } from "@/lib/auth-helpers"
 import { Card } from "@/components/ui/Card"
 import { RichText } from "@/components/ui/RichText"
 import { Badge, EventStatusBadge, RegStatusBadge, Notice } from "@/components/ui/Badge"
-import { Bar } from "@/components/ui/Rings"
-import { Avatar } from "@/components/ui/Avatar"
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
 import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions } from "@/lib/events"
@@ -35,12 +33,6 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
             categories: { orderBy: [{ sortOrder: "asc" }, { price: "asc" }] },
             images: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }] },
             _count: { select: { registrations: { where: heldSeatWhere() } } },
-            registrations: {
-                where: { status: "PAID" },
-                take: 10,
-                orderBy: { registeredAt: "asc" },
-                include: { user: { select: { id: true, name: true, email: true, image: true } } },
-            },
         },
     })
 
@@ -150,11 +142,10 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                     )}
 
                     {/* ข้อมูลงาน */}
-                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-8 gap-x-6">
+                    <dl className="grid grid-cols-2 sm:grid-cols-3 gap-y-8 gap-x-6">
                         <Spec label="วันจัดงาน" value={formatDate(event.date)} small />
                         <Spec label="เวลา" value={formatTimeRange(event.date, event.endDate).replace(" - ", "–").replace(" น.", "")} small nowrap />
                         <Spec label="ประเภทงาน" value={EVENT_TYPE_LABEL[event.type]} small />
-                        <Spec label="ผู้สมัคร" value={`${joined}${event.maxParticipants ? `/${event.maxParticipants}` : ""}`} small />
                     </dl>
 
                     <div>
@@ -162,20 +153,6 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                         <p className="text-lg tracking-tight mt-2">{event.location}</p>
                         {event.province && <p className="text-sm text-ink-mute mt-0.5">จ.{event.province}</p>}
                     </div>
-
-                    {event.maxParticipants && (
-                        <div>
-                            <div className="flex items-baseline justify-between">
-                                <p className="eyebrow">จำนวนที่รับ</p>
-                                <p className="text-sm tnum text-ink-soft">{joined} / {event.maxParticipants} คน</p>
-                            </div>
-                            <Bar
-                                value={(joined / event.maxParticipants) * 100}
-                                color={joined >= event.maxParticipants ? "var(--ring-move)" : "var(--color-ink)"}
-                                className="mt-3"
-                            />
-                        </div>
-                    )}
 
                     {/* ── ลำดับ: เสื้อ → รายละเอียด → เส้นทาง → ระยะที่เปิดรับสมัคร → เหรียญ → บรรยากาศ ── */}
 
@@ -238,25 +215,6 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                     )}
 
                     <ImageSection images={gallery} category="ATMOSPHERE" />
-
-                    {event.registrations.length > 0 && (
-                        <div>
-                            <p className="eyebrow">นักวิ่งที่ยืนยันแล้ว</p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {event.registrations.map((r) => (
-                                    <span key={r.id} className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-paper border border-line">
-                                        <Avatar src={r.user.image} name={r.user.name} email={r.user.email} size={24} />
-                                        <span className="text-[11px] text-ink-soft max-w-[7rem] truncate">{r.user.name || "นักวิ่ง"}</span>
-                                    </span>
-                                ))}
-                                {joined > event.registrations.length && (
-                                    <span className="flex items-center px-3 py-1.5 rounded-full bg-paper border border-line text-[11px] text-ink-mute tnum">
-                                        +{joined - event.registrations.length}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* กล่องรับสมัคร — sticky บนเดสก์ท็อป */}

@@ -8,7 +8,7 @@ import { formatDateRange, formatPrice } from "@/lib/utils"
  * การ์ดในรายการงานวิ่ง — โครงข้อมูลเดียวกับ race.thai.run
  * ชื่องาน / ช่วงวันที่ / ประเภท (วิ่งในงาน–วิ่งที่ไหนก็ได้) / จัดโดย
  */
-export function EventListCard({ event }: { event: Event & { categories: RaceCategory[]; _count?: { registrations: number } } }) {
+export function EventListCard({ event }: { event: Event & { categories: RaceCategory[] } }) {
     const dists = distances(event, event.categories)
     const { min, max } = priceRange(event, event.categories)
 
@@ -58,12 +58,6 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
                     <span className="text-[12px] text-ink-mute">
                         {dists.length === 1 ? `${dists[0]} กม.` : `${dists.join(" / ")} กม.`}
                     </span>
-                    {event._count && (
-                        <span className="text-[12px] text-ink-mute ml-auto">
-                            {event._count.registrations}
-                            {event.maxParticipants ? `/${event.maxParticipants}` : ""} คน
-                        </span>
-                    )}
                 </div>
             </div>
         </Link>

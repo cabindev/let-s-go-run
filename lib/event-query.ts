@@ -1,6 +1,5 @@
 import type { Prisma } from "@prisma/client"
 import { DISTANCE_BANDS } from "@/lib/events"
-import { heldSeatWhere } from "@/lib/expiry"
 
 export interface EventFilters {
     q?: string
@@ -86,5 +85,4 @@ export function buildEventWhere({ q, province, distance, filter, type }: EventFi
 
 export const EVENT_INCLUDE = {
     categories: { orderBy: [{ sortOrder: "asc" }, { price: "asc" }] },
-    _count: { select: { registrations: { where: heldSeatWhere() } } },
 } satisfies Prisma.EventInclude
