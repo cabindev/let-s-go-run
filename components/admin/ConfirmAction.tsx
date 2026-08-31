@@ -46,7 +46,7 @@ export function ConfirmAction({ action, title, message, confirmLabel = "ยื�
                         <p className="display text-lg">{title}</p>
                         <p className="text-sm text-ink-soft mt-2 leading-relaxed">{message}</p>
 
-                        {error && <Notice tone="move" className="mt-4">{error}</Notice>}
+                        {error && <Notice tone="danger" className="mt-4">{error}</Notice>}
 
                         <div className="flex gap-2 mt-6">
                             <Button variant="outline" className="flex-1" onClick={() => setOpen(false)} disabled={pending}>

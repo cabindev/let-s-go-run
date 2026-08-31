@@ -34,7 +34,7 @@ export function Countdown({ deadline, className }: { deadline: number; className
     const pad = (n: number) => String(n).padStart(2, "0")
 
     return (
-        <span className={cn("tnum tabular-nums", left < 3600_000 && "text-move", className)}>
+        <span className={cn("tnum tabular-nums", left < 3600_000 && "text-danger", className)}>
             {left <= 0 ? "หมดเวลาแล้ว" : `${h}:${pad(m)}:${pad(s)}`}
         </span>
     )

@@ -68,7 +68,7 @@ export function CategoryManager({
                                 title="ลบประเภทนี้?"
                                 message={`"${c.name}" จะถูกลบออกจากงานนี้`}
                                 confirmLabel="ลบ"
-                                className="eyebrow text-ink-mute hover:text-move transition-colors shrink-0"
+                                className="eyebrow text-ink-mute hover:text-danger transition-colors shrink-0"
                             >
                                 ลบ
                             </ConfirmAction>
@@ -86,7 +86,7 @@ export function CategoryManager({
                     </div>
                     <Field label="จำนวนที่รับ" name="maxSlots" type="number" step="1" min="1" placeholder="เว้นว่าง = ไม่จำกัด" />
 
-                    {error && <Notice tone="move">{error}</Notice>}
+                    {error && <Notice tone="danger">{error}</Notice>}
 
                     <div className="flex gap-3">
                         {categories.length > 0 && (

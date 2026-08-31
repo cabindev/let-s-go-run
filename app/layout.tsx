@@ -13,7 +13,7 @@ const prompt = Prompt({
 
 export const metadata: Metadata = {
   title: {
-    default: "Run Club · ชุมชนนักวิ่ง",
+    default: "RunLudtong · ชุมชนนักวิ่ง",
     template: "%s",
   },
   description: "ค้นหางานวิ่ง สมัครออนไลน์ สะสมระยะทาง และปลดล็อกความสำเร็จไปพร้อมกับเพื่อนนักวิ่ง",

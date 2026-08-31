@@ -47,7 +47,7 @@ export default async function AdminAchievementsPage() {
                                 title="ลบความสำเร็จนี้?"
                                 message={`"${a.name}" จะถูกลบ และผู้ใช้ ${a._count.users} คนที่ปลดล็อกไว้จะสูญเสียความสำเร็จนี้`}
                                 confirmLabel="ลบ"
-                                className="eyebrow text-ink-mute hover:text-move transition-colors shrink-0"
+                                className="eyebrow text-ink-mute hover:text-danger transition-colors shrink-0"
                             >
                                 ลบ
                             </ConfirmAction>

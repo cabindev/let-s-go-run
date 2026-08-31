@@ -150,7 +150,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
 
                 <TextArea label="บันทึกเพิ่มเติม" name="note" rows={2} maxLength={200} placeholder="เช่น วิ่งรอบสวนตอนเช้า" />
 
-                {error && <Notice tone="move">{error}</Notice>}
+                {error && <Notice tone="danger">{error}</Notice>}
                 {success && <Notice tone="lime">{success}</Notice>}
 
                 <Button type="submit" size="lg" className="w-full" disabled={pending}>
@@ -193,7 +193,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                                     title="ลบผลนี้?"
                                     message={`ผล ${formatNumber(s.distance, 2)} กม. วันที่ ${formatDate(s.runDate)} จะถูกลบออกจากระยะสะสม`}
                                     confirmLabel="ลบ"
-                                    className="eyebrow text-ink-mute hover:text-move transition-colors shrink-0"
+                                    className="eyebrow text-ink-mute hover:text-danger transition-colors shrink-0"
                                 >
                                     ลบ
                                 </ConfirmAction>

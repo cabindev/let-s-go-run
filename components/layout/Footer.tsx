@@ -6,7 +6,7 @@ export function Footer() {
             <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
                     <p className="display text-base uppercase tracking-[-0.03em]">
-                        Run<span className="text-move">Club</span>
+                        Run<span className="bg-move text-ink px-1 rounded-sm">Ludtong</span>
                     </p>
                     <p className="text-[12px] text-ink-mute mt-1.5">ระบบรับสมัครงานวิ่ง</p>
                 </div>

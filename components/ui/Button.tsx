@@ -7,10 +7,11 @@ type Size = "sm" | "md" | "lg"
 const VARIANTS: Record<Variant, string> = {
     /** ดำบนขาว — ปุ่มหลักแบบ Nike */
     primary: "bg-ink text-white hover:bg-ink-soft active:bg-ink-soft disabled:bg-paper-3 disabled:text-ink-mute",
-    solid: "bg-move text-white hover:bg-move/90 disabled:bg-move/40",
+    /** เหลืองแบรนด์ — พื้นเหลือง ตัวอักษรดำ (เหลืองคอนทราสต์ต่ำเกินจะใช้เป็นตัวอักษรบนขาวได้) */
+    solid: "bg-move text-ink hover:bg-move/90 disabled:bg-move/40 disabled:text-ink/40",
     outline: "border border-line bg-paper text-ink hover:border-ink-mute hover:bg-paper-2 disabled:opacity-40",
     ghost: "text-ink-soft hover:text-ink hover:bg-paper-2 disabled:opacity-40",
-    danger: "bg-move text-white hover:bg-move/90 disabled:opacity-40",
+    danger: "bg-danger text-white hover:bg-danger/90 disabled:opacity-40",
 }
 
 const SIZES: Record<Size, string> = {

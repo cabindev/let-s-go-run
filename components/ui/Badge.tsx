@@ -4,7 +4,8 @@ import type { EventStatus, RegistrationStatus } from "@prisma/client"
 const TONES = {
     neutral: "bg-paper-3 text-ink-soft",
     ink: "bg-ink text-white",
-    move: "bg-move text-white",
+    move: "bg-move text-ink",
+    danger: "bg-danger text-white",
     lime: "bg-lime text-white",
     sky: "bg-sky text-white",
     outline: "border border-line text-ink-soft",
@@ -37,7 +38,7 @@ export function Badge({
 export const EVENT_STATUS: Record<EventStatus, { label: string; tone: Tone }> = {
     OPEN: { label: "Open", tone: "lime" },
     CLOSED: { label: "Closed", tone: "neutral" },
-    CANCELLED: { label: "Cancelled", tone: "move" },
+    CANCELLED: { label: "Cancelled", tone: "danger" },
 }
 
 export const REG_STATUS: Record<RegistrationStatus, { label: string; tone: Tone }> = {
@@ -68,14 +69,15 @@ export function Notice({
     children,
     className,
 }: {
-    tone?: "neutral" | "move" | "lime" | "sky"
+    tone?: "neutral" | "move" | "danger" | "lime" | "sky"
     title?: string
     children?: React.ReactNode
     className?: string
 }) {
     const styles = {
         neutral: "border-l-ink-mute bg-paper-2",
-        move: "border-l-move bg-rose-50",
+        move: "border-l-move bg-amber-50",
+        danger: "border-l-danger bg-rose-50",
         lime: "border-l-lime bg-lime-50",
         sky: "border-l-sky bg-sky-50",
     }

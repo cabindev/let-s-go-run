@@ -9,7 +9,7 @@ import { submissionWindow, submitState, targetOf } from "@/lib/vr"
 import { formatDateInput, formatDateRange } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "ส่งผลวิ่ง · Run Club" }
+export const metadata = { title: "ส่งผลวิ่ง · RunLudtong" }
 
 export default async function SubmitPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -65,7 +65,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
                     finished={target > 0 && total >= target}
                 />
             ) : (
-                <Notice tone="move" title="ส่งผลไม่ได้ในตอนนี้">{state.reason}</Notice>
+                <Notice tone="danger" title="ส่งผลไม่ได้ในตอนนี้">{state.reason}</Notice>
             )}
         </div>
     )

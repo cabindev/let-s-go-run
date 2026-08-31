@@ -46,7 +46,7 @@ export function ImageGroupInput({
                 </div>
 
                 {previews.length > 0 && (
-                    <button type="button" onClick={clear} className="eyebrow text-ink-mute hover:text-move transition-colors shrink-0">
+                    <button type="button" onClick={clear} className="eyebrow text-ink-mute hover:text-danger transition-colors shrink-0">
                         ล้าง
                     </button>
                 )}

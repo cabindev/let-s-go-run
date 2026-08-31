@@ -48,7 +48,7 @@ export function AchievementForm() {
                 <Field label="ค่าที่ต้องถึง" name="threshold" type="number" step="any" min="0.1" required defaultValue={1} />
             </div>
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
 
             <Button type="submit" disabled={pending}>
                 {pending ? <Spinner /> : "เพิ่มความสำเร็จ"}

@@ -13,7 +13,7 @@ export function PasswordField({
         <div>
             <div className="flex items-baseline justify-between mb-2">
                 <label htmlFor={name} className="eyebrow">
-                    {label}{props.required && <span className="text-move ml-1">*</span>}
+                    {label}{props.required && <span className="text-danger ml-1">*</span>}
                 </label>
                 <button
                     type="button"

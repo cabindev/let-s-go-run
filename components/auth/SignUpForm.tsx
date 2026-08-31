@@ -75,7 +75,7 @@ export default function SignUpForm() {
                     <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
                     <PasswordField label="รหัสผ่าน" name="password" id="password" required minLength={5} autoComplete="new-password" placeholder="อย่างน้อย 5 ตัวอักษร" />
 
-                    {error && <Notice tone="move">{error}</Notice>}
+                    {error && <Notice tone="danger">{error}</Notice>}
 
                     <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                         {isLoading ? <Spinner /> : "สมัครสมาชิก"}

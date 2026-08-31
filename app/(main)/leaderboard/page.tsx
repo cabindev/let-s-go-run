@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState"
 import { cn, formatNumber } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "อันดับ · Run Club" }
+export const metadata = { title: "อันดับ · RunLudtong" }
 
 export default async function LeaderboardPage() {
     const session = await getSession()
@@ -50,19 +50,24 @@ export default async function LeaderboardPage() {
 
                         return (
                             <li key={u.id} className={cn("flex items-center gap-4 py-4", isMe && "-mx-4 px-4 bg-paper border border-line rounded-2xl")}>
-                                <span
-                                    className={cn(
-                                        "w-8 shrink-0 numeral text-lg",
-                                        rank === 1 ? "text-move" : rank <= 3 ? "text-ink" : "text-ink-mute"
-                                    )}
-                                >
-                                    {rank}
-                                </span>
+                                {rank === 1 ? (
+                                    <span className="w-8 h-8 shrink-0 rounded-full bg-move flex items-center justify-center numeral text-sm text-ink">
+                                        {rank}
+                                    </span>
+                                ) : (
+                                    <span className={cn("w-8 shrink-0 numeral text-lg", rank <= 3 ? "text-ink" : "text-ink-mute")}>
+                                        {rank}
+                                    </span>
+                                )}
                                 <Avatar src={u.image} name={u.name} email={u.email} size={40} />
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold tracking-tight truncate">
                                         {u.name || "นักวิ่ง"}
-                                        {isMe && <span className="ml-2 text-[11px] font-medium text-move">คุณ</span>}
+                                        {isMe && (
+                                            <span className="ml-2 inline-flex items-center text-[11px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
+                                                คุณ
+                                            </span>
+                                        )}
                                     </p>
                                     <p className="text-[11px] text-ink-mute mt-0.5 tnum">
                                         {level.current.name} · {u._count.registrations} กิจกรรม

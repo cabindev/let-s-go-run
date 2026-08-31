@@ -14,7 +14,7 @@ import { eventHref } from "@/lib/events"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "แจ้งชำระเงิน · Run Club" }
+export const metadata = { title: "แจ้งชำระเงิน · RunLudtong" }
 
 export default async function PaymentPage({
     params,
@@ -95,7 +95,7 @@ export default async function PaymentPage({
             )}
 
             {expired && (
-                <Notice tone="move" title="หมดเวลาชำระเงินแล้ว">
+                <Notice tone="danger" title="หมดเวลาชำระเงินแล้ว">
                     <p>ระบบได้คืนที่นั่งให้ผู้สมัครคนอื่นแล้ว หากยังต้องการเข้าร่วมกรุณาสมัครใหม่</p>
                     <ButtonLink href={eventHref(registration.event)} variant="outline" size="sm" className="mt-3">
                         กลับไปหน้างาน

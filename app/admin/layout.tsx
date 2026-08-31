@@ -2,7 +2,7 @@ import { requireAdminPage } from "@/lib/auth-helpers"
 import { AdminShell } from "@/components/admin/AdminShell"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "หลังบ้าน · Run Club" }
+export const metadata = { title: "หลังบ้าน · RunLudtong" }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     await requireAdminPage()

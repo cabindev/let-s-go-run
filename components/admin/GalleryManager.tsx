@@ -122,7 +122,7 @@ function GroupSection({
                                     title="ลบรูปนี้?"
                                     message={`รูปในหมวด "${group.label}" จะถูกนำออกจากหน้างาน`}
                                     confirmLabel="ลบ"
-                                    className="eyebrow text-ink-mute hover:text-move transition-colors px-1"
+                                    className="eyebrow text-ink-mute hover:text-danger transition-colors px-1"
                                 >ลบ</ConfirmAction>
                             </div>
                         </li>
@@ -160,7 +160,7 @@ function GroupSection({
                 </>
             )}
 
-            {error && <Notice tone="move" className="mt-3">{error}</Notice>}
+            {error && <Notice tone="danger" className="mt-3">{error}</Notice>}
         </div>
     )
 }

@@ -48,8 +48,8 @@ export async function createCheckoutSession(registrationId: string, method: Paym
             excluded_payment_method_types: [method === "card" ? "promptpay" : "card"],
             // แต่งหน้าจ่ายเงินให้เข้าธีมแอป (สี "move" ของแบรนด์ + ขอบมนแบบ pill ตามปุ่มในระบบ)
             // ปรับได้แค่หน้านี้เท่านั้น — ชื่อธุรกิจบนใบเสร็จจริงต้องไปตั้งใน Stripe Dashboard เอง
-            branding_settings: { display_name: "RunClub", button_color: "#E11D48", border_style: "pill" },
-            integration_identifier: `activerun_registration_${randomLabelSuffix()}`,
+            branding_settings: { display_name: "RunLudtong", button_color: "#E11D48", border_style: "pill" },
+            integration_identifier: `runludtong_registration_${randomLabelSuffix()}`,
             customer_email: user.email ?? undefined,
             client_reference_id: reg.id,
             metadata: { registrationId: reg.id, baseAmount: String(amount), paymentMethodChoice: method },

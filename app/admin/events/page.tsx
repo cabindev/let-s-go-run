@@ -65,7 +65,7 @@ export default async function AdminEventsPage() {
                                     {e._count.registrations > e.registrations.length && (
                                         <>
                                             {" · "}
-                                            <span className="text-move">
+                                            <span className="text-danger">
                                                 ค้างจ่าย {e._count.registrations - e.registrations.length}
                                             </span>
                                         </>
@@ -92,7 +92,7 @@ export default async function AdminEventsPage() {
                                             : `"${e.title}" จะถูกลบถาวร ย้อนกลับไม่ได้`
                                     }
                                     confirmLabel="ลบกิจกรรม"
-                                    className="eyebrow text-ink-mute hover:text-move transition-colors"
+                                    className="eyebrow text-ink-mute hover:text-danger transition-colors"
                                 >
                                     ลบ
                                 </ConfirmAction>

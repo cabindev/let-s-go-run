@@ -64,7 +64,7 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
                 </div>
 
                 {isEdit && event?.type !== type && (
-                    <Notice tone="move" className="mt-3">
+                    <Notice tone="danger" className="mt-3">
                         การเปลี่ยนประเภทงานที่มีผู้สมัครแล้วจะกระทบการนับระยะทางและการส่งผล ควรเปลี่ยนเฉพาะตอนยังไม่มีคนสมัคร
                     </Notice>
                 )}
@@ -226,7 +226,7 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
                 </section>
             )}
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
 
             <div className="flex gap-3">
                 <Link href="/admin/events" className={buttonClass("outline", "md", "flex-1 sm:flex-none")}>

@@ -68,7 +68,7 @@ export function Sidebar() {
                         <button
                             type="button"
                             onClick={() => signOut({ callbackUrl: "/" })}
-                            className="w-full text-left px-3 py-2.5 mt-1 rounded-2xl text-[13px] font-semibold text-ink-mute hover:text-move hover:bg-paper-2 transition-colors"
+                            className="w-full text-left px-3 py-2.5 mt-1 rounded-2xl text-[13px] font-semibold text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
                         >
                             ออกจากระบบ
                         </button>

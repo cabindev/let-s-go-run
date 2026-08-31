@@ -28,20 +28,25 @@ export function FinisherWall({
                         className={cn("py-4", isMe && "-mx-4 px-4 bg-paper border border-line rounded-2xl")}
                     >
                         <div className="flex items-center gap-3">
-                            <span
-                                className={cn(
-                                    "w-8 shrink-0 numeral text-lg",
-                                    r.rank === 1 ? "text-move" : r.rank <= 3 ? "text-ink" : "text-ink-mute"
-                                )}
-                            >
-                                {r.rank}
-                            </span>
+                            {r.rank === 1 ? (
+                                <span className="w-8 h-8 shrink-0 rounded-full bg-move flex items-center justify-center numeral text-sm text-ink">
+                                    {r.rank}
+                                </span>
+                            ) : (
+                                <span className={cn("w-8 shrink-0 numeral text-lg", r.rank <= 3 ? "text-ink" : "text-ink-mute")}>
+                                    {r.rank}
+                                </span>
+                            )}
                             <Avatar src={r.image} name={r.name} size={38} />
 
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold tracking-tight truncate">
                                     {r.name}
-                                    {isMe && <span className="ml-2 text-[11px] font-medium text-move">คุณ</span>}
+                                    {isMe && (
+                                        <span className="ml-2 inline-flex items-center text-[11px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
+                                            คุณ
+                                        </span>
+                                    )}
                                 </p>
                                 <p className="text-[11px] text-ink-mute mt-0.5 tnum">
                                     {r.bib && `BIB ${r.bib}`}

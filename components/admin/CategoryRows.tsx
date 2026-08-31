@@ -46,7 +46,7 @@ export function CategoryRows({ isVirtual }: { isVirtual: boolean }) {
                                 <button
                                     type="button"
                                     onClick={() => remove(row.key)}
-                                    className="eyebrow text-ink-mute hover:text-move transition-colors"
+                                    className="eyebrow text-ink-mute hover:text-danger transition-colors"
                                 >
                                     ลบ
                                 </button>
@@ -56,7 +56,7 @@ export function CategoryRows({ isVirtual }: { isVirtual: boolean }) {
                         <div className="grid sm:grid-cols-2 gap-4">
                             <label className="block">
                                 <span className="eyebrow block mb-1.5">
-                                    ชื่อระยะ <span className="text-move">*</span>
+                                    ชื่อระยะ <span className="text-danger">*</span>
                                 </span>
                                 <input
                                     name="cat.name"
@@ -71,7 +71,7 @@ export function CategoryRows({ isVirtual }: { isVirtual: boolean }) {
 
                             <label className="block">
                                 <span className="eyebrow block mb-1.5">
-                                    {isVirtual ? "ระยะเป้าหมาย (กม.)" : "ระยะทาง (กม.)"} <span className="text-move">*</span>
+                                    {isVirtual ? "ระยะเป้าหมาย (กม.)" : "ระยะทาง (กม.)"} <span className="text-danger">*</span>
                                 </span>
                                 <input
                                     name="cat.distance"
@@ -90,7 +90,7 @@ export function CategoryRows({ isVirtual }: { isVirtual: boolean }) {
                         <div className="grid sm:grid-cols-2 gap-4 mt-4">
                             <label className="block">
                                 <span className="eyebrow block mb-1.5">
-                                    ค่าสมัคร (บาท) <span className="text-move">*</span>
+                                    ค่าสมัคร (บาท) <span className="text-danger">*</span>
                                 </span>
                                 <input
                                     name="cat.price"

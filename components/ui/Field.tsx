@@ -11,7 +11,7 @@ export function Field({
     return (
         <div className={className}>
             <label htmlFor={name} className="eyebrow block mb-2">
-                {label}{props.required && <span className="text-move ml-1">*</span>}
+                {label}{props.required && <span className="text-danger ml-1">*</span>}
             </label>
             <input id={name} name={name} className={cn(inputClass, "h-11")} {...props} />
             {helper && <p className="text-[11px] text-ink-mute mt-2">{helper}</p>}
@@ -25,7 +25,7 @@ export function TextArea({
     return (
         <div className={className}>
             <label htmlFor={name} className="eyebrow block mb-2">
-                {label}{props.required && <span className="text-move ml-1">*</span>}
+                {label}{props.required && <span className="text-danger ml-1">*</span>}
             </label>
             <textarea id={name} name={name} className={cn(inputClass, "py-2 resize-y")} {...props} />
             {helper && <p className="text-[11px] text-ink-mute mt-2">{helper}</p>}

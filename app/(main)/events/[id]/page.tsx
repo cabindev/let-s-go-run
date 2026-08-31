@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic"
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const event = await prisma.event.findUnique({ where: { id }, select: { title: true } })
-    return { title: event ? `${event.title} · Run Club` : "ไม่พบกิจกรรม" }
+    return { title: event ? `${event.title} · RunLudtong` : "ไม่พบกิจกรรม" }
 }
 
 export default async function EventDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -205,7 +205,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                 <div className="flex justify-between gap-4 py-3.5">
                                     <dt className="text-[13px] text-ink-mute shrink-0">รายละเอียดเพิ่มเติม</dt>
                                     <dd className="text-sm font-medium min-w-0">
-                                        <a href={event.contactUrl} target="_blank" rel="noreferrer noopener" className="text-move hover:underline break-all">
+                                        <a href={event.contactUrl} target="_blank" rel="noreferrer noopener" className="text-ink underline decoration-line hover:decoration-ink break-all">
                                             {event.contactUrl}
                                         </a>
                                     </dd>

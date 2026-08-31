@@ -21,7 +21,7 @@ import { expireStaleRegistrations, isAwaitingPayment, isExpired, formatTimeLeft,
 import { cn, formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "โปรไฟล์ · Run Club" }
+export const metadata = { title: "โปรไฟล์ · RunLudtong" }
 
 export default async function ProfilePage() {
     const sessionUser = await requireUser()
@@ -182,7 +182,7 @@ export default async function ProfilePage() {
             </section>
 
             <div>
-                <SignOutButton className="text-[13px] font-semibold text-ink-mute hover:text-move transition-colors" />
+                <SignOutButton className="text-[13px] font-semibold text-ink-mute hover:text-danger transition-colors" />
             </div>
         </div>
     )
@@ -212,7 +212,7 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                         <RegStatusBadge status={expired ? "EXPIRED" : reg.status} />
                     </div>
                     {needsPayment && left !== null && (
-                        <p className="text-[11px] text-move mt-1.5 tnum">
+                        <p className="text-[11px] text-danger mt-1.5 tnum">
                             เหลือเวลาชำระเงิน {formatTimeLeft(left)}
                         </p>
                     )}

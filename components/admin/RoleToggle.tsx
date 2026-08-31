@@ -41,7 +41,7 @@ export function RoleToggle({ userId, role, disabled }: { userId: string; role: R
             >
                 {pending ? <Spinner /> : role === "ADMIN" ? "แอดมิน" : "ผู้ใช้"}
             </button>
-            {error && <p className="text-[11px] text-move mt-1">{error}</p>}
+            {error && <p className="text-[11px] text-danger mt-1">{error}</p>}
         </div>
     )
 }

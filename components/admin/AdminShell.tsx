@@ -54,7 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <button
                     type="button"
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="w-full text-left px-3 py-3 rounded-2xl text-sm font-semibold tracking-tight text-ink-mute hover:text-move hover:bg-paper-2 transition-colors"
+                    className="w-full text-left px-3 py-3 rounded-2xl text-sm font-semibold tracking-tight text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
                 >
                     ออกจากระบบ
                 </button>

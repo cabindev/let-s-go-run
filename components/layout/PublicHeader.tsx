@@ -75,7 +75,7 @@ export function PublicHeader() {
                                     <button
                                         type="button"
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-move hover:bg-paper-2 transition-colors"
+                                        className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-danger hover:bg-paper-2 transition-colors"
                                     >
                                         ออกจากระบบ
                                     </button>

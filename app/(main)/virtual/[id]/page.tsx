@@ -237,7 +237,7 @@ export default async function VirtualEventPage({
                         <div className="flex justify-between gap-4 py-3.5">
                             <dt className="text-[13px] text-ink-mute shrink-0">รายละเอียดเพิ่มเติม</dt>
                             <dd className="text-sm font-medium min-w-0">
-                                <a href={event.contactUrl} target="_blank" rel="noreferrer noopener" className="text-move hover:underline break-all">
+                                <a href={event.contactUrl} target="_blank" rel="noreferrer noopener" className="text-ink underline decoration-line hover:decoration-ink break-all">
                                     {event.contactUrl}
                                 </a>
                             </dd>

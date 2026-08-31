@@ -143,7 +143,7 @@ function ProfileForm({ user, onDone }: { user: Props["user"]; onDone: () => void
             <Field label="วันเกิด" name="dateOfBirth" type="date" defaultValue={dob} />
             <TextArea label="แนะนำตัว" name="bio" rows={3} maxLength={300} defaultValue={user.bio ?? ""} placeholder="เล่าเกี่ยวกับตัวคุณสั้น ๆ" />
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
 
             <div className="flex gap-2">
                 <Button type="button" variant="outline" className="flex-1" onClick={onDone} disabled={pending}>ยกเลิก</Button>
@@ -181,7 +181,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
             <PasswordField label="รหัสผ่านปัจจุบัน" name="currentPassword" required autoComplete="current-password" />
             <PasswordField label="รหัสผ่านใหม่" name="newPassword" required minLength={5} autoComplete="new-password" />
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
             {success && <Notice tone="lime">{success}</Notice>}
 
             <div className="flex gap-2">

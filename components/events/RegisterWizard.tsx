@@ -135,7 +135,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                 <Stepper steps={REGISTER_STEPS} current={step} />
             </div>
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
 
             {/* ---------- ขั้น 1 ---------- */}
             {step === 0 && (
@@ -143,7 +143,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     <p className="eyebrow">{isVirtual ? "เลือกระยะเป้าหมาย" : "เลือกประเภทการแข่งขัน"}</p>
 
                     {available.length === 0 ? (
-                        <Notice tone="move" title="ที่นั่งเต็มทุกประเภทแล้ว">
+                        <Notice tone="danger" title="ที่นั่งเต็มทุกประเภทแล้ว">
                             ลองติดตามงานอื่นในหน้าแรก
                         </Notice>
                     ) : (
@@ -171,7 +171,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                                         {isVirtual ? `สะสมให้ครบ ${o.distance} กม.` : `${o.distance} กม.`}
                                                         {o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
                                                     </p>
-                                                    {full && <p className="text-[12px] text-move mt-1">เต็มแล้ว</p>}
+                                                    {full && <p className="text-[12px] text-danger mt-1">เต็มแล้ว</p>}
                                                 </div>
                                                 <span className="numeral text-xl shrink-0">{formatPrice(o.price)}</span>
                                             </div>

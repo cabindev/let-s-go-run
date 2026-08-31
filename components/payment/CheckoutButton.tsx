@@ -61,7 +61,7 @@ export function CheckoutButton({ registrationId, amount }: { registrationId: str
                 )
             })}
 
-            {error && <Notice tone="move">{error}</Notice>}
+            {error && <Notice tone="danger">{error}</Notice>}
         </div>
     )
 }

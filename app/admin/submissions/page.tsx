@@ -84,7 +84,7 @@ export default async function AdminSubmissionsPage() {
                                 title="ลบผลนี้?"
                                 message={`ผล ${formatNumber(s.distance, 2)} กม. จะถูกลบออกจากระยะสะสมของผู้สมัคร`}
                                 confirmLabel="ลบ"
-                                className="eyebrow text-ink-mute hover:text-move transition-colors shrink-0"
+                                className="eyebrow text-ink-mute hover:text-danger transition-colors shrink-0"
                             >
                                 ลบ
                             </ConfirmAction>

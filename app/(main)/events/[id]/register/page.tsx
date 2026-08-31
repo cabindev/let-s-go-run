@@ -7,7 +7,7 @@ import { getTakenSlots } from "@/app/actions/register-flow"
 import { RegisterWizard } from "@/components/events/RegisterWizard"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "สมัครเข้าร่วม · Run Club" }
+export const metadata = { title: "สมัครเข้าร่วม · RunLudtong" }
 
 export default async function RegisterPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
