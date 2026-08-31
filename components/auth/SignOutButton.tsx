@@ -7,7 +7,7 @@ export default function SignOutButton({ className }: { className?: string }) {
         <button
             type="button"
             onClick={() => signOut({ callbackUrl: '/' })}
-            className={className ?? "text-[13px] font-semibold text-ink-mute hover:text-move transition-colors"}
+            className={className ?? "text-[13px] font-semibold text-ink-mute hover:text-danger transition-colors"}
         >
             ออกจากระบบ
         </button>
