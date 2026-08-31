@@ -69,9 +69,17 @@ export default function SignInForm() {
 
                 <form onSubmit={handleSubmit} className="space-y-7">
                     <Field label="อีเมล" name="email" id="email" type="email" required autoComplete="email" placeholder="you@example.com" />
-                    <PasswordField label="รหัสผ่าน" name="password" id="password" required autoComplete="current-password" placeholder="••••••" />
+                    <div>
+                        <PasswordField label="รหัสผ่าน" name="password" id="password" required autoComplete="current-password" placeholder="••••••" />
+                        <Link
+                            href="/auth/forgot-password"
+                            className="inline-block mt-2 text-[12px] font-semibold text-ink-mute hover:text-ink transition-colors"
+                        >
+                            ลืมรหัสผ่าน?
+                        </Link>
+                    </div>
 
-                    {error && <Notice tone="move">{error}</Notice>}
+                    {error && <Notice tone="danger">{error}</Notice>}
 
                     <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                         {isLoading ? <Spinner /> : "เข้าสู่ระบบ"}

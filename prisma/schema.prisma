@@ -48,6 +48,11 @@ model User {
   phone         String?
   bio           String?   @db.Text
 
+  // ลืมรหัสผ่าน — เก็บ hash ของ token (ไม่เก็บ token ดิบ เหมือนหลัก practice ของ password)
+  // null = ไม่มีคำขอรีเซ็ตค้างอยู่
+  resetToken          String?   @unique
+  resetTokenExpiresAt DateTime?
+
   // Stats (คำนวณใหม่ทุกครั้งที่มีการยืนยันการชำระเงิน)
   totalDistance Float     @default(0)
 
