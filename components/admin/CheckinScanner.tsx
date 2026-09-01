@@ -23,6 +23,7 @@ export function CheckinScanner() {
     const [error, setError] = useState<string | null>(null)
     const [pending, setPending] = useState(false)
     const [cameraError, setCameraError] = useState<string | null>(null)
+    const [cameraReady, setCameraReady] = useState(false)
     const [successSignature, setSuccessSignature] = useState<string | null>(null)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,13 +39,17 @@ export function CheckinScanner() {
     // (ซ่อนด้วย CSS เวลาไม่ได้อยู่โหมด scan แทนการ unmount กันต้องขอสิทธิ์กล้องใหม่ทุกรอบ)
     useEffect(() => {
         let cancelled = false
+        // รอ start() ให้เสร็จก่อนค่อยอนุญาตให้ stop() ทำงาน — กัน unmount เร็วเกินไป
+        // (เช่นเปลี่ยนเมนูระหว่างกล้องกำลังเปิด) แล้วไปเรียก stop() ซ้อนกับ start()
+        // ที่ยังไม่ resolve ซึ่งทำให้ html5-qrcode ปล่อยกล้องไม่หมด จน browser ค้าง/แครช
+        let startPromise: Promise<unknown> | null = null
 
         import("html5-qrcode").then(({ Html5Qrcode }) => {
             if (cancelled) return
             const qr = new Html5Qrcode(READER_ID)
             scannerRef.current = qr
 
-            qr.start(
+            startPromise = qr.start(
                 { facingMode: "environment" },
                 { fps: 10, qrbox: 250 },
                 (decodedText: string) => {
@@ -53,14 +58,21 @@ export function CheckinScanner() {
                     void handleScan(decodedText)
                 },
                 () => { /* ไม่เจอ QR ในเฟรมนี้ — ปกติ ไม่ต้องทำอะไร */ }
-            ).catch((e: unknown) => {
-                setCameraError(e instanceof Error ? e.message : "เปิดกล้องไม่ได้ — เช็คว่าอนุญาตให้เว็บนี้ใช้กล้องหรือยัง")
+            ).then(() => {
+                if (!cancelled) setCameraReady(true)
+            }).catch((e: unknown) => {
+                if (!cancelled) {
+                    setCameraError(e instanceof Error ? e.message : "เปิดกล้องไม่ได้ — เช็คว่าอนุญาตให้เว็บนี้ใช้กล้องหรือยัง")
+                }
             })
         })
 
         return () => {
             cancelled = true
-            scannerRef.current?.stop?.().catch(() => {})
+            // start() อาจยังไม่เสร็จตอนนี้ — รอให้จบ (สำเร็จหรือพัง) ก่อนค่อยสั่งปิดกล้องจริง
+            Promise.resolve(startPromise)
+                .catch(() => {})
+                .then(() => scannerRef.current?.stop?.().catch(() => {}))
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -167,7 +179,15 @@ export function CheckinScanner() {
             {/* กล้องคงอยู่ตลอดตั้งแต่โหลดหน้า — ซ่อนด้วย CSS เฉพาะตอนไม่ใช่โหมด scan กันต้องขอสิทธิ์กล้องใหม่ทุกครั้ง */}
             <Card className={cn("p-4 space-y-3", mode !== "scan" && "hidden")}>
                 <p className="eyebrow">กล้องสแกน</p>
-                <div id={READER_ID} className="rounded-2xl overflow-hidden bg-black min-h-[280px]" />
+                <div className="relative rounded-2xl overflow-hidden bg-black min-h-[280px]">
+                    <div id={READER_ID} className="w-full h-full" />
+                    {!cameraReady && !cameraError && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/80 text-paper">
+                            <Spinner />
+                            <p className="text-[12px]">กำลังเปิดกล้อง...</p>
+                        </div>
+                    )}
+                </div>
                 <p className="text-[12px] text-ink-mute text-center">ยื่น QR ให้อยู่ในกรอบกล้อง</p>
             </Card>
 

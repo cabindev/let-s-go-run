@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card"
 import { RegStatusBadge, Notice } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
 import { CheckoutButton } from "@/components/payment/CheckoutButton"
+import { PaymentStatusPoller } from "@/components/payment/PaymentStatusPoller"
 import { Countdown } from "@/components/payment/Countdown"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
@@ -93,6 +94,8 @@ export default async function PaymentPage({
                     </p>
                 </Notice>
             )}
+
+            {checkout === "success" && <PaymentStatusPoller status={registration.status} />}
 
             {checkout === "cancel" && registration.status !== "PAID" && (
                 <Notice tone="neutral" title="ยกเลิกการชำระเงิน">
