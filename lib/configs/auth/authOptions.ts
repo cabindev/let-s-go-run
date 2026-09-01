@@ -96,6 +96,16 @@ const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.picture = user.image;
+        return token;
+      }
+      // เช็ค role ล่าสุดจาก DB ทุกครั้งที่ไม่ใช่ตอน sign-in — กัน session เก่าค้างสิทธิ์เดิม
+      // (เช่นถูกลดสิทธิ์จาก ADMIN เป็น USER แล้ว แต่ยังไม่ได้ออกจากระบบ token เดิมจะยังอ้าง role เก่าตลอดอายุ JWT)
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? 'USER';
       }
       return token;
     },
