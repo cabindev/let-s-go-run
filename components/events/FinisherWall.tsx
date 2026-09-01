@@ -43,12 +43,12 @@ export function FinisherWall({
                                 <p className="text-sm font-semibold tracking-tight truncate">
                                     {r.name}
                                     {isMe && (
-                                        <span className="ml-2 inline-flex items-center text-[11px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
+                                        <span className="ml-2 inline-flex items-center text-[13px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
                                             คุณ
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-[11px] text-ink-mute mt-0.5 tnum">
+                                <p className="text-[13px] text-ink-mute mt-0.5 tnum">
                                     {r.bib && `BIB ${r.bib}`}
                                     {r.bib && r.categoryName && " · "}
                                     {r.categoryName}
@@ -60,7 +60,7 @@ export function FinisherWall({
                                     {formatNumber(r.percent, 0)}
                                     <span className="text-[0.62em] font-semibold tracking-normal text-ink-mute ml-0.5">%</span>
                                 </p>
-                                <p className="text-[11px] text-ink-mute tnum">
+                                <p className="text-[13px] text-ink-mute tnum">
                                     {formatNumber(r.total, 2)} / {formatNumber(r.target, 2)} กม.
                                 </p>
                             </div>
@@ -69,7 +69,7 @@ export function FinisherWall({
                         <div className="mt-2.5 pl-11">
                             <Bar value={r.percent} color={r.finished ? "var(--ring-lime)" : "var(--color-ink)"} />
                             <div className="flex items-center justify-between gap-3 mt-1.5">
-                                <p className="text-[11px] text-ink-mute tnum">
+                                <p className="text-[13px] text-ink-mute tnum">
                                     {r.lastRunDate
                                         ? `ล่าสุด ${formatNumber(r.lastDistance ?? 0, 2)} กม. · ${formatDate(r.lastRunDate)}`
                                         : "ยังไม่ส่งผล"}
@@ -101,7 +101,7 @@ export function WallTabs({
             key={href}
             href={href}
             className={cn(
-                "shrink-0 px-4 h-9 inline-flex items-center rounded-full text-[13px] font-semibold tracking-tight transition-colors",
+                "shrink-0 px-4 h-9 inline-flex items-center rounded-full text-[15px] font-semibold tracking-tight transition-colors",
                 active ? "bg-ink text-white" : "bg-paper border border-line text-ink-soft hover:text-ink"
             )}
         >

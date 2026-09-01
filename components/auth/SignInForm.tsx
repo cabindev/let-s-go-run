@@ -63,7 +63,7 @@ export default function SignInForm() {
 
                 <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-line" />
-                    <span className="text-[11px] text-ink-mute">หรือ</span>
+                    <span className="text-[13px] text-ink-mute">หรือ</span>
                     <div className="h-px flex-1 bg-line" />
                 </div>
 
@@ -73,7 +73,7 @@ export default function SignInForm() {
                         <PasswordField label="รหัสผ่าน" name="password" id="password" required autoComplete="current-password" placeholder="••••••" />
                         <Link
                             href="/auth/forgot-password"
-                            className="inline-block mt-2 text-[12px] font-semibold text-ink-mute hover:text-ink transition-colors"
+                            className="inline-block mt-2 text-[14px] font-semibold text-ink-mute hover:text-ink transition-colors"
                         >
                             ลืมรหัสผ่าน?
                         </Link>

@@ -64,12 +64,12 @@ export default async function LeaderboardPage() {
                                     <p className="text-sm font-semibold tracking-tight truncate">
                                         {u.name || "นักวิ่ง"}
                                         {isMe && (
-                                            <span className="ml-2 inline-flex items-center text-[11px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
+                                            <span className="ml-2 inline-flex items-center text-[13px] font-semibold text-ink bg-move px-2 py-0.5 rounded-full">
                                                 คุณ
                                             </span>
                                         )}
                                     </p>
-                                    <p className="text-[11px] text-ink-mute mt-0.5 tnum">
+                                    <p className="text-[13px] text-ink-mute mt-0.5 tnum">
                                         {level.current.name} · {u._count.registrations} กิจกรรม
                                     </p>
                                 </div>

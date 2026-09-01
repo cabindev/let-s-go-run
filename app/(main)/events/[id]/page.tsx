@@ -102,7 +102,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
 
     return (
         <div className="pt-4">
-            <Link href="/" className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-mute hover:text-ink transition-colors">
+            <Link href="/" className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors">
                 <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                 งานวิ่งทั้งหมด
             </Link>
@@ -149,8 +149,8 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={100} height={100} className="rounded-xl bg-white p-1.5 shrink-0" />
                                     <div>
-                                        <p className="text-[11px] font-semibold tracking-wide">BIB {registration!.bib}</p>
-                                        <p className="text-[11px] mt-1 leading-relaxed">
+                                        <p className="text-[13px] font-semibold tracking-wide">BIB {registration!.bib}</p>
+                                        <p className="text-[13px] mt-1 leading-relaxed">
                                             แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
                                         </p>
                                     </div>
@@ -198,7 +198,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                 <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
                                     <span className="min-w-0">
                                         <span className="block text-sm font-semibold tracking-tight truncate">{o.name}</span>
-                                        <span className="block text-[11px] text-ink-mute tnum mt-0.5">
+                                        <span className="block text-[13px] text-ink-mute tnum mt-0.5">
                                             {o.distance} กม.{o.maxSlots ? ` · รับ ${o.maxSlots} คน` : ""}
                                         </span>
                                     </span>
@@ -215,13 +215,13 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                         <dl className="divide-y divide-line border-y border-line">
                             {event.announceAt && (
                                 <div className="flex justify-between gap-4 py-3.5">
-                                    <dt className="text-[13px] text-ink-mute">วันประกาศผล</dt>
+                                    <dt className="text-[15px] text-ink-mute">วันประกาศผล</dt>
                                     <dd className="text-sm font-medium tnum">{formatDate(event.announceAt)}</dd>
                                 </div>
                             )}
                             {event.contactUrl && (
                                 <div className="flex justify-between gap-4 py-3.5">
-                                    <dt className="text-[13px] text-ink-mute shrink-0">รายละเอียดเพิ่มเติม</dt>
+                                    <dt className="text-[15px] text-ink-mute shrink-0">รายละเอียดเพิ่มเติม</dt>
                                     <dd className="text-sm font-medium min-w-0">
                                         <a href={event.contactUrl} target="_blank" rel="noreferrer noopener" className="text-ink underline decoration-line hover:decoration-ink break-all">
                                             {event.contactUrl}
@@ -288,7 +288,7 @@ function RegisterPanel({
                     </div>
                 </dl>
                 {event.maxParticipants && (
-                    <p className="text-[11px] text-ink-mute mt-3">
+                    <p className="text-[13px] text-ink-mute mt-3">
                         หรือปิดรับสมัครทันทีเมื่อมีผู้สมัครครบเต็มจำนวน
                     </p>
                 )}
@@ -299,7 +299,7 @@ function RegisterPanel({
                 <p className="numeral text-3xl mt-1.5">
                     {minPrice === maxPrice ? formatPrice(minPrice) : `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`}
                 </p>
-                <p className="text-[11px] text-ink-mute mt-2 tnum">
+                <p className="text-[13px] text-ink-mute mt-2 tnum">
                     {options.length > 1 ? `${options.length} ระยะให้เลือก` : `ระยะ ${options[0].distance} กม.`}
                 </p>
             </div>
@@ -307,7 +307,7 @@ function RegisterPanel({
             <div className="hidden lg:block">{action}</div>
 
             {!state.open && (
-                <p className="hidden lg:block text-[11px] text-ink-mute text-center -mt-2">{state.reason}</p>
+                <p className="hidden lg:block text-[13px] text-ink-mute text-center -mt-2">{state.reason}</p>
             )}
         </Card>
     )

@@ -25,7 +25,7 @@ export function MobileNav() {
                                 )}
                             >
                                 <item.icon className="w-[22px] h-[22px]" strokeWidth={active ? 2.5 : 1.8} />
-                                <span className="text-[10px] font-semibold tracking-tight">{item.name}</span>
+                                <span className="text-[12px] font-semibold tracking-tight">{item.name}</span>
                             </Link>
                         </li>
                     )

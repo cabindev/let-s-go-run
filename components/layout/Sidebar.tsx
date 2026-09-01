@@ -61,14 +61,14 @@ export function Sidebar() {
                         <Link href="/profile" className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-paper-2 transition-colors">
                             <Avatar src={session.user.image} name={session.user.name} email={session.user.email} size={36} />
                             <span className="min-w-0">
-                                <span className="block text-[13px] font-semibold truncate text-ink">{session.user.name || "นักวิ่ง"}</span>
-                                <span className="block text-[11px] text-ink-mute truncate">{session.user.email}</span>
+                                <span className="block text-[15px] font-semibold truncate text-ink">{session.user.name || "นักวิ่ง"}</span>
+                                <span className="block text-[13px] text-ink-mute truncate">{session.user.email}</span>
                             </span>
                         </Link>
                         <button
                             type="button"
                             onClick={() => signOut({ callbackUrl: "/" })}
-                            className="w-full text-left px-3 py-2.5 mt-1 rounded-2xl text-[13px] font-semibold text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
+                            className="w-full text-left px-3 py-2.5 mt-1 rounded-2xl text-[15px] font-semibold text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
                         >
                             ออกจากระบบ
                         </button>

@@ -33,7 +33,7 @@ export function PublicHeader() {
                 <nav className="flex items-center gap-1 sm:gap-2">
                     <Link
                         href="/leaderboard"
-                        className="hidden sm:inline-flex h-10 px-4 items-center rounded-full text-[13px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors"
+                        className="hidden sm:inline-flex h-10 px-4 items-center rounded-full text-[15px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors"
                     >
                         อันดับ
                     </Link>
@@ -57,17 +57,17 @@ export function PublicHeader() {
                                 <div role="menu" className="absolute right-0 mt-3 w-56 bg-paper border border-line rounded-2xl overflow-hidden py-1.5 animate-rise shadow-xl shadow-black/10">
                                     <div className="px-4 py-2.5">
                                         <p className="text-sm font-semibold truncate">{session.user.name || "นักวิ่ง"}</p>
-                                        <p className="text-[11px] text-ink-mute truncate">{session.user.email}</p>
+                                        <p className="text-[13px] text-ink-mute truncate">{session.user.email}</p>
                                     </div>
                                     <div className="h-px bg-line mx-4 my-1" />
-                                    <Link href="/profile" className="block px-4 py-2.5 text-[13px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                                    <Link href="/profile" className="block px-4 py-2.5 text-[15px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                         โปรไฟล์ของฉัน
                                     </Link>
-                                    <Link href="/leaderboard" className="sm:hidden block px-4 py-2.5 text-[13px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                                    <Link href="/leaderboard" className="sm:hidden block px-4 py-2.5 text-[15px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                         อันดับ
                                     </Link>
                                     {isAdmin && (
-                                        <Link href="/admin" className="block px-4 py-2.5 text-[13px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                                        <Link href="/admin" className="block px-4 py-2.5 text-[15px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                             หลังบ้าน
                                         </Link>
                                     )}
@@ -75,7 +75,7 @@ export function PublicHeader() {
                                     <button
                                         type="button"
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-danger hover:bg-paper-2 transition-colors"
+                                        className="w-full text-left px-4 py-2.5 text-[15px] font-medium text-danger hover:bg-paper-2 transition-colors"
                                     >
                                         ออกจากระบบ
                                     </button>
@@ -84,10 +84,10 @@ export function PublicHeader() {
                         </div>
                     ) : (
                         <>
-                            <Link href="/auth/signin" className="h-10 px-3 sm:px-4 inline-flex items-center rounded-full text-[13px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                            <Link href="/auth/signin" className="h-10 px-3 sm:px-4 inline-flex items-center rounded-full text-[15px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                 เข้าสู่ระบบ
                             </Link>
-                            <Link href="/auth/signup" className="h-10 px-4 sm:px-5 inline-flex items-center rounded-full bg-ink text-white text-[13px] font-semibold tracking-tight hover:bg-ink-soft transition-colors">
+                            <Link href="/auth/signup" className="h-10 px-4 sm:px-5 inline-flex items-center rounded-full bg-ink text-white text-[15px] font-semibold tracking-tight hover:bg-ink-soft transition-colors">
                                 สมัครสมาชิก
                             </Link>
                         </>

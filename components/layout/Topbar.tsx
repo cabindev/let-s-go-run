@@ -55,14 +55,14 @@ export function Topbar() {
                                 >
                                     <div className="px-4 py-2.5">
                                         <p className="text-sm font-semibold truncate">{session.user.name || "นักวิ่ง"}</p>
-                                        <p className="text-[11px] text-ink-mute truncate">{session.user.email}</p>
+                                        <p className="text-[13px] text-ink-mute truncate">{session.user.email}</p>
                                     </div>
                                     <div className="h-px bg-line mx-4 my-1" />
-                                    <Link href="/profile" className="block px-4 py-2.5 text-[13px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                                    <Link href="/profile" className="block px-4 py-2.5 text-[15px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                         โปรไฟล์ของฉัน
                                     </Link>
                                     {isAdmin && (
-                                        <Link href="/admin" className="block px-4 py-2.5 text-[13px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
+                                        <Link href="/admin" className="block px-4 py-2.5 text-[15px] font-medium text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors">
                                             หลังบ้าน
                                         </Link>
                                     )}
@@ -70,7 +70,7 @@ export function Topbar() {
                                     <button
                                         type="button"
                                         onClick={() => signOut({ callbackUrl: "/" })}
-                                        className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-danger hover:bg-paper-2 transition-colors"
+                                        className="w-full text-left px-4 py-2.5 text-[15px] font-medium text-danger hover:bg-paper-2 transition-colors"
                                     >
                                         ออกจากระบบ
                                     </button>
@@ -79,12 +79,12 @@ export function Topbar() {
                         </div>
                     ) : (
                         <>
-                            <Link href="/auth/signin" className="text-[13px] font-semibold text-ink-soft hover:text-ink transition-colors px-2">
+                            <Link href="/auth/signin" className="text-[15px] font-semibold text-ink-soft hover:text-ink transition-colors px-2">
                                 เข้าสู่ระบบ
                             </Link>
                             <Link
                                 href="/auth/signup"
-                                className="h-10 px-5 inline-flex items-center rounded-full bg-ink text-white text-[13px] font-semibold tracking-tight hover:bg-ink-soft transition-colors"
+                                className="h-10 px-5 inline-flex items-center rounded-full bg-ink text-white text-[15px] font-semibold tracking-tight hover:bg-ink-soft transition-colors"
                             >
                                 สมัครสมาชิก
                             </Link>

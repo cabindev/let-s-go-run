@@ -40,7 +40,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
         <div className="pt-4 max-w-2xl mx-auto space-y-8">
             <Link
                 href={`/virtual/${id}`}
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-mute hover:text-ink transition-colors"
+                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                 กลับไปหน้างาน
@@ -49,7 +49,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ id: str
             <div>
                 <p className="eyebrow">ส่งผลวิ่ง{reg.bib ? ` · BIB ${reg.bib}` : ""}</p>
                 <h1 className="display text-2xl sm:text-3xl mt-2">{event.title}</h1>
-                <p className="text-[13px] text-ink-mute mt-2 tnum">
+                <p className="text-[15px] text-ink-mute mt-2 tnum">
                     ส่งผลได้ระหว่าง {formatDateRange(event.date, event.endDate)}
                 </p>
             </div>

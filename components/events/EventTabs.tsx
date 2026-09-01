@@ -41,7 +41,7 @@ export function EventTabs() {
             onClick={onClick}
             aria-pressed={active}
             className={cn(
-                "shrink-0 px-4 h-9 rounded-full text-[13px] font-semibold tracking-tight transition-colors",
+                "shrink-0 px-4 h-9 rounded-full text-[15px] font-semibold tracking-tight transition-colors",
                 active ? "bg-ink text-white" : "bg-paper border border-line text-ink-soft hover:text-ink"
             )}
         >

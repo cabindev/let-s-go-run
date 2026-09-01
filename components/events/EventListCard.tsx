@@ -43,19 +43,19 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
                     {event.title}
                 </h3>
 
-                <p className="text-[13px] text-ink-soft mt-1.5 tnum">
+                <p className="text-[15px] text-ink-soft mt-1.5 tnum">
                     {formatDateRange(event.date, event.endDate)}
                 </p>
 
                 {event.organizer && (
-                    <p className="text-[12px] text-ink-mute mt-0.5 truncate">จัดโดย {event.organizer}</p>
+                    <p className="text-[14px] text-ink-mute mt-0.5 truncate">จัดโดย {event.organizer}</p>
                 )}
 
                 <div className="mt-auto pt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 tnum">
                     <span className="text-sm font-semibold">
                         {min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`}
                     </span>
-                    <span className="text-[12px] text-ink-mute">
+                    <span className="text-[14px] text-ink-mute">
                         {dists.length === 1 ? `${dists[0]} กม.` : `${dists.join(" / ")} กม.`}
                     </span>
                 </div>

@@ -162,16 +162,16 @@ export default async function ProfilePage() {
                                 <AchievementIcon icon={a.icon} unlocked={a.unlocked} className="mx-auto" />
                                 <span
                                     className={cn(
-                                        "block text-[11px] font-medium mt-2 leading-tight line-clamp-2",
+                                        "block text-[13px] font-medium mt-2 leading-tight line-clamp-2",
                                         !a.unlocked && "text-ink-mute"
                                     )}
                                 >
                                     {a.name}
                                 </span>
                                 {a.unlocked && a.unlockedAt ? (
-                                    <span className="block text-[10px] text-ink-mute mt-1 tnum">{formatDate(a.unlockedAt)}</span>
+                                    <span className="block text-[12px] text-ink-mute mt-1 tnum">{formatDate(a.unlockedAt)}</span>
                                 ) : (
-                                    <span className="block text-[10px] text-ink-mute/70 mt-1 tnum">
+                                    <span className="block text-[12px] text-ink-mute/70 mt-1 tnum">
                                         {formatNumber(a.threshold)} {ACHIEVEMENT_UNIT[a.type]}
                                     </span>
                                 )}
@@ -182,7 +182,7 @@ export default async function ProfilePage() {
             </section>
 
             <div>
-                <SignOutButton className="text-[13px] font-semibold text-ink-mute hover:text-danger transition-colors" />
+                <SignOutButton className="text-[15px] font-semibold text-ink-mute hover:text-danger transition-colors" />
             </div>
         </div>
     )
@@ -201,7 +201,7 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                     <Link href={eventHref(reg.event)} className="font-semibold tracking-tight hover:text-ink-soft transition-colors line-clamp-1">
                         {reg.event.title}
                     </Link>
-                    <p className="text-[11px] text-ink-mute mt-1 tnum">
+                    <p className="text-[13px] text-ink-mute mt-1 tnum">
                         {isVirtual
                             ? `สะสมระยะ ${formatDateRange(reg.event.date, reg.event.endDate)}`
                             : `${formatDate(reg.event.date)} · ${formatTime(reg.event.date)}`}
@@ -212,7 +212,7 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                         <RegStatusBadge status={expired ? "EXPIRED" : reg.status} />
                     </div>
                     {needsPayment && left !== null && (
-                        <p className="text-[11px] text-danger mt-1.5 tnum">
+                        <p className="text-[13px] text-danger mt-1.5 tnum">
                             เหลือเวลาชำระเงิน {formatTimeLeft(left)}
                         </p>
                     )}

@@ -32,7 +32,7 @@ export function ProfileEditDialog({ user }: Props) {
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="h-9 px-4 rounded-full border border-line text-[13px] font-semibold tracking-tight text-ink hover:border-ink-mute transition-colors shrink-0"
+                className="h-9 px-4 rounded-full border border-line text-[15px] font-semibold tracking-tight text-ink hover:border-ink-mute transition-colors shrink-0"
             >
                 แก้ไข
             </button>
@@ -78,7 +78,7 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
             type="button"
             onClick={onClick}
             className={cn(
-                "pb-3 -mb-px border-b-2 text-[13px] font-semibold tracking-tight transition-colors",
+                "pb-3 -mb-px border-b-2 text-[15px] font-semibold tracking-tight transition-colors",
                 active ? "border-ink text-ink" : "border-transparent text-ink-mute hover:text-ink-soft"
             )}
         >
@@ -116,7 +116,7 @@ function ProfileForm({ user, onDone }: { user: Props["user"]; onDone: () => void
             <div className="flex items-center gap-4">
                 <Avatar src={preview} name={user.name} email={user.email} size={64} />
                 <label className="cursor-pointer">
-                    <span className="inline-flex items-center h-9 px-4 rounded-full border border-line text-[13px] font-semibold text-ink hover:border-ink-mute transition-colors">
+                    <span className="inline-flex items-center h-9 px-4 rounded-full border border-line text-[15px] font-semibold text-ink hover:border-ink-mute transition-colors">
                         เปลี่ยนรูป
                     </span>
                     <input

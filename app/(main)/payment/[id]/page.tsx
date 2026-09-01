@@ -53,7 +53,7 @@ export default async function PaymentPage({
         <div className="pt-4 max-w-xl mx-auto space-y-10">
             <Link
                 href={eventHref(registration.event)}
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-mute hover:text-ink transition-colors"
+                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                 กลับไปหน้ากิจกรรม
@@ -71,11 +71,11 @@ export default async function PaymentPage({
                     <RegStatusBadge status={registration.status} />
                 </div>
                 <h1 className="display text-2xl sm:text-3xl mt-2">{registration.event.title}</h1>
-                <p className="text-[13px] text-ink-mute mt-2 tnum">
+                <p className="text-[15px] text-ink-mute mt-2 tnum">
                     {formatDate(registration.event.date)} · {formatTime(registration.event.date)} · {registration.event.location}
                 </p>
                 {registration.category && (
-                    <p className="text-[13px] text-ink-soft mt-1">
+                    <p className="text-[15px] text-ink-soft mt-1">
                         ประเภท {registration.category.name} · {registration.category.distance} กม.
                     </p>
                 )}
@@ -134,8 +134,8 @@ export default async function PaymentPage({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={120} height={120} className="rounded-xl bg-white p-1.5 shrink-0" />
                             <div>
-                                <p className="text-[11px] font-semibold tracking-wide">BIB {registration.bib}</p>
-                                <p className="text-[11px] mt-1 leading-relaxed">
+                                <p className="text-[13px] font-semibold tracking-wide">BIB {registration.bib}</p>
+                                <p className="text-[13px] mt-1 leading-relaxed">
                                     แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
                                 </p>
                             </div>

@@ -16,7 +16,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
                     <li key={s.key} className="flex items-center gap-1 sm:gap-2 min-w-0">
                         <span
                             className={cn(
-                                "w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[12px] font-bold tnum transition-colors",
+                                "w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[14px] font-bold tnum transition-colors",
                                 active && "bg-ink text-white",
                                 done && "bg-lime text-white",
                                 !active && !done && "bg-paper-3 text-ink-mute"
@@ -27,7 +27,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
                         </span>
                         <span
                             className={cn(
-                                "text-[12px] font-semibold tracking-tight whitespace-nowrap hidden sm:block",
+                                "text-[14px] font-semibold tracking-tight whitespace-nowrap hidden sm:block",
                                 active ? "text-ink" : "text-ink-mute"
                             )}
                         >

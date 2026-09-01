@@ -47,7 +47,7 @@ export default async function HomePage({
                             <h1 className="display text-[clamp(1.4rem,3vw,1.875rem)] mt-1.5">
                                 หางานวิ่งที่ใช่ แล้วสมัครได้เลย
                             </h1>
-                            <p className="text-ink-soft text-[13px] mt-2">
+                            <p className="text-ink-soft text-[15px] mt-2">
                                 ค้นหาจากชื่องานหรือระยะทาง เลือกประเภทที่ต้องการ แล้วสมัครผ่านระบบได้ทันที
                             </p>
                         </div>

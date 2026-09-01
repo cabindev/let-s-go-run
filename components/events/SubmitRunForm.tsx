@@ -83,7 +83,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                     </p>
                 </div>
                 <Bar value={percent} color={percent >= 100 ? "var(--ring-lime)" : "var(--color-ink)"} className="mt-4" />
-                <p className="text-[11px] text-ink-mute mt-3 tnum">
+                <p className="text-[13px] text-ink-mute mt-3 tnum">
                     {remaining > 0 ? `เหลืออีก ${formatNumber(remaining, 2)} กม.` : "สะสมครบเป้าหมายแล้ว 🎉"}
                 </p>
             </Card>
@@ -126,7 +126,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                         ) : (
                             <>
                                 <span className="text-sm font-semibold">แนบภาพผลวิ่ง</span>
-                                <span className="text-[11px] text-ink-mute">
+                                <span className="text-[13px] text-ink-mute">
                                     จากนาฬิกา แอปวิ่ง หรือหน้าจอลู่วิ่ง · ไม่เกิน 5MB
                                 </span>
                             </>
@@ -143,7 +143,7 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                             setPreview(f ? URL.createObjectURL(f) : null)
                         }}
                     />
-                    <p className="text-[11px] text-ink-mute mt-2">
+                    <p className="text-[13px] text-ink-mute mt-2">
                         ต้องแนบหลักฐานทุกครั้งจึงจะนับระยะได้ — ผู้จัดงานสงวนสิทธิ์ตัดสิทธิ์หากพบผลวิ่งไม่ตรงความจริง
                     </p>
                 </div>
@@ -185,8 +185,8 @@ export function SubmitRunForm({ registrationId, target, total, submissions, minD
                                         {formatNumber(s.distance, 2)}
                                         <span className="text-[0.6em] font-semibold tracking-normal text-ink-mute ml-1">กม.</span>
                                     </p>
-                                    <p className="text-[11px] text-ink-mute tnum">{formatDate(s.runDate)}</p>
-                                    {s.note && <p className="text-[11px] text-ink-mute truncate">{s.note}</p>}
+                                    <p className="text-[13px] text-ink-mute tnum">{formatDate(s.runDate)}</p>
+                                    {s.note && <p className="text-[13px] text-ink-mute truncate">{s.note}</p>}
                                 </div>
                                 <ConfirmAction
                                     action={deleteOwnSubmission.bind(null, s.id)}

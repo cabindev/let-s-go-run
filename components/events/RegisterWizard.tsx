@@ -141,7 +141,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         <div className="pt-4 max-w-2xl mx-auto space-y-8">
             <Link
                 href={base}
-                className="inline-flex items-center gap-2 text-[13px] font-semibold text-ink-mute hover:text-ink transition-colors"
+                className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                 กลับไปหน้างาน
@@ -151,7 +151,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
             <div>
                 <p className="eyebrow">สมัครเข้าร่วม</p>
                 <h1 className="display text-2xl sm:text-3xl mt-2">{event.title}</h1>
-                <p className="text-[13px] text-ink-mute mt-2 tnum">
+                <p className="text-[15px] text-ink-mute mt-2 tnum">
                     {isVirtual
                         ? `สะสมระยะได้ระหว่าง ${formatDateRange(event.date, event.endDate)}`
                         : `${formatDate(event.date)} · ${formatTime(event.date)} · ${event.location}`}
@@ -194,11 +194,11 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
                                                     <p className="font-semibold tracking-tight">{o.name}</p>
-                                                    <p className="text-[12px] text-ink-mute mt-1 tnum">
+                                                    <p className="text-[14px] text-ink-mute mt-1 tnum">
                                                         {isVirtual ? `สะสมให้ครบ ${o.distance} กม.` : `${o.distance} กม.`}
                                                         {o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
                                                     </p>
-                                                    {full && <p className="text-[12px] text-danger mt-1">เต็มแล้ว</p>}
+                                                    {full && <p className="text-[14px] text-danger mt-1">เต็มแล้ว</p>}
                                                 </div>
                                                 <span className="numeral text-xl shrink-0">{formatPrice(o.price)}</span>
                                             </div>
@@ -327,10 +327,10 @@ export function RegisterWizard({ event, options, defaults }: Props) {
 
                     <div className="space-y-3">
                         <p className="eyebrow">ความเป็นส่วนตัว (PDPA)</p>
-                        <div className="max-h-48 overflow-y-auto rounded-2xl border border-line p-4 text-[12px] leading-relaxed text-ink-mute whitespace-pre-line">
+                        <div className="max-h-48 overflow-y-auto rounded-2xl border border-line p-4 text-[14px] leading-relaxed text-ink-mute whitespace-pre-line">
                             {pdpaNotice}
                         </div>
-                        <label className="flex items-start gap-3 text-[13px]">
+                        <label className="flex items-start gap-3 text-[15px]">
                             <input
                                 type="checkbox"
                                 className="mt-0.5"
@@ -358,7 +358,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
 function Row({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-start justify-between gap-4 px-5 py-3.5">
-            <dt className="text-[13px] text-ink-mute shrink-0">{label}</dt>
+            <dt className="text-[15px] text-ink-mute shrink-0">{label}</dt>
             <dd className="text-sm font-medium text-right break-words min-w-0">{value}</dd>
         </div>
     )
@@ -403,7 +403,7 @@ function RadioGroup({
                     )
                 })}
             </div>
-            {helper && <p className="text-[12px] text-ink-mute mt-2">{helper}</p>}
+            {helper && <p className="text-[14px] text-ink-mute mt-2">{helper}</p>}
         </div>
     )
 }

@@ -30,7 +30,7 @@ export function CheckoutButton({ registrationId, amount }: { registrationId: str
 
     return (
         <div className="space-y-3">
-            <p className="text-[11px] text-ink-mute">
+            <p className="text-[13px] text-ink-mute">
                 ยอดรวมค่าธรรมเนียมการชำระเงินแล้ว ต่างกันตามวิธีจ่าย — ผู้จัดงานได้รับเต็ม {formatPrice(amount)}
             </p>
 
@@ -55,7 +55,7 @@ export function CheckoutButton({ registrationId, amount }: { registrationId: str
                         </span>
                         <span className="text-right">
                             <span className="numeral text-base block">{formatPrice(total)}</span>
-                            <span className="text-[11px] text-ink-mute">รวมค่าธรรมเนียม {formatPrice(fee)}</span>
+                            <span className="text-[13px] text-ink-mute">รวมค่าธรรมเนียม {formatPrice(fee)}</span>
                         </span>
                     </button>
                 )

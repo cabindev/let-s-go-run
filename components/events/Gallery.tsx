@@ -124,7 +124,7 @@ export function Gallery({
                             alt={images[index].caption ?? ""}
                             className="w-full max-h-[80vh] object-contain rounded-2xl"
                         />
-                        <figcaption className="text-center text-white/70 text-[12px] mt-3 tnum">
+                        <figcaption className="text-center text-white/70 text-[14px] mt-3 tnum">
                             {images[index].caption || `${index + 1} / ${images.length}`}
                         </figcaption>
                     </figure>

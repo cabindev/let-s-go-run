@@ -15,7 +15,7 @@ export function GoogleSignInButton({ callbackUrl = "/" }: { callbackUrl?: string
                 setIsLoading(true)
                 signIn("google", { callbackUrl })
             }}
-            className="w-full h-14 rounded-full border border-line bg-paper text-ink text-[15px] font-semibold tracking-tight
+            className="w-full h-14 rounded-full border border-line bg-paper text-ink text-[17px] font-semibold tracking-tight
                        inline-flex items-center justify-center gap-3 hover:bg-paper-2 transition-colors
                        disabled:opacity-60 disabled:cursor-not-allowed"
         >
