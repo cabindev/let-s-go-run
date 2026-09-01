@@ -9,7 +9,7 @@ import { Badge, RegStatusBadge, REG_STATUS } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ConfirmAction } from "@/components/admin/ConfirmAction"
-import { MarkShippedButton } from "@/components/admin/MarkShippedButton"
+import { PickupStatusEditor } from "@/components/admin/PickupStatusEditor"
 import { Pagination } from "@/components/admin/Pagination"
 import { RegistrationFilters } from "@/components/admin/RegistrationFilters"
 import { REGISTRATION_STATUSES, buildRegistrationWhere } from "@/lib/admin-registrations-query"
@@ -177,8 +177,13 @@ export default async function AdminRegistrationsPage({
 
                                     <div className="flex flex-col items-end gap-2 shrink-0">
                                         <p className="numeral text-base">{formatPrice(amount)}</p>
-                                        {needsShipping && (
-                                            <MarkShippedButton registrationId={r.id} name={r.fullName || r.user.email} />
+                                        {r.status === "PAID" && (
+                                            <PickupStatusEditor
+                                                registrationId={r.id}
+                                                name={r.fullName || r.user.email}
+                                                currentStatus={r.pickupStatus}
+                                                currentTrackingNo={r.shippingTrackingNo}
+                                            />
                                         )}
                                         {cancellable && (
                                             <ConfirmAction

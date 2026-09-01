@@ -21,7 +21,6 @@ export function CheckinScanner() {
     const [mode, setMode] = useState<Mode>("scan")
     const [data, setData] = useState<CheckinInfo | null>(null)
     const [error, setError] = useState<string | null>(null)
-    const [trackingNo, setTrackingNo] = useState("")
     const [pending, setPending] = useState(false)
     const [cameraError, setCameraError] = useState<string | null>(null)
     const [successSignature, setSuccessSignature] = useState<string | null>(null)
@@ -84,7 +83,6 @@ export function CheckinScanner() {
     function scanNext() {
         setData(null)
         setMode("scan")
-        setTrackingNo("")
         setError(null)
         setSuccessSignature(null)
         lastScannedRef.current = null
@@ -161,25 +159,6 @@ export function CheckinScanner() {
         setMode("success")
     }
 
-    async function submitShipped() {
-        if (!data) return
-        setPending(true)
-        setError(null)
-
-        const fd = new FormData()
-        fd.set("registrationId", data.id)
-        fd.set("method", "SHIPPED")
-        fd.set("trackingNo", trackingNo)
-
-        const res = await confirmPickupAdmin(fd)
-        setPending(false)
-        if (!res.ok) return setError(res.error)
-
-        setData(res.data)
-        setSuccessSignature(null)
-        setMode("success")
-    }
-
     return (
         <div className="space-y-5">
             {error && <Notice tone="danger">{error}</Notice>}
@@ -223,12 +202,9 @@ export function CheckinScanner() {
                         <Notice tone="sky">รายการนี้ยืนยันไปแล้ว — ยืนยันซ้ำได้ถ้าจำเป็น</Notice>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <Button variant="outline" onClick={goToSignature} disabled={pending}>
-                            รับที่บูธ
-                        </Button>
-                        <ShippedButton onClick={submitShipped} pending={pending} trackingNo={trackingNo} setTrackingNo={setTrackingNo} />
-                    </div>
+                    <Button onClick={goToSignature} disabled={pending} className="w-full">
+                        ยืนยันรับที่บูธ
+                    </Button>
 
                     <Button variant="ghost" size="sm" onClick={scanNext} className="w-full" disabled={pending}>
                         ยกเลิก / สแกนใหม่
@@ -312,40 +288,6 @@ function Field({ label, value, className }: { label: string; value: string; clas
         <div className={className}>
             <dt className="text-[11px] text-ink-mute">{label}</dt>
             <dd className="font-medium tracking-tight mt-0.5">{value}</dd>
-        </div>
-    )
-}
-
-function ShippedButton({
-    onClick, pending, trackingNo, setTrackingNo,
-}: {
-    onClick: () => void
-    pending: boolean
-    trackingNo: string
-    setTrackingNo: (v: string) => void
-}) {
-    const [open, setOpen] = useState(false)
-
-    if (!open) {
-        return (
-            <Button variant="outline" onClick={() => setOpen(true)} disabled={pending}>
-                ส่งไปรษณีย์
-            </Button>
-        )
-    }
-
-    return (
-        <div className="col-span-2 space-y-2 p-3 rounded-2xl border border-line">
-            <input
-                type="text"
-                value={trackingNo}
-                onChange={(e) => setTrackingNo(e.target.value)}
-                placeholder="เลขพัสดุ (ไม่บังคับ)"
-                className="w-full h-10 px-3 rounded-xl border border-line text-sm bg-transparent focus:outline-none focus:border-ink"
-            />
-            <Button onClick={onClick} disabled={pending} className="w-full">
-                {pending ? <Spinner /> : "ยืนยันส่งไปรษณีย์"}
-            </Button>
         </div>
     )
 }

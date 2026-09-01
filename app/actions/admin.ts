@@ -623,8 +623,9 @@ export async function lookupRegistrationForCheckin(
 }
 
 /**
- * ยืนยันรับเสื้อที่บูธ (พร้อมลายเซ็นนิ้วเป็นหลักฐาน) หรือบันทึกว่าส่งไปรษณีย์แทน
- * formData: registrationId, method ("PICKED_UP" | "SHIPPED"), trackingNo?, signature? (ไฟล์รูป PNG จาก canvas)
+ * ยืนยันรับเสื้อที่บูธ (พร้อมลายเซ็นนิ้วเป็นหลักฐาน), บันทึกว่าส่งไปรษณีย์แทน, หรือรีเซ็ตกลับเป็นยังไม่รับ
+ * formData: registrationId, method ("PENDING" | "PICKED_UP" | "SHIPPED"), trackingNo?, signature? (ไฟล์รูป PNG จาก canvas)
+ * ใช้ทั้งจากหน้าสแกน QR (CheckBIB) และปุ่มแก้ไขสถานะตรงในตารางรายการสมัคร (เผื่อสแกนไม่ได้)
  */
 export async function confirmPickupAdmin(
     formData: FormData
@@ -634,27 +635,30 @@ export async function confirmPickupAdmin(
 
         const registrationId = String(formData.get("registrationId") ?? "")
         const method = formData.get("method")
-        if (method !== "PICKED_UP" && method !== "SHIPPED") {
-            return { ok: false, error: "method ต้องเป็น PICKED_UP หรือ SHIPPED" }
+        if (method !== "PENDING" && method !== "PICKED_UP" && method !== "SHIPPED") {
+            return { ok: false, error: "method ต้องเป็น PENDING, PICKED_UP หรือ SHIPPED" }
         }
 
         const reg = await prisma.registration.findUnique({ where: { id: registrationId }, select: { status: true } })
         if (!reg) return { ok: false, error: "ไม่พบรายการลงทะเบียนนี้" }
         if (reg.status !== "PAID") return { ok: false, error: "รายการนี้ยังไม่ยืนยันการชำระเงิน" }
 
-        let signatureUrl: string | null = null
+        // undefined = ไม่แตะฟิลด์นี้ (เก็บลายเซ็นเดิมไว้ถ้ายืนยัน PICKED_UP ซ้ำโดยไม่ได้เซ็นใหม่)
+        let signatureUrl: string | null | undefined
         const signatureFile = formData.get("signature")
-        if (method === "PICKED_UP" && signatureFile instanceof File && signatureFile.size > 0) {
+        if (signatureFile instanceof File && signatureFile.size > 0) {
             signatureUrl = (await saveImage(signatureFile, "signatures")).url
+        } else if (method !== "PICKED_UP") {
+            signatureUrl = null
         }
 
         const updated = await prisma.registration.update({
             where: { id: registrationId },
             data: {
                 pickupStatus: method,
-                pickupAt: new Date(),
+                pickupAt: method === "PENDING" ? null : new Date(),
                 shippingTrackingNo: method === "SHIPPED" ? (String(formData.get("trackingNo") ?? "").trim() || null) : null,
-                pickupSignatureUrl: method === "PICKED_UP" ? signatureUrl : null,
+                ...(signatureUrl !== undefined ? { pickupSignatureUrl: signatureUrl } : {}),
             },
             include: { event: { select: { title: true } }, category: { select: { name: true, distance: true } } },
         })
