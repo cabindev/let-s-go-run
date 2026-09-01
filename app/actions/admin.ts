@@ -557,3 +557,107 @@ export async function cancelRegistrationAsAdmin(id: string): Promise<ActionResul
         return { ok: false, error: e instanceof Error ? e.message : "ยกเลิกไม่สำเร็จ" }
     }
 }
+
+// ───────────── เช็คอินรับเสื้อหน้างาน (สแกน QR ด้วยมือถือ) ─────────────
+
+export interface CheckinInfo {
+    id: string
+    fullName: string | null
+    bib: string | null
+    shirtSize: string | null
+    registrationStatus: string
+    eventTitle: string
+    categoryName: string | null
+    pickupStatus: string
+    pickupAt: string | null
+    shippingTrackingNo: string | null
+}
+
+function serializeCheckin(reg: {
+    id: string
+    fullName: string | null
+    bib: string | null
+    shirtSize: string | null
+    status: string
+    pickupStatus: string
+    pickupAt: Date | null
+    shippingTrackingNo: string | null
+    event: { title: string }
+    category: { name: string; distance: number } | null
+}): CheckinInfo {
+    return {
+        id: reg.id,
+        fullName: reg.fullName,
+        bib: reg.bib,
+        shirtSize: reg.shirtSize,
+        registrationStatus: reg.status,
+        eventTitle: reg.event.title,
+        categoryName: reg.category ? `${reg.category.name} (${reg.category.distance} กม.)` : null,
+        pickupStatus: reg.pickupStatus,
+        pickupAt: reg.pickupAt?.toISOString() ?? null,
+        shippingTrackingNo: reg.shippingTrackingNo,
+    }
+}
+
+/** ดึงข้อมูลผู้สมัครจาก registrationId ที่สแกน QR ได้ — ใช้ในหน้า /admin/checkin */
+export async function lookupRegistrationForCheckin(
+    registrationId: string
+): Promise<{ ok: true; data: CheckinInfo } | { ok: false; error: string }> {
+    try {
+        await requireAdminAction()
+
+        const reg = await prisma.registration.findUnique({
+            where: { id: registrationId },
+            include: { event: { select: { title: true } }, category: { select: { name: true, distance: true } } },
+        })
+        if (!reg) return { ok: false, error: "ไม่พบรายการลงทะเบียนนี้ — QR อาจไม่ถูกต้อง" }
+
+        return { ok: true, data: serializeCheckin(reg) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ค้นหาไม่สำเร็จ" }
+    }
+}
+
+/**
+ * ยืนยันรับเสื้อที่บูธ (พร้อมลายเซ็นนิ้วเป็นหลักฐาน) หรือบันทึกว่าส่งไปรษณีย์แทน
+ * formData: registrationId, method ("PICKED_UP" | "SHIPPED"), trackingNo?, signature? (ไฟล์รูป PNG จาก canvas)
+ */
+export async function confirmPickupAdmin(
+    formData: FormData
+): Promise<{ ok: true; data: CheckinInfo } | { ok: false; error: string }> {
+    try {
+        await requireAdminAction()
+
+        const registrationId = String(formData.get("registrationId") ?? "")
+        const method = formData.get("method")
+        if (method !== "PICKED_UP" && method !== "SHIPPED") {
+            return { ok: false, error: "method ต้องเป็น PICKED_UP หรือ SHIPPED" }
+        }
+
+        const reg = await prisma.registration.findUnique({ where: { id: registrationId }, select: { status: true } })
+        if (!reg) return { ok: false, error: "ไม่พบรายการลงทะเบียนนี้" }
+        if (reg.status !== "PAID") return { ok: false, error: "รายการนี้ยังไม่ยืนยันการชำระเงิน" }
+
+        let signatureUrl: string | null = null
+        const signatureFile = formData.get("signature")
+        if (method === "PICKED_UP" && signatureFile instanceof File && signatureFile.size > 0) {
+            signatureUrl = (await saveImage(signatureFile, "signatures")).url
+        }
+
+        const updated = await prisma.registration.update({
+            where: { id: registrationId },
+            data: {
+                pickupStatus: method,
+                pickupAt: new Date(),
+                shippingTrackingNo: method === "SHIPPED" ? (String(formData.get("trackingNo") ?? "").trim() || null) : null,
+                pickupSignatureUrl: method === "PICKED_UP" ? signatureUrl : null,
+            },
+            include: { event: { select: { title: true } }, category: { select: { name: true, distance: true } } },
+        })
+
+        revalidatePath("/admin/registrations")
+        return { ok: true, data: serializeCheckin(updated) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
+    }
+}

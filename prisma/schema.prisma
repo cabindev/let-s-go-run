@@ -219,6 +219,7 @@ model Registration {
   pickupStatus       PickupStatus @default(PENDING)
   pickupAt           DateTime?
   shippingTrackingNo String?
+  pickupSignatureUrl String?  @db.Text // ลายเซ็นนิ้วบนจอตอนรับที่บูธ — เป็นหลักฐานยืนยัน
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
