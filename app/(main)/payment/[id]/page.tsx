@@ -10,7 +10,7 @@ import { CheckoutButton } from "@/components/payment/CheckoutButton"
 import { Countdown } from "@/components/payment/Countdown"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
-import { eventHref } from "@/lib/events"
+import { eventHref, registrationAmount, SHIPPING_FEE } from "@/lib/events"
 import { generateCheckinQr } from "@/lib/checkin-qr"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
@@ -36,8 +36,9 @@ export default async function PaymentPage({
     if (!registration) notFound()
     if (registration.userId !== user.id) redirect("/profile")
 
-    // ยอดที่ต้องชำระ — ยึดตามประเภทที่เลือก ถ้าไม่มีให้ใช้ค่าของงาน
-    const amount = registration.category?.price ?? registration.event.price
+    // ยอดที่ต้องชำระ — ยึดตามประเภทที่เลือก ถ้าไม่มีให้ใช้ค่าของงาน บวกค่าส่งไปรษณีย์ถ้าเลือกไว้
+    const basePrice = registration.category?.price ?? registration.event.price
+    const amount = registrationAmount(basePrice, registration.deliveryMethod)
     if (amount <= 0) redirect(eventHref(registration.event))
 
     const checkinQr = registration.status === "PAID" && registration.bib
@@ -112,6 +113,11 @@ export default async function PaymentPage({
             <div>
                 <p className="eyebrow">ยอดที่ต้องชำระ</p>
                 <p className="numeral text-4xl sm:text-5xl mt-2">{formatPrice(amount)}</p>
+                {registration.deliveryMethod === "SHIPPING" && (
+                    <p className="text-[13px] text-ink-mute mt-2">
+                        รวมค่าส่งไปรษณีย์ {formatPrice(SHIPPING_FEE)} แล้ว
+                    </p>
+                )}
             </div>
 
             {/* สถานะ */}
@@ -129,7 +135,14 @@ export default async function PaymentPage({
                         )}
                     </div>
 
-                    {checkinQr && (
+                    {registration.deliveryMethod === "SHIPPING" ? (
+                        <div className="mt-5 pt-5 border-t border-lime-900/10">
+                            <p className="text-[13px] font-semibold tracking-wide">BIB {registration.bib}</p>
+                            <p className="text-[13px] mt-1 leading-relaxed">
+                                คุณเลือกรับทางไปรษณีย์ — ไม่ต้องมาสแกนหน้างาน ทางผู้จัดจะจัดส่งให้ตามที่อยู่ที่แจ้งไว้
+                            </p>
+                        </div>
+                    ) : checkinQr && (
                         <div className="mt-5 pt-5 border-t border-lime-900/10 flex items-center gap-4">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={120} height={120} className="rounded-xl bg-white p-1.5 shrink-0" />

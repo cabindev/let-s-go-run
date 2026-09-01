@@ -10,7 +10,7 @@ import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, inputClass } from "@/components/ui/Field"
 import { Stepper, REGISTER_STEPS } from "./Stepper"
 import { submitRegistration } from "@/app/actions/register-flow"
-import { SHIRT_SIZES, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, type Option } from "@/lib/events"
+import { SHIRT_SIZES, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, registrationAmount, type Option } from "@/lib/events"
 import { cn, formatDate, formatDateRange, formatPrice, formatTime } from "@/lib/utils"
 
 interface Props {
@@ -26,6 +26,7 @@ interface Props {
         collectBloodType: boolean
         collectNationalId: boolean
         collectPreviousParticipation: boolean
+        offerShipping: boolean
         pdpaNotice: string | null
     }
     options: (Option & { taken: number })[]
@@ -44,6 +45,7 @@ interface Details {
     bloodType: string
     nationalId: string
     hasParticipatedBefore: string
+    deliveryMethod: string
 }
 
 export function RegisterWizard({ event, options, defaults }: Props) {
@@ -71,10 +73,13 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         bloodType: "",
         nationalId: "",
         hasParticipatedBefore: "",
+        deliveryMethod: "",
     })
 
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
         setDetails((d) => ({ ...d, [k]: e.target.value }))
+
+    const totalAmount = selected ? registrationAmount(selected.price, details.deliveryMethod) : 0
 
     const goto = (n: number) => {
         setError(null)
@@ -99,6 +104,12 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         if (event.collectPreviousParticipation && !details.hasParticipatedBefore) {
             return setError("กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่")
         }
+        if (event.offerShipping && !details.deliveryMethod) {
+            return setError("กรุณาเลือกวิธีรับของ")
+        }
+        if (details.deliveryMethod === "SHIPPING" && !details.address.trim()) {
+            return setError("กรุณากรอกที่อยู่จัดส่งสำหรับการส่งไปรษณีย์")
+        }
         goto(2)
     }
 
@@ -120,6 +131,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         fd.set("bloodType", details.bloodType)
         fd.set("nationalId", details.nationalId)
         fd.set("hasParticipatedBefore", details.hasParticipatedBefore)
+        fd.set("deliveryMethod", details.deliveryMethod)
         fd.set("pdpaConsent", "1")
 
         startTransition(async () => {
@@ -261,7 +273,31 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         />
                     )}
 
-                    <TextArea label="ที่อยู่จัดส่ง" name="address" rows={3} value={details.address} onChange={set("address")} placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)" />
+                    {event.offerShipping && (
+                        <RadioGroup
+                            label="วิธีรับของ"
+                            name="deliveryMethod"
+                            required
+                            value={details.deliveryMethod}
+                            onChange={set("deliveryMethod")}
+                            options={[
+                                { value: "PICKUP", label: "รับที่งาน" },
+                                { value: "SHIPPING", label: `ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})` },
+                            ]}
+                            helper={
+                                details.deliveryMethod === "SHIPPING"
+                                    ? "กรุณากรอกที่อยู่จัดส่งด้านล่างให้ครบถ้วน"
+                                    : "มารับเองที่งาน โดยยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธ"
+                            }
+                        />
+                    )}
+
+                    <TextArea
+                        label="ที่อยู่จัดส่ง" name="address" rows={3}
+                        required={details.deliveryMethod === "SHIPPING"}
+                        value={details.address} onChange={set("address")}
+                        placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)"
+                    />
 
                     <div className="border-t border-line pt-7 space-y-7">
                         <p className="eyebrow">ผู้ติดต่อกรณีฉุกเฉิน</p>
@@ -314,14 +350,20 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         {details.hasParticipatedBefore && (
                             <Row label="เคยเข้าร่วมมาก่อน" value={details.hasParticipatedBefore === "YES" ? "เคย" : "ไม่เคย"} />
                         )}
+                        {details.deliveryMethod && (
+                            <Row
+                                label="วิธีรับของ"
+                                value={details.deliveryMethod === "SHIPPING" ? `ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})` : "รับที่งาน"}
+                            />
+                        )}
                     </Card>
 
                     <div className="flex items-baseline justify-between">
                         <p className="eyebrow">ยอดที่ต้องชำระ</p>
-                        <p className="numeral text-3xl">{formatPrice(selected.price)}</p>
+                        <p className="numeral text-3xl">{formatPrice(totalAmount)}</p>
                     </div>
 
-                    {selected.price === 0 && (
+                    {totalAmount === 0 && (
                         <Notice tone="lime">งานนี้ไม่มีค่าสมัคร กดยืนยันแล้วเข้าร่วมได้ทันที</Notice>
                     )}
 
@@ -346,7 +388,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             ย้อนกลับ
                         </Button>
                         <Button size="lg" className="flex-1" onClick={confirm} disabled={pending || !pdpaConsent}>
-                            {pending ? <Spinner /> : selected.price > 0 ? "ยืนยันและไปชำระเงิน" : "ยืนยันการสมัคร"}
+                            {pending ? <Spinner /> : totalAmount > 0 ? "ยืนยันและไปชำระเงิน" : "ยืนยันการสมัคร"}
                         </Button>
                     </div>
                 </div>

@@ -112,6 +112,9 @@ model Event {
   // ข้อความแจ้งเตือน PDPA ที่แสดงในฟอร์มสมัคร — แต่ละงานแก้ไขเองได้ (ว่าง = ใช้ข้อความกลางแทน)
   pdpaNotice String? @db.Text
 
+  // เปิดให้ผู้สมัครเลือกรับทางไปรษณีย์แทนการมารับที่งาน (+ค่าส่ง SHIPPING_FEE) ตั้งแต่ตอนสมัคร
+  offerShipping Boolean @default(false)
+
   images        EventImage[]
   categories    RaceCategory[]
   registrations Registration[]
@@ -214,6 +217,10 @@ model Registration {
 
   // เวลาที่ผู้สมัครกดยินยอมข้อความ PDPA — ใช้เป็นหลักฐานการยินยอมย้อนหลัง
   pdpaConsentAt DateTime?
+
+  // วิธีรับของที่เลือกไว้ตอนสมัคร (มีค่าเฉพาะงานที่เปิด Event.offerShipping)
+  // "PICKUP" = มารับเองที่งาน (สแกน QR หน้างาน) / "SHIPPING" = ส่งไปรษณีย์ (+ค่าส่ง)
+  deliveryMethod String?
 
   // รับเสื้อ/ของที่ระลึก — ยืนยันผ่านระบบสแกน QR หน้างานแยกต่างหาก (ดู CHECKIN_API_SECRET)
   pickupStatus       PickupStatus @default(PENDING)

@@ -9,10 +9,11 @@ import { Badge, RegStatusBadge, REG_STATUS } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { MarkShippedButton } from "@/components/admin/MarkShippedButton"
 import { Pagination } from "@/components/admin/Pagination"
 import { RegistrationFilters } from "@/components/admin/RegistrationFilters"
 import { REGISTRATION_STATUSES, buildRegistrationWhere } from "@/lib/admin-registrations-query"
-import { eventHref, GENDER_OPTIONS } from "@/lib/events"
+import { eventHref, GENDER_OPTIONS, registrationAmount } from "@/lib/events"
 import { expireStaleRegistrations, formatTimeLeft, isAwaitingPayment, timeLeft } from "@/lib/expiry"
 import { cn, formatDate, formatPrice, maskNationalId } from "@/lib/utils"
 
@@ -114,11 +115,12 @@ export default async function AdminRegistrationsPage({
                     </p>
                     <ul className="divide-y divide-line">
                         {registrations.map((r) => {
-                            const amount = r.category?.price ?? r.event.price
+                            const amount = registrationAmount(r.category?.price ?? r.event.price, r.deliveryMethod)
                             const days = Math.floor((now - r.registeredAt.getTime()) / 86400000)
                             const left = timeLeft(r, new Date(now))
                             const overdue = isAwaitingPayment(r.status) && left !== null && left < 3600_000
                             const cancellable = r.status === "PENDING"
+                            const needsShipping = r.deliveryMethod === "SHIPPING" && r.status === "PAID" && r.pickupStatus === "PENDING"
 
                             return (
                                 <li key={r.id} className="flex items-start gap-3 py-4">
@@ -138,6 +140,7 @@ export default async function AdminRegistrationsPage({
                                             {r.bib && <span className="text-[11px] text-ink-mute tnum">BIB {r.bib}</span>}
                                             {r.pickupStatus === "PICKED_UP" && <Badge tone="lime">รับที่บูธแล้ว</Badge>}
                                             {r.pickupStatus === "SHIPPED" && <Badge tone="sky">ส่งไปรษณีย์แล้ว</Badge>}
+                                            {needsShipping && <Badge tone="danger">รอส่งไปรษณีย์</Badge>}
                                         </div>
 
                                         <p className="text-[11px] text-ink-mute truncate mt-0.5">
@@ -174,6 +177,9 @@ export default async function AdminRegistrationsPage({
 
                                     <div className="flex flex-col items-end gap-2 shrink-0">
                                         <p className="numeral text-base">{formatPrice(amount)}</p>
+                                        {needsShipping && (
+                                            <MarkShippedButton registrationId={r.id} name={r.fullName || r.user.email} />
+                                        )}
                                         {cancellable && (
                                             <ConfirmAction
                                                 action={cancelRegistrationAsAdmin.bind(null, r.id)}

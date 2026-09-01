@@ -63,6 +63,7 @@ export default async function VirtualRegisterPage({ params }: { params: Promise<
                 collectBloodType: event.collectBloodType,
                 collectNationalId: event.collectNationalId,
                 collectPreviousParticipation: event.collectPreviousParticipation,
+                offerShipping: event.offerShipping,
                 pdpaNotice: event.pdpaNotice,
             }}
             options={options}

@@ -65,6 +65,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ id: s
                 collectBloodType: event.collectBloodType,
                 collectNationalId: event.collectNationalId,
                 collectPreviousParticipation: event.collectPreviousParticipation,
+                offerShipping: event.offerShipping,
                 pdpaNotice: event.pdpaNotice,
             }}
             options={options}

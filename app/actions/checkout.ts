@@ -6,6 +6,7 @@ import { stripe } from "@/lib/stripe"
 import { requireUserAction } from "@/lib/auth-helpers"
 import { isExpired, PAYABLE_STATUS } from "@/lib/expiry"
 import { amountWithFee, FEE_LABEL, type PaymentMethodChoice } from "@/lib/checkout-fees"
+import { registrationAmount } from "@/lib/events"
 import type { ActionResult } from "./registration"
 
 /** ป้ายกำกับสุ่ม 8 ตัวอักษร — ใช้แยก session ในการดู/เทียบ checkout flow บน Stripe Dashboard */
@@ -33,12 +34,14 @@ export async function createCheckoutSession(registrationId: string, method: Paym
         if (!PAYABLE_STATUS.includes(reg.status)) return { ok: false, error: "รายการนี้ชำระเงินไม่ได้แล้ว" }
         if (isExpired(reg)) return { ok: false, error: "หมดเวลาชำระเงินแล้ว กรุณาสมัครใหม่อีกครั้ง" }
 
-        const amount = reg.category?.price ?? reg.event.price
+        const basePrice = reg.category?.price ?? reg.event.price
+        const amount = registrationAmount(basePrice, reg.deliveryMethod)
         if (amount <= 0) return { ok: false, error: "รายการนี้ไม่มีค่าใช้จ่าย" }
 
         const total = amountWithFee(amount, method)
         const origin = process.env.NEXTAUTH_URL || "http://localhost:3000"
-        const productName = reg.category ? `${reg.event.title} · ${reg.category.name}` : reg.event.title
+        const productName = (reg.category ? `${reg.event.title} · ${reg.category.name}` : reg.event.title)
+            + (reg.deliveryMethod === "SHIPPING" ? " (รวมค่าส่งไปรษณีย์)" : "")
 
         const session = await stripe.checkout.sessions.create({
             mode: "payment",

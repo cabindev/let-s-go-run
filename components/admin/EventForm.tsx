@@ -8,7 +8,7 @@ import { createEvent, updateEvent } from "@/app/actions/admin"
 import { Button, Spinner, buttonClass } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, Select } from "@/components/ui/Field"
-import { PROVINCES, DEFAULT_PDPA_NOTICE } from "@/lib/events"
+import { PROVINCES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE } from "@/lib/events"
 import { IMAGE_GROUPS } from "@/lib/image-groups"
 import { ImageGroupInput } from "./ImageGroupInput"
 import { CategoryRows } from "./CategoryRows"
@@ -197,6 +197,10 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="collectPreviousParticipation" defaultChecked={event?.collectPreviousParticipation} />
                     ถามว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่
+                </label>
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="offerShipping" defaultChecked={event?.offerShipping} />
+                    เปิดให้เลือกรับทางไปรษณีย์แทนการมารับที่งาน (+{SHIPPING_FEE} บาท)
                 </label>
             </section>
 

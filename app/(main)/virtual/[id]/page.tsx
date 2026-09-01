@@ -135,7 +135,14 @@ export default async function VirtualEventPage({
 
                     <Bar value={myPercent} color={myPercent >= 100 ? "var(--ring-lime)" : "var(--color-ink)"} className="mt-4" />
 
-                    {checkinQr && (
+                    {myReg!.deliveryMethod === "SHIPPING" ? (
+                        <div className="mt-4 pt-4 border-t border-line">
+                            <p className="text-[13px] font-semibold tracking-wide text-ink-mute">BIB {myReg!.bib}</p>
+                            <p className="text-[13px] mt-1 leading-relaxed text-ink-mute">
+                                คุณเลือกรับทางไปรษณีย์ — ไม่ต้องมาสแกนหน้างาน ทางผู้จัดจะจัดส่งให้ตามที่อยู่ที่แจ้งไว้
+                            </p>
+                        </div>
+                    ) : checkinQr && (
                         <div className="mt-4 pt-4 border-t border-line flex items-center gap-4">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={100} height={100} className="rounded-xl bg-white p-1.5 shrink-0" />

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth-helpers"
 import { buildRegistrationWhere } from "@/lib/admin-registrations-query"
 import { REG_STATUS } from "@/components/ui/Badge"
-import { GENDER_OPTIONS } from "@/lib/events"
+import { GENDER_OPTIONS, registrationAmount } from "@/lib/events"
 
 export const dynamic = "force-dynamic"
 
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
         { header: "ยอดชำระ", key: "amount", width: 12 },
         { header: "วิธีจ่าย", key: "paymentMethod", width: 14 },
         { header: "ไซส์เสื้อ", key: "shirtSize", width: 10 },
+        { header: "วิธีรับของ", key: "deliveryMethod", width: 14 },
         { header: "ที่อยู่", key: "address", width: 36 },
         { header: "ผู้ติดต่อฉุกเฉิน", key: "emergencyName", width: 20 },
         { header: "เบอร์ฉุกเฉิน", key: "emergencyPhone", width: 16 },
@@ -94,9 +95,10 @@ export async function GET(request: NextRequest) {
             event: r.event.title,
             category: r.category ? `${r.category.name} (${r.category.distance} กม.)` : "",
             status: REG_STATUS[r.status]?.label ?? r.status,
-            amount: r.category?.price ?? r.event.price,
+            amount: registrationAmount(r.category?.price ?? r.event.price, r.deliveryMethod),
             paymentMethod: r.paymentMethod ? (PAYMENT_METHOD_LABEL[r.paymentMethod] ?? r.paymentMethod) : "",
             shirtSize: r.shirtSize || "",
+            deliveryMethod: r.deliveryMethod === "SHIPPING" ? "ส่งไปรษณีย์" : r.deliveryMethod === "PICKUP" ? "รับที่งาน" : "",
             address: r.address || "",
             emergencyName: r.emergencyName || "",
             emergencyPhone: r.emergencyPhone || "",

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { heldSeatWhere, expireStaleRegistrations, paymentDeadline } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
-import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN } from "@/lib/events"
+import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN, registrationAmount } from "@/lib/events"
 import type { ActionResult } from "./registration"
 
 const schema = z.object({
@@ -21,6 +21,7 @@ const schema = z.object({
     bloodType: z.enum(["O", "A", "B", "AB"]).optional().or(z.literal("")),
     nationalId: z.string().trim().regex(NATIONAL_ID_PATTERN, "เลขบัตรประชาชนไม่ถูกต้อง").optional().or(z.literal("")),
     hasParticipatedBefore: z.enum(["YES", "NO"]).optional().or(z.literal("")),
+    deliveryMethod: z.enum(["PICKUP", "SHIPPING"]).optional().or(z.literal("")),
 })
 
 export type SubmitResult =
@@ -48,6 +49,7 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             bloodType: formData.get("bloodType"),
             nationalId: formData.get("nationalId"),
             hasParticipatedBefore: formData.get("hasParticipatedBefore"),
+            deliveryMethod: formData.get("deliveryMethod"),
         })
 
         if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
@@ -76,13 +78,23 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             return { ok: false, error: "กรุณายอมรับข้อความ PDPA ก่อนสมัคร" }
         }
 
+        // ตัวเลือกรับของ — สนใจค่านี้เฉพาะงานที่เปิดไว้จริง (กันส่งมาเองทั้งที่งานไม่ได้เปิด)
+        const deliveryMethod = event.offerShipping ? (d.deliveryMethod || null) : null
+        if (event.offerShipping && !deliveryMethod) {
+            return { ok: false, error: "กรุณาเลือกวิธีรับของ" }
+        }
+        if (deliveryMethod === "SHIPPING" && !d.address) {
+            return { ok: false, error: "กรุณากรอกที่อยู่จัดส่งสำหรับการส่งไปรษณีย์" }
+        }
+
         // ตรวจว่าประเภทที่เลือกเป็นของงานนี้จริง
         const options = toOptions(event, event.categories)
         const chosen = options.find((o) => (o.id ?? "") === (d.categoryId ?? ""))
         if (!chosen) return { ok: false, error: "กรุณาเลือกประเภทการแข่งขัน" }
 
-        // ฟรี = ยืนยันทันที / มีค่าสมัคร = รอชำระเงิน
-        const needsPayment = chosen.price > 0
+        // ฟรี = ยืนยันทันที / มีค่าสมัคร (รวมค่าส่งไปรษณีย์ถ้าเลือก) = รอชำระเงิน
+        const amount = registrationAmount(chosen.price, deliveryMethod)
+        const needsPayment = amount > 0
         const status = needsPayment ? "PENDING" : "PAID"
 
         // มีค่าสมัคร = ต้องจ่ายให้เสร็จภายในเวลาที่กำหนด ไม่งั้นระบบคืนที่นั่ง
@@ -102,6 +114,7 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             bloodType: d.bloodType || null,
             nationalId: d.nationalId || null,
             hasParticipatedBefore: d.hasParticipatedBefore ? d.hasParticipatedBefore === "YES" : null,
+            deliveryMethod,
             pdpaConsentAt: new Date(),
             note: null,
             paidAt: needsPayment ? null : new Date(),

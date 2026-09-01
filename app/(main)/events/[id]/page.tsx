@@ -44,7 +44,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
     const registration = session?.user
         ? await prisma.registration.findUnique({
             where: { userId_eventId: { userId: session.user.id, eventId: id } },
-            select: { id: true, status: true, note: true, expiresAt: true, bib: true, category: { select: { name: true } } },
+            select: { id: true, status: true, note: true, expiresAt: true, bib: true, deliveryMethod: true, category: { select: { name: true } } },
         })
         : null
 
@@ -144,7 +144,14 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                 {registration!.category && <span>ประเภท {registration!.category.name}</span>}
                             </span>
 
-                            {checkinQr && (
+                            {registration!.deliveryMethod === "SHIPPING" ? (
+                                <div className="mt-4 pt-4 border-t border-lime-900/10">
+                                    <p className="text-[13px] font-semibold tracking-wide">BIB {registration!.bib}</p>
+                                    <p className="text-[13px] mt-1 leading-relaxed">
+                                        คุณเลือกรับทางไปรษณีย์ — ไม่ต้องมาสแกนหน้างาน ทางผู้จัดจะจัดส่งให้ตามที่อยู่ที่แจ้งไว้
+                                    </p>
+                                </div>
+                            ) : checkinQr && (
                                 <div className="mt-4 pt-4 border-t border-lime-900/10 flex items-center gap-4">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={100} height={100} className="rounded-xl bg-white p-1.5 shrink-0" />
