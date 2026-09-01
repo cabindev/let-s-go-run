@@ -11,6 +11,7 @@ import { Countdown } from "@/components/payment/Countdown"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
 import { eventHref } from "@/lib/events"
+import { generateCheckinQr } from "@/lib/checkin-qr"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -38,6 +39,10 @@ export default async function PaymentPage({
     // ยอดที่ต้องชำระ — ยึดตามประเภทที่เลือก ถ้าไม่มีให้ใช้ค่าของงาน
     const amount = registration.category?.price ?? registration.event.price
     if (amount <= 0) redirect(eventHref(registration.event))
+
+    const checkinQr = registration.status === "PAID" && registration.bib
+        ? await generateCheckinQr(registration.id)
+        : null
 
     const expired = isExpired(registration)
     const canPay = !expired && registration.status === "PENDING"
@@ -123,6 +128,19 @@ export default async function PaymentPage({
                             </ButtonLink>
                         )}
                     </div>
+
+                    {checkinQr && (
+                        <div className="mt-5 pt-5 border-t border-lime-900/10 flex items-center gap-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={120} height={120} className="rounded-xl bg-white p-1.5 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-semibold tracking-wide">BIB {registration.bib}</p>
+                                <p className="text-[11px] mt-1 leading-relaxed">
+                                    แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </Notice>
             )}
 

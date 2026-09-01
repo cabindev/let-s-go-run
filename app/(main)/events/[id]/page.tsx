@@ -10,6 +10,7 @@ import { Badge, EventStatusBadge, RegStatusBadge, Notice } from "@/components/ui
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
 import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions } from "@/lib/events"
+import { generateCheckinQr } from "@/lib/checkin-qr"
 import { formatDate, formatDateLong, formatDateRange, formatPrice, formatTime, formatTimeRange, relativeDay } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -43,8 +44,12 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
     const registration = session?.user
         ? await prisma.registration.findUnique({
             where: { userId_eventId: { userId: session.user.id, eventId: id } },
-            select: { id: true, status: true, note: true, expiresAt: true, category: { select: { name: true } } },
+            select: { id: true, status: true, note: true, expiresAt: true, bib: true, category: { select: { name: true } } },
         })
+        : null
+
+    const checkinQr = registration?.status === "PAID" && registration.bib
+        ? await generateCheckinQr(registration.id)
         : null
 
     const joined = event._count.registrations
@@ -138,6 +143,19 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                 <RegStatusBadge status={registration!.status} />
                                 {registration!.category && <span>ประเภท {registration!.category.name}</span>}
                             </span>
+
+                            {checkinQr && (
+                                <div className="mt-4 pt-4 border-t border-lime-900/10 flex items-center gap-4">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={100} height={100} className="rounded-xl bg-white p-1.5 shrink-0" />
+                                    <div>
+                                        <p className="text-[11px] font-semibold tracking-wide">BIB {registration!.bib}</p>
+                                        <p className="text-[11px] mt-1 leading-relaxed">
+                                            แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </Notice>
                     )}
 

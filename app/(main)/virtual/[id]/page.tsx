@@ -13,6 +13,7 @@ import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
 import { FinisherWall, WallTabs } from "@/components/events/FinisherWall"
 import { registerState, toOptions } from "@/lib/events"
+import { generateCheckinQr } from "@/lib/checkin-qr"
 import { getFinisherWall, submitState, targetOf } from "@/lib/vr"
 import { formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
 
@@ -69,6 +70,9 @@ export default async function VirtualEventPage({
     const subState = submitState(event)
 
     const isRegistered = !!myReg && myReg.status !== "CANCELLED" && !isExpired(myReg)
+    const checkinQr = myReg?.status === "PAID" && myReg.bib
+        ? await generateCheckinQr(myReg.id)
+        : null
     const myTarget = myReg ? targetOf({ category: myReg.category, event }) : 0
     const myTotal = myReg?.submissions.reduce((s, x) => s + x.distance, 0) ?? 0
     const myPercent = myTarget > 0 ? Math.min(100, (myTotal / myTarget) * 100) : 0
@@ -130,6 +134,19 @@ export default async function VirtualEventPage({
                     </div>
 
                     <Bar value={myPercent} color={myPercent >= 100 ? "var(--ring-lime)" : "var(--color-ink)"} className="mt-4" />
+
+                    {checkinQr && (
+                        <div className="mt-4 pt-4 border-t border-line flex items-center gap-4">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={checkinQr} alt="QR รับเสื้อหน้างาน" width={100} height={100} className="rounded-xl bg-white p-1.5 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-semibold tracking-wide text-ink-mute">BIB {myReg!.bib}</p>
+                                <p className="text-[11px] mt-1 leading-relaxed text-ink-mute">
+                                    แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="mt-5">
                         {myReg!.status === "PAID" ? (

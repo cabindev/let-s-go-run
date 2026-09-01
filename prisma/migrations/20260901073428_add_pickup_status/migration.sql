@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Registration` ADD COLUMN `pickupAt` DATETIME(3) NULL,
+    ADD COLUMN `pickupStatus` ENUM('PENDING', 'PICKED_UP', 'SHIPPED') NOT NULL DEFAULT 'PENDING',
+    ADD COLUMN `shippingTrackingNo` VARCHAR(191) NULL;

@@ -136,6 +136,8 @@ export default async function AdminRegistrationsPage({
                                                 </Badge>
                                             )}
                                             {r.bib && <span className="text-[11px] text-ink-mute tnum">BIB {r.bib}</span>}
+                                            {r.pickupStatus === "PICKED_UP" && <Badge tone="lime">รับที่บูธแล้ว</Badge>}
+                                            {r.pickupStatus === "SHIPPED" && <Badge tone="sky">ส่งไปรษณีย์แล้ว</Badge>}
                                         </div>
 
                                         <p className="text-[11px] text-ink-mute truncate mt-0.5">

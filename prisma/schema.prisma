@@ -24,6 +24,13 @@ enum EventType {
   VIRTUAL
 }
 
+/** สถานะรับเสื้อ/ของที่ระลึกหน้างาน — ยืนยันผ่านระบบสแกน QR แยกต่างหาก */
+enum PickupStatus {
+  PENDING    // ยังไม่รับ
+  PICKED_UP  // รับที่บูธแล้ว
+  SHIPPED    // ส่งไปรษณีย์แทน
+}
+
 enum RegistrationStatus {
   PENDING   // ลงทะเบียนแล้ว รอชำระเงิน
   PAID      // ยืนยันการชำระเงินแล้ว (ผ่าน Stripe เท่านั้น)
@@ -207,6 +214,11 @@ model Registration {
 
   // เวลาที่ผู้สมัครกดยินยอมข้อความ PDPA — ใช้เป็นหลักฐานการยินยอมย้อนหลัง
   pdpaConsentAt DateTime?
+
+  // รับเสื้อ/ของที่ระลึก — ยืนยันผ่านระบบสแกน QR หน้างานแยกต่างหาก (ดู CHECKIN_API_SECRET)
+  pickupStatus       PickupStatus @default(PENDING)
+  pickupAt           DateTime?
+  shippingTrackingNo String?
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)

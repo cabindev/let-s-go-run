@@ -13,6 +13,12 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
     promptpay: "PromptPay",
 }
 
+const PICKUP_STATUS_LABEL: Record<string, string> = {
+    PENDING: "ยังไม่รับ",
+    PICKED_UP: "รับที่บูธแล้ว",
+    SHIPPED: "ส่งไปรษณีย์แล้ว",
+}
+
 export async function GET(request: NextRequest) {
     const session = await getSession()
     if (!session?.user || session.user.role !== "ADMIN") {
@@ -63,6 +69,9 @@ export async function GET(request: NextRequest) {
         { header: "เลขบัตรประชาชน", key: "nationalId", width: 18 },
         { header: "เคยเข้าร่วมมาก่อน", key: "hasParticipatedBefore", width: 16 },
         { header: "ยินยอม PDPA เมื่อ", key: "pdpaConsentAt", width: 18 },
+        { header: "สถานะรับเสื้อ", key: "pickupStatus", width: 14 },
+        { header: "เลขพัสดุ", key: "shippingTrackingNo", width: 18 },
+        { header: "วันที่รับ/ส่ง", key: "pickupAt", width: 18 },
         { header: "วันที่สมัคร", key: "registeredAt", width: 18 },
         { header: "วันที่ชำระ", key: "paidAt", width: 18 },
     ]
@@ -94,6 +103,9 @@ export async function GET(request: NextRequest) {
             nationalId: r.nationalId || "",
             hasParticipatedBefore: r.hasParticipatedBefore === null ? "" : r.hasParticipatedBefore ? "เคย" : "ไม่เคย",
             pdpaConsentAt: r.pdpaConsentAt ?? null,
+            pickupStatus: PICKUP_STATUS_LABEL[r.pickupStatus],
+            shippingTrackingNo: r.shippingTrackingNo || "",
+            pickupAt: r.pickupAt ?? null,
             registeredAt: r.registeredAt,
             paidAt: r.paidAt ?? null,
         })
@@ -104,6 +116,7 @@ export async function GET(request: NextRequest) {
     sheet.getColumn("registeredAt").numFmt = "yyyy-mm-dd hh:mm"
     sheet.getColumn("paidAt").numFmt = "yyyy-mm-dd hh:mm"
     sheet.getColumn("pdpaConsentAt").numFmt = "yyyy-mm-dd hh:mm"
+    sheet.getColumn("pickupAt").numFmt = "yyyy-mm-dd hh:mm"
 
     const buffer = await workbook.xlsx.writeBuffer()
     const filename = `registrations-${new Date().toISOString().slice(0, 10)}.xlsx`
