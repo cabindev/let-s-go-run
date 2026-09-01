@@ -10,7 +10,7 @@ import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, inputClass } from "@/components/ui/Field"
 import { Stepper, REGISTER_STEPS } from "./Stepper"
 import { submitRegistration } from "@/app/actions/register-flow"
-import { SHIRT_SIZES, type Option } from "@/lib/events"
+import { SHIRT_SIZES, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, type Option } from "@/lib/events"
 import { cn, formatDate, formatDateRange, formatPrice, formatTime } from "@/lib/utils"
 
 interface Props {
@@ -22,6 +22,11 @@ interface Props {
         location: string
         image: string | null
         type: "ONSITE" | "VIRTUAL"
+        collectGender: boolean
+        collectBloodType: boolean
+        collectNationalId: boolean
+        collectPreviousParticipation: boolean
+        pdpaNotice: string | null
     }
     options: (Option & { taken: number })[]
     /** ค่าเริ่มต้นจากโปรไฟล์ผู้ใช้ */
@@ -35,6 +40,10 @@ interface Details {
     address: string
     emergencyName: string
     emergencyPhone: string
+    gender: string
+    bloodType: string
+    nationalId: string
+    hasParticipatedBefore: string
 }
 
 export function RegisterWizard({ event, options, defaults }: Props) {
@@ -42,6 +51,8 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     const [step, setStep] = useState(0)
     const [pending, startTransition] = useTransition()
     const [error, setError] = useState<string | null>(null)
+    const [pdpaConsent, setPdpaConsent] = useState(false)
+    const pdpaNotice = event.pdpaNotice?.trim() || DEFAULT_PDPA_NOTICE
 
     const available = options.filter((o) => !o.maxSlots || o.taken < o.maxSlots)
     const [selected, setSelected] = useState<Option | null>(available.length === 1 ? available[0] : null)
@@ -56,6 +67,10 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         address: "",
         emergencyName: "",
         emergencyPhone: "",
+        gender: "",
+        bloodType: "",
+        nationalId: "",
+        hasParticipatedBefore: "",
     })
 
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -78,12 +93,19 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         e.preventDefault()
         if (!details.fullName.trim()) return setError("กรุณากรอกชื่อ-นามสกุล")
         if (details.phone.trim().length < 8) return setError("เบอร์โทรศัพท์ไม่ถูกต้อง")
+        if (event.collectNationalId && !/^\d{13}$/.test(details.nationalId.trim())) {
+            return setError("กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก")
+        }
+        if (event.collectPreviousParticipation && !details.hasParticipatedBefore) {
+            return setError("กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่")
+        }
         goto(2)
     }
 
     // ---- ขั้น 3: ยืนยัน ----
     const confirm = () => {
         if (!selected) return
+        if (!pdpaConsent) return setError("กรุณายอมรับข้อความ PDPA ก่อนสมัคร")
         setError(null)
         const fd = new FormData()
         fd.set("eventId", event.id)
@@ -94,6 +116,11 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         fd.set("address", details.address)
         fd.set("emergencyName", details.emergencyName)
         fd.set("emergencyPhone", details.emergencyPhone)
+        fd.set("gender", details.gender)
+        fd.set("bloodType", details.bloodType)
+        fd.set("nationalId", details.nationalId)
+        fd.set("hasParticipatedBefore", details.hasParticipatedBefore)
+        fd.set("pdpaConsent", "1")
 
         startTransition(async () => {
             const res = await submitRegistration(fd)
@@ -196,12 +223,43 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     <Field label="ชื่อ-นามสกุล" name="fullName" required value={details.fullName} onChange={set("fullName")} placeholder="ชื่อที่ใช้ในการรับของที่ระลึก" />
                     <Field label="เบอร์โทรศัพท์" name="phone" type="tel" required value={details.phone} onChange={set("phone")} placeholder="08x-xxx-xxxx" />
 
+                    {event.collectGender && (
+                        <RadioGroup
+                            label="เพศ"
+                            name="gender"
+                            value={details.gender}
+                            onChange={set("gender")}
+                            options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
+                        />
+                    )}
+
                     <div>
                         <label htmlFor="shirtSize" className="eyebrow block mb-2">ไซส์เสื้อ</label>
                         <select id="shirtSize" value={details.shirtSize} onChange={set("shirtSize")} className={`${inputClass} h-11`}>
                             {SHIRT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
+
+                    {event.collectBloodType && (
+                        <RadioGroup
+                            label="กรุ๊ปเลือด"
+                            name="bloodType"
+                            value={details.bloodType}
+                            onChange={set("bloodType")}
+                            options={BLOOD_TYPES.map((b) => ({ value: b, label: b }))}
+                            helper="ใช้ในกรณีฉุกเฉินเท่านั้น ท่านไม่จำเป็นต้องกรอก"
+                        />
+                    )}
+
+                    {event.collectNationalId && (
+                        <Field
+                            label="หมายเลขบัตรประชาชน" name="nationalId" required
+                            inputMode="numeric" maxLength={13}
+                            value={details.nationalId} onChange={set("nationalId")}
+                            placeholder="เลข 13 หลัก ไม่ต้องมีขีด"
+                            helper="เพื่อประโยชน์ของผู้เข้าร่วม กรุณากรอกให้ตรงกับชื่อผู้ลงทะเบียน เพื่อสิทธิ์ประกันภัยอุบัติเหตุจากการเข้าร่วมกิจกรรม โดยข้อมูลถูกจัดเก็บอย่างปลอดภัย"
+                        />
+                    )}
 
                     <TextArea label="ที่อยู่จัดส่ง" name="address" rows={3} value={details.address} onChange={set("address")} placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)" />
 
@@ -210,6 +268,19 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         <Field label="ชื่อผู้ติดต่อ" name="emergencyName" value={details.emergencyName} onChange={set("emergencyName")} placeholder="ชื่อ-นามสกุล" />
                         <Field label="เบอร์ผู้ติดต่อ" name="emergencyPhone" type="tel" value={details.emergencyPhone} onChange={set("emergencyPhone")} placeholder="08x-xxx-xxxx" />
                     </div>
+
+                    {event.collectPreviousParticipation && (
+                        <div className="border-t border-line pt-7">
+                            <RadioGroup
+                                label="เคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่"
+                                name="hasParticipatedBefore"
+                                required
+                                value={details.hasParticipatedBefore}
+                                onChange={set("hasParticipatedBefore")}
+                                options={[{ value: "YES", label: "เคย" }, { value: "NO", label: "ไม่เคย" }]}
+                            />
+                        </div>
+                    )}
 
                     <div className="flex gap-3">
                         <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => goto(0)}>
@@ -235,6 +306,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         {details.emergencyName && (
                             <Row label="ผู้ติดต่อฉุกเฉิน" value={`${details.emergencyName}${details.emergencyPhone ? ` · ${details.emergencyPhone}` : ""}`} />
                         )}
+                        {details.gender && (
+                            <Row label="เพศ" value={GENDER_OPTIONS.find((g) => g.value === details.gender)?.label ?? details.gender} />
+                        )}
+                        {details.bloodType && <Row label="กรุ๊ปเลือด" value={details.bloodType} />}
+                        {details.nationalId && <Row label="เลขบัตรประชาชน" value={details.nationalId} />}
+                        {details.hasParticipatedBefore && (
+                            <Row label="เคยเข้าร่วมมาก่อน" value={details.hasParticipatedBefore === "YES" ? "เคย" : "ไม่เคย"} />
+                        )}
                     </Card>
 
                     <div className="flex items-baseline justify-between">
@@ -246,11 +325,27 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         <Notice tone="lime">งานนี้ไม่มีค่าสมัคร กดยืนยันแล้วเข้าร่วมได้ทันที</Notice>
                     )}
 
+                    <div className="space-y-3">
+                        <p className="eyebrow">ความเป็นส่วนตัว (PDPA)</p>
+                        <div className="max-h-48 overflow-y-auto rounded-2xl border border-line p-4 text-[12px] leading-relaxed text-ink-mute whitespace-pre-line">
+                            {pdpaNotice}
+                        </div>
+                        <label className="flex items-start gap-3 text-[13px]">
+                            <input
+                                type="checkbox"
+                                className="mt-0.5"
+                                checked={pdpaConsent}
+                                onChange={(e) => setPdpaConsent(e.target.checked)}
+                            />
+                            ข้าพเจ้าได้อ่านและรับทราบข้อความข้างต้น และยินยอมให้เก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคลตามวัตถุประสงค์ที่แจ้งไว้
+                        </label>
+                    </div>
+
                     <div className="flex gap-3">
                         <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => goto(1)} disabled={pending}>
                             ย้อนกลับ
                         </Button>
-                        <Button size="lg" className="flex-1" onClick={confirm} disabled={pending}>
+                        <Button size="lg" className="flex-1" onClick={confirm} disabled={pending || !pdpaConsent}>
                             {pending ? <Spinner /> : selected.price > 0 ? "ยืนยันและไปชำระเงิน" : "ยืนยันการสมัคร"}
                         </Button>
                     </div>
@@ -265,6 +360,50 @@ function Row({ label, value }: { label: string; value: string }) {
         <div className="flex items-start justify-between gap-4 px-5 py-3.5">
             <dt className="text-[13px] text-ink-mute shrink-0">{label}</dt>
             <dd className="text-sm font-medium text-right break-words min-w-0">{value}</dd>
+        </div>
+    )
+}
+
+function RadioGroup({
+    label, name, value, onChange, options, helper, required,
+}: {
+    label: string
+    name: string
+    value: string
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+    options: { value: string; label: string }[]
+    helper?: string
+    required?: boolean
+}) {
+    return (
+        <div>
+            <label className="eyebrow block mb-2">{label}</label>
+            <div className="flex flex-wrap gap-2">
+                {options.map((o) => {
+                    const active = value === o.value
+                    return (
+                        <label
+                            key={o.value}
+                            className={cn(
+                                "px-4 h-11 inline-flex items-center rounded-full border text-sm font-medium cursor-pointer transition-colors",
+                                active ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink-mute"
+                            )}
+                        >
+                            <input
+                                type="radio"
+                                name={name}
+                                value={o.value}
+                                checked={active}
+                                onChange={onChange}
+                                required={required}
+                                className="sr-only"
+                            />
+                            {o.label}
+                        </label>
+                    )
+                })}
+            </div>
+            {helper && <p className="text-[12px] text-ink-mute mt-2">{helper}</p>}
         </div>
     )
 }

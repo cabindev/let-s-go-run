@@ -12,9 +12,9 @@ import { ConfirmAction } from "@/components/admin/ConfirmAction"
 import { Pagination } from "@/components/admin/Pagination"
 import { RegistrationFilters } from "@/components/admin/RegistrationFilters"
 import { REGISTRATION_STATUSES, buildRegistrationWhere } from "@/lib/admin-registrations-query"
-import { eventHref } from "@/lib/events"
+import { eventHref, GENDER_OPTIONS } from "@/lib/events"
 import { expireStaleRegistrations, formatTimeLeft, isAwaitingPayment, timeLeft } from "@/lib/expiry"
-import { cn, formatDate, formatPrice } from "@/lib/utils"
+import { cn, formatDate, formatPrice, maskNationalId } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -142,6 +142,15 @@ export default async function AdminRegistrationsPage({
                                             {r.user.email}
                                             {r.phone && ` · ${r.phone}`}
                                         </p>
+
+                                        {(r.gender || r.bloodType || r.nationalId || r.hasParticipatedBefore !== null) && (
+                                            <p className="text-[11px] text-ink-mute tnum mt-0.5">
+                                                {r.gender && GENDER_OPTIONS.find((g) => g.value === r.gender)?.label}
+                                                {r.bloodType && ` · กรุ๊ป ${r.bloodType}`}
+                                                {r.nationalId && ` · บัตร ปชช. ${maskNationalId(r.nationalId)}`}
+                                                {r.hasParticipatedBefore !== null && ` · ${r.hasParticipatedBefore ? "เคยเข้าร่วม" : "ยังไม่เคยเข้าร่วม"}`}
+                                            </p>
+                                        )}
 
                                         <Link
                                             href={eventHref(r.event)}

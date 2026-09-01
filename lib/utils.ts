@@ -90,3 +90,9 @@ export function initials(name?: string | null, email?: string | null) {
     const source = name?.trim() || email || "?"
     return source.charAt(0).toUpperCase()
 }
+
+/** เลขบัตรประชาชนแบบปิดบางส่วน — โชว์แค่หลักแรกกับหลักสุดท้าย เช่น "1-XXXXXXXXXXX-8" */
+export function maskNationalId(id: string) {
+    if (id.length < 2) return id
+    return `${id[0]}-${"X".repeat(id.length - 2)}-${id[id.length - 1]}`
+}

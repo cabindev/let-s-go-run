@@ -61,6 +61,11 @@ export default async function RegisterPage({ params }: { params: Promise<{ id: s
                 location: event.location,
                 image: event.image,
                 type: "ONSITE",
+                collectGender: event.collectGender,
+                collectBloodType: event.collectBloodType,
+                collectNationalId: event.collectNationalId,
+                collectPreviousParticipation: event.collectPreviousParticipation,
+                pdpaNotice: event.pdpaNotice,
             }}
             options={options}
             defaults={{ fullName: user?.name ?? "", phone: user?.phone ?? "" }}

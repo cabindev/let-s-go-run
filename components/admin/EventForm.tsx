@@ -8,7 +8,7 @@ import { createEvent, updateEvent } from "@/app/actions/admin"
 import { Button, Spinner, buttonClass } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, Select } from "@/components/ui/Field"
-import { PROVINCES } from "@/lib/events"
+import { PROVINCES, DEFAULT_PDPA_NOTICE } from "@/lib/events"
 import { IMAGE_GROUPS } from "@/lib/image-groups"
 import { ImageGroupInput } from "./ImageGroupInput"
 import { CategoryRows } from "./CategoryRows"
@@ -174,6 +174,42 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
                         defaultValue={event?.announceAt ? formatDateInput(event.announceAt) : ""}
                     />
                 </div>
+            </section>
+
+            <section className="space-y-3">
+                <p className="eyebrow">ข้อมูลผู้สมัครเพิ่มเติม</p>
+                <p className="text-[12px] text-ink-mute">
+                    เลือกเก็บได้ตามความจำเป็นของแต่ละงาน (เช่น งานที่มีประกันอุบัติเหตุ) — ไม่เลือกอะไรเลยได้ถ้าไม่จำเป็น
+                </p>
+
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="collectGender" defaultChecked={event?.collectGender} />
+                    เก็บข้อมูลเพศ (ชาย/หญิง/LGBTQ+)
+                </label>
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="collectBloodType" defaultChecked={event?.collectBloodType} />
+                    เก็บข้อมูลกรุ๊ปเลือด
+                </label>
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="collectNationalId" defaultChecked={event?.collectNationalId} />
+                    เก็บเลขบัตรประชาชน (สำหรับสิทธิ์ประกันอุบัติเหตุ)
+                </label>
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="collectPreviousParticipation" defaultChecked={event?.collectPreviousParticipation} />
+                    ถามว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่
+                </label>
+            </section>
+
+            <section className="space-y-3">
+                <p className="eyebrow">ข้อความ PDPA</p>
+                <p className="text-[12px] text-ink-mute">
+                    แสดงในฟอร์มสมัครพร้อมช่องยินยอมก่อนส่งใบสมัครทุกครั้ง — แก้ชื่องาน/รายละเอียดให้ตรงกับงานนี้ ถ้าเว้นว่างไว้ ระบบจะใช้ข้อความกลางแทน
+                </p>
+                <TextArea
+                    label="ข้อความแจ้ง PDPA" name="pdpaNotice" rows={10}
+                    defaultValue={event?.pdpaNotice ?? (isEdit ? "" : DEFAULT_PDPA_NOTICE)}
+                    placeholder="เว้นว่าง = ใช้ข้อความกลาง"
+                />
             </section>
 
             <section>

@@ -9,6 +9,10 @@ export function Footer() {
                         Run<span className="bg-move text-ink px-1 rounded-sm">Ludtong</span>
                     </p>
                     <p className="text-[12px] text-ink-mute mt-1.5">ระบบรับสมัครงานวิ่ง</p>
+                    <p className="text-[12px] text-ink-mute mt-1">
+                        34 หมู่ 7 ตำบลยุหว่า อำเภอสันป่าตอง จังหวัดเชียงใหม่ 50120
+                    </p>
+                    <p className="text-[12px] text-ink-mute">โทร. +66 65 993 5647</p>
                 </div>
 
                 <nav className="flex flex-wrap gap-x-6 gap-y-2">

@@ -28,6 +28,7 @@ const eventSchema = z.object({
     rewards: z.string().trim().max(2000).optional().or(z.literal("")),
     contactUrl: z.string().trim().url("ลิงก์ติดต่อไม่ถูกต้อง").optional().or(z.literal("")),
     announceAt: z.string().optional().or(z.literal("")),
+    pdpaNotice: z.string().trim().max(5000).optional().or(z.literal("")),
 })
 
 export interface ParsedCategory {
@@ -123,6 +124,7 @@ function parseEventForm(formData: FormData) {
         rewards: formData.get("rewards"),
         contactUrl: formData.get("contactUrl"),
         announceAt: formData.get("announceAt"),
+        pdpaNotice: formData.get("pdpaNotice"),
     })
 }
 
@@ -144,6 +146,11 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
         const parsedCats = parseCategories(formData)
         if (!parsedCats.ok) return { ok: false, error: parsedCats.error }
         const cats = parsedCats.rows
+
+        const collectGender = formData.get("collectGender") === "on"
+        const collectBloodType = formData.get("collectBloodType") === "on"
+        const collectNationalId = formData.get("collectNationalId") === "on"
+        const collectPreviousParticipation = formData.get("collectPreviousParticipation") === "on"
 
         let image: string | null = null
         const file = formData.get("image")
@@ -169,6 +176,11 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
                 rewards: d.rewards || null,
                 contactUrl: d.contactUrl || null,
                 announceAt: d.announceAt ? new Date(d.announceAt) : null,
+                collectGender,
+                collectBloodType,
+                collectNationalId,
+                collectPreviousParticipation,
+                pdpaNotice: d.pdpaNotice || null,
                 image,
                 categories: {
                     create: cats.map((c, i) => ({
@@ -221,6 +233,11 @@ export async function updateEvent(id: string, formData: FormData): Promise<Actio
             }
             : { distance: d.distance ?? 0, price: d.price ?? 0 }
 
+        const collectGender = formData.get("collectGender") === "on"
+        const collectBloodType = formData.get("collectBloodType") === "on"
+        const collectNationalId = formData.get("collectNationalId") === "on"
+        const collectPreviousParticipation = formData.get("collectPreviousParticipation") === "on"
+
         let image: string | undefined
         const file = formData.get("image")
         if (file instanceof File && file.size > 0) image = (await saveImage(file, "events")).url
@@ -245,6 +262,11 @@ export async function updateEvent(id: string, formData: FormData): Promise<Actio
                 rewards: d.rewards || null,
                 contactUrl: d.contactUrl || null,
                 announceAt: d.announceAt ? new Date(d.announceAt) : null,
+                collectGender,
+                collectBloodType,
+                collectNationalId,
+                collectPreviousParticipation,
+                pdpaNotice: d.pdpaNotice || null,
                 ...(image ? { image } : {}),
             },
         })

@@ -59,6 +59,11 @@ export default async function VirtualRegisterPage({ params }: { params: Promise<
                 location: event.location,
                 image: event.image,
                 type: "VIRTUAL",
+                collectGender: event.collectGender,
+                collectBloodType: event.collectBloodType,
+                collectNationalId: event.collectNationalId,
+                collectPreviousParticipation: event.collectPreviousParticipation,
+                pdpaNotice: event.pdpaNotice,
             }}
             options={options}
             defaults={{ fullName: user?.name ?? "", phone: user?.phone ?? "" }}

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { heldSeatWhere, expireStaleRegistrations, paymentDeadline } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
-import { registerState, toOptions, SHIRT_SIZES } from "@/lib/events"
+import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN } from "@/lib/events"
 import type { ActionResult } from "./registration"
 
 const schema = z.object({
@@ -17,6 +17,10 @@ const schema = z.object({
     address: z.string().trim().max(400).optional().or(z.literal("")),
     emergencyName: z.string().trim().max(120).optional().or(z.literal("")),
     emergencyPhone: z.string().trim().max(20).optional().or(z.literal("")),
+    gender: z.enum(["MALE", "FEMALE", "LGBTQ"]).optional().or(z.literal("")),
+    bloodType: z.enum(["O", "A", "B", "AB"]).optional().or(z.literal("")),
+    nationalId: z.string().trim().regex(NATIONAL_ID_PATTERN, "เลขบัตรประชาชนไม่ถูกต้อง").optional().or(z.literal("")),
+    hasParticipatedBefore: z.enum(["YES", "NO"]).optional().or(z.literal("")),
 })
 
 export type SubmitResult =
@@ -40,6 +44,10 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             address: formData.get("address"),
             emergencyName: formData.get("emergencyName"),
             emergencyPhone: formData.get("emergencyPhone"),
+            gender: formData.get("gender"),
+            bloodType: formData.get("bloodType"),
+            nationalId: formData.get("nationalId"),
+            hasParticipatedBefore: formData.get("hasParticipatedBefore"),
         })
 
         if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
@@ -56,6 +64,17 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
 
         const state = registerState(event, event._count.registrations)
         if (!state.open) return { ok: false, error: state.reason }
+
+        // ฟิลด์เสริม — บังคับกรอกเฉพาะเมื่องานนี้เปิดเก็บไว้ (เพศ/กรุ๊ปเลือดไม่บังคับแม้เปิดเก็บ)
+        if (event.collectNationalId && !d.nationalId) {
+            return { ok: false, error: "กรุณากรอกเลขบัตรประชาชน" }
+        }
+        if (event.collectPreviousParticipation && !d.hasParticipatedBefore) {
+            return { ok: false, error: "กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่" }
+        }
+        if (formData.get("pdpaConsent") !== "1") {
+            return { ok: false, error: "กรุณายอมรับข้อความ PDPA ก่อนสมัคร" }
+        }
 
         // ตรวจว่าประเภทที่เลือกเป็นของงานนี้จริง
         const options = toOptions(event, event.categories)
@@ -79,6 +98,11 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             address: d.address || null,
             emergencyName: d.emergencyName || null,
             emergencyPhone: d.emergencyPhone || null,
+            gender: d.gender || null,
+            bloodType: d.bloodType || null,
+            nationalId: d.nationalId || null,
+            hasParticipatedBefore: d.hasParticipatedBefore ? d.hasParticipatedBefore === "YES" : null,
+            pdpaConsentAt: new Date(),
             note: null,
             paidAt: needsPayment ? null : new Date(),
         } as const

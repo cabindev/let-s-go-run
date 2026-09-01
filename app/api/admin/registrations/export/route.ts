@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth-helpers"
 import { buildRegistrationWhere } from "@/lib/admin-registrations-query"
 import { REG_STATUS } from "@/components/ui/Badge"
+import { GENDER_OPTIONS } from "@/lib/events"
 
 export const dynamic = "force-dynamic"
 
@@ -57,6 +58,11 @@ export async function GET(request: NextRequest) {
         { header: "ที่อยู่", key: "address", width: 36 },
         { header: "ผู้ติดต่อฉุกเฉิน", key: "emergencyName", width: 20 },
         { header: "เบอร์ฉุกเฉิน", key: "emergencyPhone", width: 16 },
+        { header: "เพศ", key: "gender", width: 12 },
+        { header: "กรุ๊ปเลือด", key: "bloodType", width: 12 },
+        { header: "เลขบัตรประชาชน", key: "nationalId", width: 18 },
+        { header: "เคยเข้าร่วมมาก่อน", key: "hasParticipatedBefore", width: 16 },
+        { header: "ยินยอม PDPA เมื่อ", key: "pdpaConsentAt", width: 18 },
         { header: "วันที่สมัคร", key: "registeredAt", width: 18 },
         { header: "วันที่ชำระ", key: "paidAt", width: 18 },
     ]
@@ -83,14 +89,21 @@ export async function GET(request: NextRequest) {
             address: r.address || "",
             emergencyName: r.emergencyName || "",
             emergencyPhone: r.emergencyPhone || "",
+            gender: r.gender ? (GENDER_OPTIONS.find((g) => g.value === r.gender)?.label ?? r.gender) : "",
+            bloodType: r.bloodType || "",
+            nationalId: r.nationalId || "",
+            hasParticipatedBefore: r.hasParticipatedBefore === null ? "" : r.hasParticipatedBefore ? "เคย" : "ไม่เคย",
+            pdpaConsentAt: r.pdpaConsentAt ?? null,
             registeredAt: r.registeredAt,
             paidAt: r.paidAt ?? null,
         })
     }
 
+    sheet.getColumn("nationalId").numFmt = "@"
     sheet.getColumn("amount").numFmt = "#,##0"
     sheet.getColumn("registeredAt").numFmt = "yyyy-mm-dd hh:mm"
     sheet.getColumn("paidAt").numFmt = "yyyy-mm-dd hh:mm"
+    sheet.getColumn("pdpaConsentAt").numFmt = "yyyy-mm-dd hh:mm"
 
     const buffer = await workbook.xlsx.writeBuffer()
     const filename = `registrations-${new Date().toISOString().slice(0, 10)}.xlsx`
