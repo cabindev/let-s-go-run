@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 })
     }
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams, origin: requestOrigin } = new URL(request.url)
+    const origin = process.env.NEXTAUTH_URL || requestOrigin
     const where = buildRegistrationWhere({
         status: searchParams.get("status") ?? undefined,
         event: searchParams.get("event") ?? undefined,
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest) {
         { header: "ยินยอม PDPA เมื่อ", key: "pdpaConsentAt", width: 18 },
         { header: "สถานะรับเสื้อ", key: "pickupStatus", width: 14 },
         { header: "เลขพัสดุ", key: "shippingTrackingNo", width: 18 },
+        { header: "ลายเซ็นผู้รับ", key: "pickupSignature", width: 16 },
         { header: "วันที่รับ/ส่ง", key: "pickupAt", width: 18 },
         { header: "วันที่สมัคร", key: "registeredAt", width: 18 },
         { header: "วันที่ชำระ", key: "paidAt", width: 18 },
@@ -105,6 +107,9 @@ export async function GET(request: NextRequest) {
             pdpaConsentAt: r.pdpaConsentAt ?? null,
             pickupStatus: PICKUP_STATUS_LABEL[r.pickupStatus],
             shippingTrackingNo: r.shippingTrackingNo || "",
+            pickupSignature: r.pickupSignatureUrl
+                ? { text: "ดูลายเซ็น", hyperlink: `${origin}${r.pickupSignatureUrl}` }
+                : "",
             pickupAt: r.pickupAt ?? null,
             registeredAt: r.registeredAt,
             paidAt: r.paidAt ?? null,
@@ -117,6 +122,7 @@ export async function GET(request: NextRequest) {
     sheet.getColumn("paidAt").numFmt = "yyyy-mm-dd hh:mm"
     sheet.getColumn("pdpaConsentAt").numFmt = "yyyy-mm-dd hh:mm"
     sheet.getColumn("pickupAt").numFmt = "yyyy-mm-dd hh:mm"
+    sheet.getColumn("pickupSignature").font = { color: { argb: "FF1D4ED8" }, underline: true }
 
     const buffer = await workbook.xlsx.writeBuffer()
     const filename = `registrations-${new Date().toISOString().slice(0, 10)}.xlsx`
