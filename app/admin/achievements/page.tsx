@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { AchievementIcon } from "@/components/ui/AchievementIcon"
 import { AchievementForm } from "@/components/admin/AchievementForm"
-import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { formatNumber } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"

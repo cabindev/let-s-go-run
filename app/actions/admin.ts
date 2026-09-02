@@ -151,6 +151,7 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
         const collectBloodType = formData.get("collectBloodType") === "on"
         const collectNationalId = formData.get("collectNationalId") === "on"
         const collectPreviousParticipation = formData.get("collectPreviousParticipation") === "on"
+        const collectDateOfBirth = formData.get("collectDateOfBirth") === "on"
         const offerShipping = formData.get("offerShipping") === "on"
 
         let image: string | null = null
@@ -181,6 +182,7 @@ export async function createEvent(formData: FormData): Promise<ActionResult> {
                 collectBloodType,
                 collectNationalId,
                 collectPreviousParticipation,
+                collectDateOfBirth,
                 offerShipping,
                 pdpaNotice: d.pdpaNotice || null,
                 image,
@@ -239,6 +241,7 @@ export async function updateEvent(id: string, formData: FormData): Promise<Actio
         const collectBloodType = formData.get("collectBloodType") === "on"
         const collectNationalId = formData.get("collectNationalId") === "on"
         const collectPreviousParticipation = formData.get("collectPreviousParticipation") === "on"
+        const collectDateOfBirth = formData.get("collectDateOfBirth") === "on"
         const offerShipping = formData.get("offerShipping") === "on"
 
         let image: string | undefined
@@ -269,6 +272,7 @@ export async function updateEvent(id: string, formData: FormData): Promise<Actio
                 collectBloodType,
                 collectNationalId,
                 collectPreviousParticipation,
+                collectDateOfBirth,
                 offerShipping,
                 pdpaNotice: d.pdpaNotice || null,
                 ...(image ? { image } : {}),

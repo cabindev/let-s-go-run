@@ -24,7 +24,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ id: s
                 _count: { select: { registrations: { where: heldSeatWhere() } } },
             },
         }),
-        prisma.user.findUnique({ where: { id: sessionUser.id }, select: { name: true, phone: true } }),
+        prisma.user.findUnique({ where: { id: sessionUser.id }, select: { name: true, phone: true, dateOfBirth: true } }),
     ])
 
     if (!event) notFound()
@@ -65,11 +65,16 @@ export default async function RegisterPage({ params }: { params: Promise<{ id: s
                 collectBloodType: event.collectBloodType,
                 collectNationalId: event.collectNationalId,
                 collectPreviousParticipation: event.collectPreviousParticipation,
+                collectDateOfBirth: event.collectDateOfBirth,
                 offerShipping: event.offerShipping,
                 pdpaNotice: event.pdpaNotice,
             }}
             options={options}
-            defaults={{ fullName: user?.name ?? "", phone: user?.phone ?? "" }}
+            defaults={{
+                fullName: user?.name ?? "",
+                phone: user?.phone ?? "",
+                dateOfBirth: user?.dateOfBirth ? user.dateOfBirth.toISOString().slice(0, 10) : "",
+            }}
         />
     )
 }

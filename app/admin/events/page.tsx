@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card"
 import { EventStatusBadge } from "@/components/ui/Badge"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ButtonLink } from "@/components/ui/Button"
-import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"

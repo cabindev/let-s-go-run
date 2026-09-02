@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         where,
         orderBy: [{ event: { date: "desc" } }, { registeredAt: "desc" }],
         include: {
-            user: { select: { name: true, email: true } },
+            user: { select: { name: true, email: true, dateOfBirth: true } },
             event: { select: { title: true, price: true } },
             category: { select: { name: true, price: true, distance: true } },
         },
@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
         { header: "ผู้ติดต่อฉุกเฉิน", key: "emergencyName", width: 20 },
         { header: "เบอร์ฉุกเฉิน", key: "emergencyPhone", width: 16 },
         { header: "เพศ", key: "gender", width: 12 },
+        { header: "วันเกิด", key: "dateOfBirth", width: 14 },
         { header: "กรุ๊ปเลือด", key: "bloodType", width: 12 },
+        { header: "โรคประจำตัว", key: "medicalCondition", width: 24 },
         { header: "เลขบัตรประชาชน", key: "nationalId", width: 18 },
         { header: "เคยเข้าร่วมมาก่อน", key: "hasParticipatedBefore", width: 16 },
         { header: "ยินยอม PDPA เมื่อ", key: "pdpaConsentAt", width: 18 },
@@ -103,7 +105,9 @@ export async function GET(request: NextRequest) {
             emergencyName: r.emergencyName || "",
             emergencyPhone: r.emergencyPhone || "",
             gender: r.gender ? (GENDER_OPTIONS.find((g) => g.value === r.gender)?.label ?? r.gender) : "",
+            dateOfBirth: r.user.dateOfBirth ?? null,
             bloodType: r.bloodType || "",
+            medicalCondition: r.hasMedicalCondition === null ? "" : r.hasMedicalCondition ? (r.medicalConditionDetail || "มี") : "ไม่มี",
             nationalId: r.nationalId || "",
             hasParticipatedBefore: r.hasParticipatedBefore === null ? "" : r.hasParticipatedBefore ? "เคย" : "ไม่เคย",
             pdpaConsentAt: r.pdpaConsentAt ?? null,
@@ -118,6 +122,7 @@ export async function GET(request: NextRequest) {
         })
     }
 
+    sheet.getColumn("dateOfBirth").numFmt = "yyyy-mm-dd"
     sheet.getColumn("nationalId").numFmt = "@"
     sheet.getColumn("amount").numFmt = "#,##0"
     sheet.getColumn("registeredAt").numFmt = "yyyy-mm-dd hh:mm"

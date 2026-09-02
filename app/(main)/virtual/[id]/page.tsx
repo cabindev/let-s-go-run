@@ -12,10 +12,11 @@ import { Stat } from "@/components/ui/Stat"
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
 import { FinisherWall, WallTabs } from "@/components/events/FinisherWall"
-import { registerState, toOptions } from "@/lib/events"
+import { registerState, toOptions, categoryAvailability } from "@/lib/events"
+import { getTakenSlots } from "@/app/actions/register-flow"
 import { generateCheckinQr } from "@/lib/checkin-qr"
 import { getFinisherWall, submitState, targetOf } from "@/lib/vr"
-import { formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
+import { cn, formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -62,7 +63,11 @@ export default async function VirtualEventPage({
             : null,
     ])
 
-    const options = toOptions(event, event.categories)
+    const taken = await getTakenSlots(event.id)
+    const options = toOptions(event, event.categories).map((o) => ({
+        ...o,
+        taken: o.id ? (taken[o.id] ?? 0) : event._count.registrations,
+    }))
     const gallery = event.images.map((i) => ({
         id: i.id, url: i.url, caption: i.caption, category: i.category, width: i.width, height: i.height,
     }))
@@ -232,17 +237,28 @@ export default async function VirtualEventPage({
             <section>
                 <p className="eyebrow mb-3">ระยะเป้าหมายที่เปิดรับสมัคร</p>
                 <ul className="divide-y divide-line border-y border-line">
-                    {options.map((o) => (
-                        <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
-                            <span className="min-w-0">
-                                <span className="block text-sm font-semibold tracking-tight truncate">{o.name}</span>
-                                <span className="block text-[13px] text-ink-mute tnum mt-0.5">
-                                    สะสมให้ครบ {o.distance} กม.{o.maxSlots ? ` · รับ ${o.maxSlots} คน` : ""}
+                    {options.map((o) => {
+                        const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
+                        return (
+                            <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
+                                <span className="min-w-0">
+                                    <span className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm font-semibold tracking-tight truncate">{o.name}</span>
+                                        <span className={cn(
+                                            "eyebrow px-2 py-0.5 rounded-full shrink-0",
+                                            full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                        )}>
+                                            {availabilityLabel}
+                                        </span>
+                                    </span>
+                                    <span className="block text-[13px] text-ink-mute tnum mt-0.5">
+                                        สะสมให้ครบ {o.distance} กม.{o.maxSlots ? ` · รับ ${o.maxSlots} คน` : ""}
+                                    </span>
                                 </span>
-                            </span>
-                            <span className="numeral text-lg shrink-0">{formatPrice(o.price)}</span>
-                        </li>
-                    ))}
+                                <span className="numeral text-lg shrink-0">{formatPrice(o.price)}</span>
+                            </li>
+                        )
+                    })}
                 </ul>
             </section>
 

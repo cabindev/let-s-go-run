@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/Avatar"
 import { Badge, RegStatusBadge, REG_STATUS } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
 import { EmptyState } from "@/components/ui/EmptyState"
-import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { PickupStatusEditor } from "@/components/admin/PickupStatusEditor"
 import { Pagination } from "@/components/admin/Pagination"
 import { RegistrationFilters } from "@/components/admin/RegistrationFilters"
@@ -48,7 +48,7 @@ export default async function AdminRegistrationsPage({
             skip: (page - 1) * PAGE_SIZE,
             take: PAGE_SIZE,
             include: {
-                user: { select: { name: true, email: true, image: true } },
+                user: { select: { name: true, email: true, image: true, dateOfBirth: true } },
                 event: { select: { id: true, title: true, type: true, price: true } },
                 category: { select: { name: true, price: true, distance: true } },
             },
@@ -148,11 +148,17 @@ export default async function AdminRegistrationsPage({
                                             {r.phone && ` · ${r.phone}`}
                                         </p>
 
-                                        {(r.gender || r.bloodType || r.nationalId || r.hasParticipatedBefore !== null) && (
+                                        {(r.gender || r.bloodType || r.nationalId || r.hasParticipatedBefore !== null || r.user.dateOfBirth || r.hasMedicalCondition !== null) && (
                                             <p className="text-[11px] text-ink-mute tnum mt-0.5">
                                                 {r.gender && GENDER_OPTIONS.find((g) => g.value === r.gender)?.label}
                                                 {r.bloodType && ` · กรุ๊ป ${r.bloodType}`}
+                                                {r.hasMedicalCondition !== null && (
+                                                    r.hasMedicalCondition
+                                                        ? ` · โรคประจำตัว: ${r.medicalConditionDetail}`
+                                                        : " · ไม่มีโรคประจำตัว"
+                                                )}
                                                 {r.nationalId && ` · บัตร ปชช. ${maskNationalId(r.nationalId)}`}
+                                                {r.user.dateOfBirth && ` · เกิด ${formatDate(r.user.dateOfBirth)}`}
                                                 {r.hasParticipatedBefore !== null && ` · ${r.hasParticipatedBefore ? "เคยเข้าร่วม" : "ยังไม่เคยเข้าร่วม"}`}
                                             </p>
                                         )}

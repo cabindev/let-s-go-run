@@ -184,11 +184,11 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
 
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="collectGender" defaultChecked={event?.collectGender} />
-                    เก็บข้อมูลเพศ (ชาย/หญิง/LGBTQ+)
+                    เก็บข้อมูลเพศ (ชาย/หญิง)
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="collectBloodType" defaultChecked={event?.collectBloodType} />
-                    เก็บข้อมูลกรุ๊ปเลือด
+                    เก็บข้อมูลทางการแพทย์ (กรุ๊ปเลือด + โรคประจำตัว)
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="collectNationalId" defaultChecked={event?.collectNationalId} />
@@ -197,6 +197,10 @@ export function EventForm({ event, defaultType }: { event?: Event; defaultType?:
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="collectPreviousParticipation" defaultChecked={event?.collectPreviousParticipation} />
                     ถามว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่
+                </label>
+                <label className="flex items-center gap-3 text-sm">
+                    <input type="checkbox" name="collectDateOfBirth" defaultChecked={event?.collectDateOfBirth} />
+                    เก็บวันเกิด
                 </label>
                 <label className="flex items-center gap-3 text-sm">
                     <input type="checkbox" name="offerShipping" defaultChecked={event?.offerShipping} />

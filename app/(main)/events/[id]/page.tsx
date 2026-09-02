@@ -9,9 +9,10 @@ import { RichText } from "@/components/ui/RichText"
 import { Badge, EventStatusBadge, RegStatusBadge, Notice } from "@/components/ui/Badge"
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
-import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions } from "@/lib/events"
+import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions, categoryAvailability } from "@/lib/events"
+import { getTakenSlots } from "@/app/actions/register-flow"
 import { generateCheckinQr } from "@/lib/checkin-qr"
-import { formatDate, formatDateLong, formatDateRange, formatPrice, formatTime, formatTimeRange, relativeDay } from "@/lib/utils"
+import { cn, formatDate, formatDateLong, formatDateRange, formatPrice, formatTime, formatTimeRange, relativeDay } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -54,7 +55,11 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
 
     const joined = event._count.registrations
     const state = registerState(event, joined)
-    const options = toOptions(event, event.categories)
+    const taken = await getTakenSlots(event.id)
+    const options = toOptions(event, event.categories).map((o) => ({
+        ...o,
+        taken: o.id ? (taken[o.id] ?? 0) : joined,
+    }))
     // หมดเวลาชำระ = ที่นั่งถูกคืนแล้ว ถือว่ายังไม่ได้สมัคร สมัครใหม่ได้
     const isRegistered =
         !!registration && registration.status !== "CANCELLED" && !isExpired(registration)
@@ -201,17 +206,28 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                     <section>
                         <p className="eyebrow mb-3">ระยะที่เปิดรับสมัคร</p>
                         <ul className="divide-y divide-line border-y border-line">
-                            {options.map((o) => (
-                                <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
-                                    <span className="min-w-0">
-                                        <span className="block text-sm font-semibold tracking-tight truncate">{o.name}</span>
-                                        <span className="block text-[13px] text-ink-mute tnum mt-0.5">
-                                            {o.distance} กม.{o.maxSlots ? ` · รับ ${o.maxSlots} คน` : ""}
+                            {options.map((o) => {
+                                const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
+                                return (
+                                    <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
+                                        <span className="min-w-0">
+                                            <span className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-semibold tracking-tight truncate">{o.name}</span>
+                                                <span className={cn(
+                                                    "eyebrow px-2 py-0.5 rounded-full shrink-0",
+                                                    full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                                )}>
+                                                    {availabilityLabel}
+                                                </span>
+                                            </span>
+                                            <span className="block text-[13px] text-ink-mute tnum mt-0.5">
+                                                {o.distance} กม.{o.maxSlots ? ` · รับ ${o.maxSlots} คน` : ""}
+                                            </span>
                                         </span>
-                                    </span>
-                                    <span className="numeral text-lg shrink-0">{formatPrice(o.price)}</span>
-                                </li>
-                            ))}
+                                        <span className="numeral text-lg shrink-0">{formatPrice(o.price)}</span>
+                                    </li>
+                                )
+                            })}
                         </ul>
                     </section>
 

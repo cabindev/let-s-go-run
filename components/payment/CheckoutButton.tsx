@@ -29,9 +29,13 @@ export function CheckoutButton({ registrationId, amount }: { registrationId: str
     }
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
+            <div className="rounded-2xl bg-paper-2 px-5 py-4 flex items-baseline justify-between gap-3">
+                <span className="eyebrow text-ink-mute">ยอดที่ต้องชำระ</span>
+                <span className="numeral text-2xl">{formatPrice(amount)}</span>
+            </div>
             <p className="text-[13px] text-ink-mute">
-                ยอดรวมค่าธรรมเนียมการชำระเงินแล้ว ต่างกันตามวิธีจ่าย — ผู้จัดงานได้รับเต็ม {formatPrice(amount)}
+                เลือกวิธีจ่าย — ยอดด้านล่างรวมค่าธรรมเนียมของแต่ละวิธีแล้ว ต่างกันตามวิธีจ่าย ผู้จัดงานได้รับเต็ม {formatPrice(amount)}
             </p>
 
             {METHODS.map((method) => {

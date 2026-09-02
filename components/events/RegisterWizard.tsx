@@ -10,7 +10,7 @@ import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, inputClass } from "@/components/ui/Field"
 import { Stepper, REGISTER_STEPS } from "./Stepper"
 import { submitRegistration } from "@/app/actions/register-flow"
-import { SHIRT_SIZES, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, registrationAmount, type Option } from "@/lib/events"
+import { SHIRT_SIZES, SHIRT_SIZE_CHART, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, registrationAmount, categoryAvailability, type Option } from "@/lib/events"
 import { cn, formatDate, formatDateRange, formatPrice, formatTime } from "@/lib/utils"
 
 interface Props {
@@ -26,12 +26,13 @@ interface Props {
         collectBloodType: boolean
         collectNationalId: boolean
         collectPreviousParticipation: boolean
+        collectDateOfBirth: boolean
         offerShipping: boolean
         pdpaNotice: string | null
     }
     options: (Option & { taken: number })[]
     /** ค่าเริ่มต้นจากโปรไฟล์ผู้ใช้ */
-    defaults: { fullName: string; phone: string }
+    defaults: { fullName: string; phone: string; dateOfBirth: string }
 }
 
 interface Details {
@@ -46,6 +47,9 @@ interface Details {
     nationalId: string
     hasParticipatedBefore: string
     deliveryMethod: string
+    dateOfBirth: string
+    hasMedicalCondition: string
+    medicalConditionDetail: string
 }
 
 export function RegisterWizard({ event, options, defaults }: Props) {
@@ -74,6 +78,9 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         nationalId: "",
         hasParticipatedBefore: "",
         deliveryMethod: "",
+        dateOfBirth: defaults.dateOfBirth,
+        hasMedicalCondition: "",
+        medicalConditionDetail: "",
     })
 
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -104,6 +111,15 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         if (event.collectPreviousParticipation && !details.hasParticipatedBefore) {
             return setError("กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่")
         }
+        if (event.collectDateOfBirth && !details.dateOfBirth) {
+            return setError("กรุณากรอกวันเกิด")
+        }
+        if (event.collectBloodType && !details.hasMedicalCondition) {
+            return setError("กรุณาระบุว่ามีโรคประจำตัวหรือไม่")
+        }
+        if (details.hasMedicalCondition === "YES" && !details.medicalConditionDetail.trim()) {
+            return setError("กรุณาระบุรายละเอียดโรคประจำตัว")
+        }
         if (event.offerShipping && !details.deliveryMethod) {
             return setError("กรุณาเลือกวิธีรับของ")
         }
@@ -132,6 +148,9 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         fd.set("nationalId", details.nationalId)
         fd.set("hasParticipatedBefore", details.hasParticipatedBefore)
         fd.set("deliveryMethod", details.deliveryMethod)
+        fd.set("dateOfBirth", details.dateOfBirth)
+        fd.set("hasMedicalCondition", details.hasMedicalCondition)
+        fd.set("medicalConditionDetail", details.medicalConditionDetail)
         fd.set("pdpaConsent", "1")
 
         startTransition(async () => {
@@ -188,7 +207,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     ) : (
                         <ul className="space-y-3">
                             {options.map((o) => {
-                                const full = !!o.maxSlots && o.taken >= o.maxSlots
+                                const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
                                 const active = selected?.id === o.id && selected?.name === o.name
                                 return (
                                     <li key={o.id ?? "default"}>
@@ -205,12 +224,19 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                         >
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
-                                                    <p className="font-semibold tracking-tight">{o.name}</p>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="font-semibold tracking-tight">{o.name}</p>
+                                                        <span className={cn(
+                                                            "eyebrow px-2 py-0.5 rounded-full shrink-0",
+                                                            full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                                        )}>
+                                                            {availabilityLabel}
+                                                        </span>
+                                                    </div>
                                                     <p className="text-[14px] text-ink-mute mt-1 tnum">
                                                         {isVirtual ? `สะสมให้ครบ ${o.distance} กม.` : `${o.distance} กม.`}
                                                         {o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
                                                     </p>
-                                                    {full && <p className="text-[14px] text-danger mt-1">เต็มแล้ว</p>}
                                                 </div>
                                                 <span className="numeral text-xl shrink-0">{formatPrice(o.price)}</span>
                                             </div>
@@ -228,12 +254,36 @@ export function RegisterWizard({ event, options, defaults }: Props) {
             )}
 
             {/* ---------- ขั้น 2 ---------- */}
-            {step === 1 && (
+            {step === 1 && selected && (
                 <form onSubmit={nextFromDetails} className="space-y-7">
                     <p className="eyebrow">ข้อมูลผู้สมัคร</p>
 
+                    <Card className="divide-y divide-line">
+                        <Row label="งาน" value={event.title} />
+                        <Row label={isVirtual ? "ระยะเป้าหมาย" : "ประเภท"} value={`${selected.name} · ${selected.distance} กม.`} />
+                        <Row label="ค่าสมัคร" value={formatPrice(selected.price)} />
+                    </Card>
+
                     <Field label="ชื่อ-นามสกุล" name="fullName" required value={details.fullName} onChange={set("fullName")} placeholder="ชื่อที่ใช้ในการรับของที่ระลึก" />
-                    <Field label="เบอร์โทรศัพท์" name="phone" type="tel" required value={details.phone} onChange={set("phone")} placeholder="08x-xxx-xxxx" />
+
+                    <div>
+                        <label htmlFor="phone" className="eyebrow block mb-2">เบอร์โทรศัพท์</label>
+                        <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm text-ink-mute pointer-events-none">
+                                🇹🇭 <span className="tnum">+66</span>
+                            </span>
+                            <input
+                                id="phone" name="phone" type="tel" required
+                                value={details.phone} onChange={set("phone")}
+                                placeholder="8x-xxx-xxxx"
+                                className={`${inputClass} h-11 pl-[4.5rem]`}
+                            />
+                        </div>
+                    </div>
+
+                    {event.collectDateOfBirth && (
+                        <Field label="วันเกิด" name="dateOfBirth" type="date" required value={details.dateOfBirth} onChange={set("dateOfBirth")} />
+                    )}
 
                     {event.collectGender && (
                         <RadioGroup
@@ -248,19 +298,43 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     <div>
                         <label htmlFor="shirtSize" className="eyebrow block mb-2">ไซส์เสื้อ</label>
                         <select id="shirtSize" value={details.shirtSize} onChange={set("shirtSize")} className={`${inputClass} h-11`}>
-                            {SHIRT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                            {SHIRT_SIZES.map((s) => (
+                                <option key={s} value={s}>{s} (รอบอก {SHIRT_SIZE_CHART[s]}&quot;)</option>
+                            ))}
                         </select>
+                        <p className="text-[13px] text-ink-mute mt-2 tnum">
+                            ไซส์ {details.shirtSize} — รอบอกประมาณ {SHIRT_SIZE_CHART[details.shirtSize as keyof typeof SHIRT_SIZE_CHART]}&quot;
+                        </p>
                     </div>
 
                     {event.collectBloodType && (
-                        <RadioGroup
-                            label="กรุ๊ปเลือด"
-                            name="bloodType"
-                            value={details.bloodType}
-                            onChange={set("bloodType")}
-                            options={BLOOD_TYPES.map((b) => ({ value: b, label: b }))}
-                            helper="ใช้ในกรณีฉุกเฉินเท่านั้น ท่านไม่จำเป็นต้องกรอก"
-                        />
+                        <div className="space-y-4">
+                            <p className="eyebrow">ข้อมูลทางการแพทย์</p>
+                            <RadioGroup
+                                label="กรุ๊ปเลือด"
+                                name="bloodType"
+                                value={details.bloodType}
+                                onChange={set("bloodType")}
+                                options={BLOOD_TYPES.map((b) => ({ value: b, label: b }))}
+                                helper="ใช้ในกรณีฉุกเฉินเท่านั้น ท่านไม่จำเป็นต้องกรอก"
+                            />
+                            <RadioGroup
+                                label="มีโรคประจำตัวหรือไม่"
+                                name="hasMedicalCondition"
+                                required
+                                value={details.hasMedicalCondition}
+                                onChange={set("hasMedicalCondition")}
+                                options={[{ value: "NO", label: "ไม่มี" }, { value: "YES", label: "มี" }]}
+                            />
+                            {details.hasMedicalCondition === "YES" && (
+                                <TextArea
+                                    label="โปรดระบุโรคประจำตัว" name="medicalConditionDetail" rows={2} required
+                                    value={details.medicalConditionDetail} onChange={set("medicalConditionDetail")}
+                                    placeholder="เช่น โรคหัวใจ, ความดันโลหิตสูง, หอบหืด"
+                                    helper="เพื่อความปลอดภัยของท่านในระหว่างกิจกรรม เจ้าหน้าที่พยาบาลจะได้เตรียมพร้อมได้ถูกต้อง"
+                                />
+                            )}
+                        </div>
                     )}
 
                     {event.collectNationalId && (
@@ -342,10 +416,17 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         {details.emergencyName && (
                             <Row label="ผู้ติดต่อฉุกเฉิน" value={`${details.emergencyName}${details.emergencyPhone ? ` · ${details.emergencyPhone}` : ""}`} />
                         )}
+                        {details.dateOfBirth && <Row label="วันเกิด" value={formatDate(details.dateOfBirth)} />}
                         {details.gender && (
                             <Row label="เพศ" value={GENDER_OPTIONS.find((g) => g.value === details.gender)?.label ?? details.gender} />
                         )}
                         {details.bloodType && <Row label="กรุ๊ปเลือด" value={details.bloodType} />}
+                        {event.collectBloodType && details.hasMedicalCondition && (
+                            <Row
+                                label="โรคประจำตัว"
+                                value={details.hasMedicalCondition === "YES" ? details.medicalConditionDetail : "ไม่มี"}
+                            />
+                        )}
                         {details.nationalId && <Row label="เลขบัตรประชาชน" value={details.nationalId} />}
                         {details.hasParticipatedBefore && (
                             <Row label="เคยเข้าร่วมมาก่อน" value={details.hasParticipatedBefore === "YES" ? "เคย" : "ไม่เคย"} />

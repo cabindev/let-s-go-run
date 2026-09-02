@@ -9,7 +9,7 @@ import { Notice } from "@/components/ui/Badge"
 import { Card } from "@/components/ui/Card"
 import { Bar } from "@/components/ui/Rings"
 import { Field, TextArea } from "@/components/ui/Field"
-import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { formatDate, formatNumber } from "@/lib/utils"
 
 interface Props {

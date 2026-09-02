@@ -9,6 +9,8 @@ import { ButtonLink } from "@/components/ui/Button"
 import { CheckoutButton } from "@/components/payment/CheckoutButton"
 import { PaymentStatusPoller } from "@/components/payment/PaymentStatusPoller"
 import { Countdown } from "@/components/payment/Countdown"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
+import { cancelRegistration } from "@/app/actions/registration"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
 import { eventHref, registrationAmount, SHIPPING_FEE } from "@/lib/events"
@@ -169,7 +171,20 @@ export default async function PaymentPage({
                 </Card>
             )}
 
-            {canPay && <CheckoutButton registrationId={registration.id} amount={amount} />}
+            {canPay && (
+                <div className="space-y-4">
+                    <CheckoutButton registrationId={registration.id} amount={amount} />
+                    <ConfirmAction
+                        action={cancelRegistration.bind(null, registration.id)}
+                        title="ยกเลิกการสมัคร?"
+                        message="ที่นั่งของคุณจะถูกคืนให้ผู้สมัครคนอื่นทันที และต้องสมัครใหม่หากเปลี่ยนใจภายหลัง"
+                        confirmLabel="ยกเลิกการสมัคร"
+                        className="w-full text-center text-[13px] text-ink-mute hover:text-danger transition-colors"
+                    >
+                        ยกเลิกการสมัคร
+                    </ConfirmAction>
+                </div>
+            )}
         </div>
     )
 }

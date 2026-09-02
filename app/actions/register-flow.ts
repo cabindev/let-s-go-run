@@ -17,11 +17,14 @@ const schema = z.object({
     address: z.string().trim().max(400).optional().or(z.literal("")),
     emergencyName: z.string().trim().max(120).optional().or(z.literal("")),
     emergencyPhone: z.string().trim().max(20).optional().or(z.literal("")),
-    gender: z.enum(["MALE", "FEMALE", "LGBTQ"]).optional().or(z.literal("")),
+    gender: z.enum(["MALE", "FEMALE"]).optional().or(z.literal("")),
     bloodType: z.enum(["O", "A", "B", "AB"]).optional().or(z.literal("")),
     nationalId: z.string().trim().regex(NATIONAL_ID_PATTERN, "เลขบัตรประชาชนไม่ถูกต้อง").optional().or(z.literal("")),
     hasParticipatedBefore: z.enum(["YES", "NO"]).optional().or(z.literal("")),
     deliveryMethod: z.enum(["PICKUP", "SHIPPING"]).optional().or(z.literal("")),
+    dateOfBirth: z.string().trim().optional().or(z.literal("")),
+    hasMedicalCondition: z.enum(["YES", "NO"]).optional().or(z.literal("")),
+    medicalConditionDetail: z.string().trim().max(400).optional().or(z.literal("")),
 })
 
 export type SubmitResult =
@@ -50,6 +53,9 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             nationalId: formData.get("nationalId"),
             hasParticipatedBefore: formData.get("hasParticipatedBefore"),
             deliveryMethod: formData.get("deliveryMethod"),
+            dateOfBirth: formData.get("dateOfBirth"),
+            hasMedicalCondition: formData.get("hasMedicalCondition"),
+            medicalConditionDetail: formData.get("medicalConditionDetail"),
         })
 
         if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
@@ -73,6 +79,15 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
         }
         if (event.collectPreviousParticipation && !d.hasParticipatedBefore) {
             return { ok: false, error: "กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่" }
+        }
+        if (event.collectDateOfBirth && !d.dateOfBirth) {
+            return { ok: false, error: "กรุณากรอกวันเกิด" }
+        }
+        if (event.collectBloodType && !d.hasMedicalCondition) {
+            return { ok: false, error: "กรุณาระบุว่ามีโรคประจำตัวหรือไม่" }
+        }
+        if (d.hasMedicalCondition === "YES" && !d.medicalConditionDetail) {
+            return { ok: false, error: "กรุณาระบุรายละเอียดโรคประจำตัว" }
         }
         if (formData.get("pdpaConsent") !== "1") {
             return { ok: false, error: "กรุณายอมรับข้อความ PDPA ก่อนสมัคร" }
@@ -114,6 +129,8 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             bloodType: d.bloodType || null,
             nationalId: d.nationalId || null,
             hasParticipatedBefore: d.hasParticipatedBefore ? d.hasParticipatedBefore === "YES" : null,
+            hasMedicalCondition: event.collectBloodType && d.hasMedicalCondition ? d.hasMedicalCondition === "YES" : null,
+            medicalConditionDetail: d.hasMedicalCondition === "YES" ? (d.medicalConditionDetail || null) : null,
             deliveryMethod,
             pdpaConsentAt: new Date(),
             note: null,
@@ -181,6 +198,14 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
         })
 
         if (!outcome.ok) return { ok: false, error: outcome.error }
+
+        // อัปเดตวันเกิดเข้าโปรไฟล์ผู้ใช้ — เป็นข้อมูลระดับคน ไม่ใช่ต่อการสมัครครั้งเดียว จึงไม่ต้อง atomic กับการจองที่นั่ง
+        if (event.collectDateOfBirth && d.dateOfBirth) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { dateOfBirth: new Date(d.dateOfBirth) },
+            })
+        }
 
         revalidatePath(`/events/${d.eventId}`)
         revalidatePath("/profile")

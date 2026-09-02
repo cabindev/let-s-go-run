@@ -6,7 +6,7 @@ import type { EventImage, ImageCategory } from "@prisma/client"
 import { addEventImages, deleteEventImage, moveEventImage } from "@/app/actions/admin"
 import { Button, Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
-import { ConfirmAction } from "./ConfirmAction"
+import { ConfirmAction } from "../ui/ConfirmAction"
 import { IMAGE_GROUPS, groupField, type ImageGroup } from "@/lib/image-groups"
 
 /** จัดการรูปประกอบของงาน แยกตามหมวด */

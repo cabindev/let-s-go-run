@@ -108,6 +108,7 @@ model Event {
   collectBloodType             Boolean @default(false)
   collectNationalId            Boolean @default(false)
   collectPreviousParticipation Boolean @default(false)
+  collectDateOfBirth           Boolean @default(false)
 
   // ข้อความแจ้งเตือน PDPA ที่แสดงในฟอร์มสมัคร — แต่ละงานแก้ไขเองได้ (ว่าง = ใช้ข้อความกลางแทน)
   pdpaNotice String? @db.Text
@@ -210,10 +211,12 @@ model Registration {
   emergencyPhone String?
 
   // ฟิลด์เสริม — มีค่าเฉพาะงานที่เปิดเก็บ (ดู Event.collect*) ที่เหลือเป็น null เสมอ
-  gender                String?  // "MALE" | "FEMALE" | "LGBTQ"
+  gender                String?  // "MALE" | "FEMALE" (ค่าเก่า "LGBTQ" อาจยังพบได้ในเรคคอร์ดก่อนหน้า)
   bloodType             String?  // "O" | "A" | "B" | "AB"
   nationalId            String?  // เลขบัตรประชาชน 13 หลัก — ใช้เพื่อสิทธิ์ประกันอุบัติเหตุ
   hasParticipatedBefore Boolean?
+  hasMedicalCondition    Boolean? // มีโรคประจำตัวหรือไม่ — มีค่าเฉพาะงานที่เปิด Event.collectBloodType
+  medicalConditionDetail String?  @db.Text // รายละเอียดโรคประจำตัว — มีค่าเฉพาะเมื่อ hasMedicalCondition = true
 
   // เวลาที่ผู้สมัครกดยินยอมข้อความ PDPA — ใช้เป็นหลักฐานการยินยอมย้อนหลัง
   pdpaConsentAt DateTime?

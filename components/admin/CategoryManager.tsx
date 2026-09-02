@@ -7,7 +7,7 @@ import { createCategory, deleteCategory } from "@/app/actions/admin"
 import { Button, Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
 import { Field } from "@/components/ui/Field"
-import { ConfirmAction } from "./ConfirmAction"
+import { ConfirmAction } from "../ui/ConfirmAction"
 import { formatPrice } from "@/lib/utils"
 
 /** จัดการประเภทการแข่งขันของงานหนึ่ง ๆ (ตารางแบบ race.thai.run) */

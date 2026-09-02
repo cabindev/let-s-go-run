@@ -103,13 +103,29 @@ export const EVENT_TYPE_LABEL = {
 
 export const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const
 
+/** รอบอกโดยประมาณของแต่ละไซส์ (นิ้ว) — ค่าอ้างอิงทั่วไป แก้ในโค้ดได้ถ้าผู้ผลิตจริงระบุไม่ตรงกันนี้ */
+export const SHIRT_SIZE_CHART: Record<(typeof SHIRT_SIZES)[number], string> = {
+    XS: "34",
+    S: "36",
+    M: "38",
+    L: "40",
+    XL: "42",
+    "2XL": "44",
+    "3XL": "46",
+}
+
 export const GENDER_OPTIONS = [
     { value: "MALE", label: "ชาย" },
     { value: "FEMALE", label: "หญิง" },
-    { value: "LGBTQ", label: "LGBTQ+" },
 ] as const
 
 export const BLOOD_TYPES = ["O", "A", "B", "AB"] as const
+
+/** สถานะที่นั่งของประเภทหนึ่งๆ — ใช้ร่วมกันทั้งหน้ารายละเอียดงานและฟอร์มสมัคร */
+export function categoryAvailability(taken: number, maxSlots: number | null) {
+    const full = !!maxSlots && taken >= maxSlots
+    return { full, label: full ? "เต็มแล้ว" : "ว่าง" }
+}
 
 /** เลขบัตรประชาชนไทย — ตรวจแค่รูปแบบตัวเลข 13 หลัก ไม่ตรวจ checksum */
 export const NATIONAL_ID_PATTERN = /^\d{13}$/

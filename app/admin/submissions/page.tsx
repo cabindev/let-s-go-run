@@ -4,7 +4,7 @@ import { deleteSubmissionAsAdmin } from "@/app/actions/submission"
 import { Card } from "@/components/ui/Card"
 import { Avatar } from "@/components/ui/Avatar"
 import { EmptyState } from "@/components/ui/EmptyState"
-import { ConfirmAction } from "@/components/admin/ConfirmAction"
+import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { formatDate, formatNumber, formatTime } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
