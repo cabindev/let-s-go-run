@@ -25,7 +25,7 @@ export default async function HomePage({
 
     const events = await prisma.event.findMany({
         where: buildEventWhere(sp),
-        orderBy: sp.filter === "past" ? { date: "desc" } : { date: "asc" },
+        orderBy: { createdAt: "desc" },
         include: EVENT_INCLUDE,
         take: 60,
     })

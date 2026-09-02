@@ -60,7 +60,7 @@ export default async function PaymentPage({
                 className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors"
             >
                 <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-                กลับไปหน้ากิจกรรม
+                Back to Event / กลับไปหน้ากิจกรรม
             </Link>
 
             {fromWizard && (
@@ -71,7 +71,7 @@ export default async function PaymentPage({
 
             <div>
                 <div className="flex items-start justify-between gap-3">
-                    <p className="eyebrow">แจ้งชำระเงิน</p>
+                    <p className="eyebrow">Payment / แจ้งชำระเงิน</p>
                     <RegStatusBadge status={registration.status} />
                 </div>
                 <h1 className="display text-2xl sm:text-3xl mt-2">{registration.event.title}</h1>
@@ -86,12 +86,12 @@ export default async function PaymentPage({
             </div>
 
             {showCountdown && (
-                <Notice tone="sky" title="เหลือเวลาชำระเงิน">
+                <Notice tone="sky" title="Time Left to Pay / เหลือเวลาชำระเงิน">
                     <p className="numeral text-2xl mt-1">
                         <Countdown deadline={registration.expiresAt!.getTime()} />
                     </p>
                     <p className="mt-1">
-                        ต้องชำระเงินภายใน {PAYMENT_WINDOW_HOURS} ชั่วโมงหลังจอง
+                        Please pay within {PAYMENT_WINDOW_HOURS} hours of booking, or your seat will be released automatically / ต้องชำระเงินภายใน {PAYMENT_WINDOW_HOURS} ชั่วโมงหลังจอง
                         มิฉะนั้นระบบจะคืนที่นั่งให้ผู้สมัครคนอื่นโดยอัตโนมัติ
                     </p>
                 </Notice>
@@ -100,42 +100,42 @@ export default async function PaymentPage({
             {checkout === "success" && <PaymentStatusPoller status={registration.status} />}
 
             {checkout === "cancel" && registration.status !== "PAID" && (
-                <Notice tone="neutral" title="ยกเลิกการชำระเงิน">
-                    <p>ยังไม่ได้ตัดเงิน คุณสามารถลองชำระใหม่ได้อีกครั้ง</p>
+                <Notice tone="neutral" title="Payment Cancelled / ยกเลิกการชำระเงิน">
+                    <p>No charge was made — you can try paying again / ยังไม่ได้ตัดเงิน คุณสามารถลองชำระใหม่ได้อีกครั้ง</p>
                 </Notice>
             )}
 
             {expired && (
-                <Notice tone="danger" title="หมดเวลาชำระเงินแล้ว">
-                    <p>ระบบได้คืนที่นั่งให้ผู้สมัครคนอื่นแล้ว หากยังต้องการเข้าร่วมกรุณาสมัครใหม่</p>
+                <Notice tone="danger" title="Payment Time Expired / หมดเวลาชำระเงินแล้ว">
+                    <p>Your seat has been released to other participants — please register again if you still want to join / ระบบได้คืนที่นั่งให้ผู้สมัครคนอื่นแล้ว หากยังต้องการเข้าร่วมกรุณาสมัครใหม่</p>
                     <ButtonLink href={eventHref(registration.event)} variant="outline" size="sm" className="mt-3">
-                        กลับไปหน้างาน
+                        Back to Event / กลับไปหน้างาน
                     </ButtonLink>
                 </Notice>
             )}
 
             {/* ยอด */}
             <div>
-                <p className="eyebrow">ยอดที่ต้องชำระ</p>
+                <p className="eyebrow">Total Amount / ยอดที่ต้องชำระ</p>
                 <p className="numeral text-4xl sm:text-5xl mt-2">{formatPrice(amount)}</p>
                 {registration.deliveryMethod === "SHIPPING" && (
                     <p className="text-[13px] text-ink-mute mt-2">
-                        รวมค่าส่งไปรษณีย์ {formatPrice(SHIPPING_FEE)} แล้ว
+                        Includes mail delivery fee {formatPrice(SHIPPING_FEE)} / รวมค่าส่งไปรษณีย์ {formatPrice(SHIPPING_FEE)} แล้ว
                     </p>
                 )}
             </div>
 
             {/* สถานะ */}
             {registration.status === "PAID" && (
-                <Notice tone="lime" title="ยืนยันการชำระเงินแล้ว">
-                    <p>คุณเข้าร่วมกิจกรรมนี้เรียบร้อยแล้ว แล้วเจอกันที่จุดสตาร์ท</p>
+                <Notice tone="lime" title="Payment Confirmed / ยืนยันการชำระเงินแล้ว">
+                    <p>You&apos;ve successfully joined this event — see you at the start line / คุณเข้าร่วมกิจกรรมนี้เรียบร้อยแล้ว แล้วเจอกันที่จุดสตาร์ท</p>
                     <div className="flex flex-wrap gap-2 mt-3">
                         <ButtonLink href={eventHref(registration.event)} size="sm" variant="outline">
-                            ดูรายละเอียดกิจกรรม
+                            View Event / ดูรายละเอียดกิจกรรม
                         </ButtonLink>
                         {registration.receiptUrl && (
                             <ButtonLink href={registration.receiptUrl} target="_blank" size="sm" variant="outline">
-                                ดาวน์โหลดใบเสร็จ
+                                Download Receipt / ดาวน์โหลดใบเสร็จ
                             </ButtonLink>
                         )}
                     </div>
@@ -144,7 +144,7 @@ export default async function PaymentPage({
                         <div className="mt-5 pt-5 border-t border-lime-900/10">
                             <p className="text-[13px] font-semibold tracking-wide">BIB {registration.bib}</p>
                             <p className="text-[13px] mt-1 leading-relaxed">
-                                คุณเลือกรับทางไปรษณีย์ — ไม่ต้องมาสแกนหน้างาน ทางผู้จัดจะจัดส่งให้ตามที่อยู่ที่แจ้งไว้
+                                You chose mail delivery — no need to scan in at the venue, we&apos;ll ship to your address / คุณเลือกรับทางไปรษณีย์ — ไม่ต้องมาสแกนหน้างาน ทางผู้จัดจะจัดส่งให้ตามที่อยู่ที่แจ้งไว้
                             </p>
                         </div>
                     ) : checkinQr && (
@@ -154,7 +154,7 @@ export default async function PaymentPage({
                             <div>
                                 <p className="text-[13px] font-semibold tracking-wide">BIB {registration.bib}</p>
                                 <p className="text-[13px] mt-1 leading-relaxed">
-                                    แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
+                                    Show this QR at the gear pickup booth / แสดง QR นี้ที่บูธรับเสื้อ/ของที่ระลึกหน้างาน
                                 </p>
                             </div>
                         </div>
@@ -164,9 +164,9 @@ export default async function PaymentPage({
 
             {registration.status === "CANCELLED" && (
                 <Card className="p-6 text-center">
-                    <p className="text-sm text-ink-soft">รายการนี้ถูกยกเลิกแล้ว</p>
+                    <p className="text-sm text-ink-soft">Cancelled / รายการนี้ถูกยกเลิกแล้ว</p>
                     <ButtonLink href={eventHref(registration.event)} variant="outline" size="sm" className="mt-4">
-                        กลับไปหน้ากิจกรรม
+                        Back to Event / กลับไปหน้ากิจกรรม
                     </ButtonLink>
                 </Card>
             )}
@@ -176,12 +176,12 @@ export default async function PaymentPage({
                     <CheckoutButton registrationId={registration.id} amount={amount} />
                     <ConfirmAction
                         action={cancelRegistration.bind(null, registration.id)}
-                        title="ยกเลิกการสมัคร?"
-                        message="ที่นั่งของคุณจะถูกคืนให้ผู้สมัครคนอื่นทันที และต้องสมัครใหม่หากเปลี่ยนใจภายหลัง"
-                        confirmLabel="ยกเลิกการสมัคร"
+                        title="Cancel Registration? / ยกเลิกการสมัคร?"
+                        message="Your seat will be released to other participants immediately, and you'll need to register again if you change your mind / ที่นั่งของคุณจะถูกคืนให้ผู้สมัครคนอื่นทันที และต้องสมัครใหม่หากเปลี่ยนใจภายหลัง"
+                        confirmLabel="Cancel Registration / ยกเลิกการสมัคร"
                         className="w-full text-center text-[13px] text-ink-mute hover:text-danger transition-colors"
                     >
-                        ยกเลิกการสมัคร
+                        Cancel Registration / ยกเลิกการสมัคร
                     </ConfirmAction>
                 </div>
             )}

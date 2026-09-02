@@ -115,8 +115,8 @@ export const SHIRT_SIZE_CHART: Record<(typeof SHIRT_SIZES)[number], string> = {
 }
 
 export const GENDER_OPTIONS = [
-    { value: "MALE", label: "ชาย" },
-    { value: "FEMALE", label: "หญิง" },
+    { value: "MALE", label: "Male / ชาย" },
+    { value: "FEMALE", label: "Female / หญิง" },
 ] as const
 
 export const BLOOD_TYPES = ["O", "A", "B", "AB"] as const
@@ -124,7 +124,7 @@ export const BLOOD_TYPES = ["O", "A", "B", "AB"] as const
 /** สถานะที่นั่งของประเภทหนึ่งๆ — ใช้ร่วมกันทั้งหน้ารายละเอียดงานและฟอร์มสมัคร */
 export function categoryAvailability(taken: number, maxSlots: number | null) {
     const full = !!maxSlots && taken >= maxSlots
-    return { full, label: full ? "เต็มแล้ว" : "ว่าง" }
+    return { full, label: full ? "Full / เต็มแล้ว" : "Available / ว่าง" }
 }
 
 /** เลขบัตรประชาชนไทย — ตรวจแค่รูปแบบตัวเลข 13 หลัก ไม่ตรวจ checksum */

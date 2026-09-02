@@ -29,14 +29,14 @@ export function PaymentStatusPoller({ status }: { status: string }) {
     if (status !== "PENDING") return null
 
     return (
-        <Notice tone="sky" title="กำลังตรวจสอบการชำระเงิน">
+        <Notice tone="sky" title="Confirming Payment / กำลังตรวจสอบการชำระเงิน">
             <div className="flex items-center gap-2">
                 <Spinner />
-                <p>โปรดรอสักครู่ ระบบกำลังยืนยันการชำระเงินของคุณ...</p>
+                <p>Please wait, we&apos;re confirming your payment... / โปรดรอสักครู่ ระบบกำลังยืนยันการชำระเงินของคุณ...</p>
             </div>
             {tries >= MAX_TRIES && (
                 <p className="mt-2 text-[13px]">
-                    ยังไม่เห็นการยืนยันกลับมา ลองรีเฟรชหน้านี้อีกครั้ง หรือรอสักครู่แล้วเข้ามาดูใหม่
+                    Still not confirmed — try refreshing this page, or check back shortly / ยังไม่เห็นการยืนยันกลับมา ลองรีเฟรชหน้านี้อีกครั้ง หรือรอสักครู่แล้วเข้ามาดูใหม่
                 </p>
             )}
         </Notice>

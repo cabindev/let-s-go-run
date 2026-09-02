@@ -13,7 +13,7 @@ const FEE_RATES: Record<PaymentMethodChoice, { percent: number; fixed: number }>
 }
 
 export const FEE_LABEL: Record<PaymentMethodChoice, string> = {
-    card: "บัตรเครดิต/เดบิต",
+    card: "Credit/Debit Card / บัตรเครดิต/เดบิต",
     promptpay: "PromptPay",
 }
 

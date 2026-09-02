@@ -44,8 +44,8 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
 }
 
 export const REGISTER_STEPS: Step[] = [
-    { key: "category", label: "เลือกประเภท" },
-    { key: "details", label: "ข้อมูลผู้สมัคร" },
-    { key: "confirm", label: "ตรวจสอบ" },
-    { key: "payment", label: "ชำระเงิน" },
+    { key: "category", label: "Category / เลือกประเภท" },
+    { key: "details", label: "Details / ข้อมูลผู้สมัคร" },
+    { key: "confirm", label: "Review / ตรวจสอบ" },
+    { key: "payment", label: "Payment / ชำระเงิน" },
 ]
