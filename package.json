@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "prisma generate",
-    "build": "next build",
+    "_comment_build": "prisma generate ต้องอยู่ใน build ด้วย ไม่ใช่พึ่ง postinstall อย่างเดียว — postinstall ทำงานเฉพาะตอน npm install ถูกเรียกจริง ถ้า deploy script ข้ามขั้นนั้น หรือ npm มองว่า dependency ไม่เปลี่ยน จะได้ Prisma Client ตัวเก่าที่ไม่รู้จักตารางใหม่ แล้ว type check พังทั้งไฟล์",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
