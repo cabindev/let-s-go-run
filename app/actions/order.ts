@@ -71,10 +71,6 @@ export async function placeOrder(formData: FormData): Promise<PlaceOrderResult> 
         if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง" }
         const d = parsed.data
 
-        if (formData.get("pdpaConsent") !== "1") {
-            return { ok: false, error: "กรุณายอมรับเงื่อนไขการเก็บข้อมูลก่อนสั่งซื้อ" }
-        }
-
         const cart = await getCart(user.id)
         if (!cart || cart.items.length === 0) return { ok: false, error: "ตะกร้าว่างเปล่า" }
 
@@ -198,6 +194,8 @@ export async function placeOrder(formData: FormData): Promise<PlaceOrderResult> 
                         customerNote: d.customerNote || null,
                         expiresAt: needsPayment ? expiresAt : null,
                         paidAt: needsPayment ? null : new Date(),
+                        // เก็บเวลาที่ลูกค้ากดยืนยันคำสั่งซื้อไว้เป็นหลักฐานว่าได้รับแจ้งเรื่องการใช้ข้อมูลแล้ว
+                        // (ข้อความแจ้งอยู่เหนือปุ่มยืนยันในหน้า checkout)
                         pdpaConsentAt: new Date(),
                         items: {
                             create: group.lines.map((l) => ({
