@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { heldSeatWhere, expireStaleRegistrations, paymentDeadline } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
 import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN, registrationAmount } from "@/lib/events"
+import { sendRegistrationPlacedEmail, sendRegistrationPaidEmail } from "@/lib/mail"
 import type { ActionResult } from "./registration"
 
 const schema = z.object({
@@ -205,6 +206,25 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
                 where: { id: user.id },
                 data: { dateOfBirth: new Date(d.dateOfBirth) },
             })
+        }
+
+        // อีเมลยืนยันส่งหลังทรานแซกชันจบ และห้ามทำให้การสมัครล้มถ้าส่งไม่ออก
+        // งานฟรียืนยันทันทีตั้งแต่ตอนสมัคร จึงส่งฉบับ "ยืนยันแล้ว" ไปเลย ไม่ต้องรอ webhook
+        try {
+            const mailReg = {
+                id: outcome.reg.id,
+                eventTitle: event.title,
+                eventDate: event.date,
+                categoryName: chosen.id ? chosen.name : null,
+                amount,
+                bib: outcome.reg.bib,
+                expiresAt,
+                deliveryMethod,
+            }
+            if (needsPayment) await sendRegistrationPlacedEmail(user.email ?? "", mailReg)
+            else await sendRegistrationPaidEmail(user.email ?? "", mailReg)
+        } catch (e) {
+            console.error("[register] ส่งอีเมลยืนยันการสมัครไม่สำเร็จ:", e)
         }
 
         revalidatePath(`/events/${d.eventId}`)

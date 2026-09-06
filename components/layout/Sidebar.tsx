@@ -4,11 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { NAV_ITEMS, isActive } from "./nav-items"
+import { CartCountBadge } from "./CartButton"
 import { Wordmark } from "./Wordmark"
 import { Avatar } from "@/components/ui/Avatar"
 import { cn } from "@/lib/utils"
 
-export function Sidebar() {
+export function Sidebar({ cartCount = 0 }: { cartCount?: number }) {
     const pathname = usePathname()
     const { data: session, status } = useSession()
     const isAdmin = session?.user?.role === "ADMIN"
@@ -34,6 +35,9 @@ export function Sidebar() {
                                 >
                                     <item.icon className="w-5 h-5" strokeWidth={active ? 2.4 : 1.8} />
                                     {item.name}
+                                    {item.href === "/shop" && (
+                                        <CartCountBadge count={cartCount} className="ml-auto block" />
+                                    )}
                                 </Link>
                             </li>
                         )

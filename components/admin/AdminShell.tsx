@@ -14,6 +14,8 @@ const LINKS = [
     { href: "/admin/registrations", label: "ผู้สมัคร" },
     { href: "/admin/checkin", label: "CheckBIB" },
     { href: "/admin/submissions", label: "ผลวิ่ง VR" },
+    { href: "/admin/products", label: "สินค้า" },
+    { href: "/admin/orders", label: "ออเดอร์" },
     { href: "/admin/users", label: "ผู้ใช้งาน" },
     { href: "/admin/achievements", label: "ความสำเร็จ" },
 ]

@@ -5,12 +5,14 @@ import { getSession } from "@/lib/auth-helpers"
 import { getUserStats } from "@/lib/stats"
 import { getLevel } from "@/lib/levels"
 import { buildEventWhere, EVENT_INCLUDE } from "@/lib/event-query"
-import { Card } from "@/components/ui/Card"
+import { Card, SectionTitle, MoreLink } from "@/components/ui/Card"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ButtonLink } from "@/components/ui/Button"
 import { EventSearch } from "@/components/events/EventSearch"
 import { EventListCard } from "@/components/events/EventListCard"
 import { EventTabs } from "@/components/events/EventTabs"
+import { ProductCard } from "@/components/shop/ProductCard"
+import { isPurchasable, SHOP_NAME } from "@/lib/shop"
 import { formatNumber } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -83,7 +85,50 @@ export default async function HomePage({
                     </>
                 )}
             </section>
+
+            {/* ───── เสื้อและของที่ระลึก ───── */}
+            <Suspense fallback={null}>
+                <ShopStrip />
+            </Suspense>
         </>
+    )
+}
+
+/**
+ * แถบสินค้าบนหน้าแรก — โชว์ของล่าสุดไม่กี่ชิ้นแล้วลิงก์ไปหน้าร้านเต็ม
+ * ไม่แสดงอะไรเลยถ้ายังไม่มีสินค้าเปิดขาย เพื่อไม่ให้หน้าแรกมีหัวข้อว่างๆ
+ */
+async function ShopStrip() {
+    const products = await prisma.product.findMany({
+        where: { status: "ACTIVE" },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        include: {
+            variants: { where: { active: true }, orderBy: { sortOrder: "asc" } },
+            // ดึงมาไม่กี่รูปแล้วให้ coverImage() เลือก "ด้านหน้า" เป็นปก
+            images: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }], take: 4 },
+            event: { select: { title: true } },
+        },
+        take: 6,
+    })
+
+    const visible = products.filter((p) => isPurchasable(p)).slice(0, 3)
+    if (visible.length === 0) return null
+
+    return (
+        <section className="border-t border-line bg-paper">
+            <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-6">
+                <SectionTitle
+                    title="สินค้าและของที่ระลึก"
+                    action={<MoreLink href="/shop">ดูสินค้าทั้งหมด</MoreLink>}
+                />
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {visible.map((p) => <ProductCard key={p.id} product={p} />)}
+                </div>
+                <p className="text-[13px] text-ink-mute">
+                    {SHOP_NAME} · เลือกไซส์ ใส่ตะกร้า แล้วชำระเงินผ่านระบบได้ทันที รับเองหรือส่งไปรษณีย์ก็ได้
+                </p>
+            </div>
+        </section>
     )
 }
 
