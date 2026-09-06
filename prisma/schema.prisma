@@ -66,6 +66,10 @@ model User {
   registrations Registration[]
   achievements  UserAchievement[]
 
+  // ร้านค้า — ตะกร้ามีได้คนละใบเดียว ออเดอร์มีได้หลายใบ
+  cart          Cart?
+  orders        Order[]
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -119,6 +123,7 @@ model Event {
   images        EventImage[]
   categories    RaceCategory[]
   registrations Registration[]
+  products      Product[]              // สินค้าในร้านที่ผูกกับงานนี้ (เช่น เสื้อของงาน) — ไม่ผูกก็ได้
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -221,6 +226,15 @@ model Registration {
   // เวลาที่ผู้สมัครกดยินยอมข้อความ PDPA — ใช้เป็นหลักฐานการยินยอมย้อนหลัง
   pdpaConsentAt DateTime?
 
+  /**
+   * ตั้งค่าเมื่อ Stripe แจ้งว่าจ่ายเงินสำเร็จ แต่ใบสมัครไม่อยู่ในสถานะที่รับเงินได้แล้ว
+   * (หมดเวลาชำระ หรือถูกยกเลิก — ที่นั่งถูกคืนให้คนอื่นไปแล้ว)
+   *
+   * เงินเข้าจริงแต่ผู้สมัครไม่ได้ที่นั่ง ห้ามปล่อยเงียบ ต้องมีคนตามเรื่อง
+   * (กติกาเดียวกับ Order.paymentIssueAt ของฝั่งร้านค้า)
+   */
+  paymentIssueAt DateTime?
+
   // วิธีรับของที่เลือกไว้ตอนสมัคร (มีค่าเฉพาะงานที่เปิด Event.offerShipping)
   // "PICKUP" = มารับเองที่งาน (สแกน QR หน้างาน) / "SHIPPING" = ส่งไปรษณีย์ (+ค่าส่ง)
   deliveryMethod String?
@@ -243,6 +257,7 @@ model Registration {
   @@index([categoryId])
   @@index([status])
   @@index([status, expiresAt])
+  @@index([paymentIssueAt])
 }
 
 /**
@@ -293,4 +308,265 @@ model UserAchievement {
   @@unique([userId, achievementId])
   @@index([userId])
   @@index([achievementId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ร้านค้า (Shop)
+//
+// แยกจากระบบสมัครงานวิ่งโดยสิ้นเชิง — ไม่แตะ Registration เลย เพราะ Registration
+// ถูกออกแบบเป็น "1 คน 1 งาน" (@@unique([userId, eventId])) จึงมีหลายชิ้น/หลายไซส์/
+// มีจำนวนไม่ได้ ส่วนตรงนี้ใช้ User / Stripe / ระบบ auth ร่วมกับของเดิม
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** สินค้าพร้อมส่ง (ตัดสต็อกจริง) หรือ พรีออเดอร์ (ผลิตหลังปิดรอบ) — คนละรอบจัดส่ง จึงแยกออเดอร์กัน */
+enum ProductType {
+  STOCK
+  PREORDER
+}
+
+enum ProductStatus {
+  DRAFT   // ยังไม่เผยแพร่ — เห็นเฉพาะแอดมิน
+  ACTIVE  // ขายอยู่
+  HIDDEN  // ซ่อนชั่วคราว (ของเก่าที่ขายไปแล้วยังอ้างอิงได้)
+}
+
+enum OrderStatus {
+  PENDING    // สั่งแล้ว รอชำระเงิน (จองสต็อกไว้แล้ว)
+  PAID       // ชำระเงินแล้ว รอจัดเตรียม
+  PREPARING  // กำลังจัดเตรียม/รอผลิต (พรีออเดอร์)
+  SHIPPED    // จัดส่งแล้ว (มีเลขพัสดุ)
+  COMPLETED  // ผู้ซื้อรับของแล้ว
+  CANCELLED  // ยกเลิก — คืนสต็อกแล้ว
+  EXPIRED    // ไม่ชำระเงินตามกำหนด ระบบคืนสต็อกอัตโนมัติ
+  REFUNDED   // คืนเงินแล้ว
+}
+
+/** วิธีรับของของออเดอร์ร้านค้า (แยกจาก Registration.deliveryMethod ที่เป็น String) */
+enum ShopDelivery {
+  PICKUP    // มารับเอง
+  SHIPPING  // ส่งไปรษณีย์ (+ค่าส่ง)
+}
+
+/**
+ * หมวดรูปสินค้า — คนซื้อของออนไลน์ตัดสินใจจากรูปเป็นหลัก จึงแยกหมวดให้ชัด
+ * FRONT กับ BACK บังคับต้องมีก่อนเปิดขาย (ดู REQUIRED_PRODUCT_IMAGE_GROUPS)
+ */
+enum ProductImageCategory {
+  FRONT       // ด้านหน้า
+  BACK        // ด้านหลัง
+  MODEL       // ใส่จริงบนนายแบบ/นางแบบ
+  DETAIL      // รายละเอียดเนื้อผ้า/งานพิมพ์
+  SIZE_GUIDE  // ตารางไซส์
+  OTHER
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  slug        String        @unique          // ใช้เป็น URL /shop/[slug]
+  name        String
+  description String        @db.Text
+  type        ProductType   @default(STOCK)
+  status      ProductStatus @default(DRAFT)
+  price       Float                          // ราคาตั้งต้น — variant override ได้
+
+  // ผูกกับงานวิ่ง (ไม่บังคับ) — null = สินค้าทั่วไปที่ไม่เกี่ยวกับงานไหน
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  // เฉพาะสินค้าพรีออเดอร์
+  preorderCloseAt DateTime?                  // ปิดรับพรีออเดอร์
+  estimatedShipAt DateTime?                  // กำหนดจัดส่งโดยประมาณ
+  preorderNote    String?   @db.Text         // เงื่อนไข/รอบผลิต บอกผู้ซื้อก่อนตัดสินใจ
+
+  // วิธีรับของที่สินค้านี้อนุญาต
+  allowPickup   Boolean @default(true)
+  allowShipping Boolean @default(true)
+
+  // จำกัดจำนวนต่อออเดอร์ — กันคนกวาดของทั้งล็อต
+  maxPerOrder Int @default(10)
+
+  sortOrder Int @default(0)
+
+  variants   ProductVariant[]
+  images     ProductImage[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, type])
+  @@index([eventId])
+}
+
+/**
+ * ตัวเลือกของสินค้า เช่น ไซส์เสื้อ
+ *
+ * สินค้าทุกตัวต้องมีอย่างน้อย 1 variant — ของที่ไม่มีไซส์ให้สร้างตัวชื่อ "มาตรฐาน"
+ * เพื่อให้ราคา/สต็อก/ตะกร้าใช้ตรรกะเดียวกันหมด และเลี่ยงปัญหา MySQL ที่ยอมให้
+ * ค่า NULL ซ้ำกันได้ใน unique index (ถ้าปล่อยให้ variantId เป็น null ในตะกร้า)
+ */
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  name      String                  // เช่น "M (รอบอก 38 นิ้ว)" หรือ "มาตรฐาน"
+  sku       String? @unique
+  price     Float?                  // null = ใช้ราคาของสินค้า
+  stock     Int?                    // null = ไม่จำกัด (ใช้กับพรีออเดอร์) / 0 = หมด
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, name])
+  @@index([productId])
+}
+
+model ProductImage {
+  id        String               @id @default(cuid())
+  productId String
+  url       String
+  caption   String?
+  category  ProductImageCategory @default(OTHER)
+  sortOrder Int                  @default(0)
+
+  // ขนาดจริงของไฟล์ — จองพื้นที่ก่อนรูปโหลด กันหน้ากระโดด (เหมือน EventImage)
+  width  Int?
+  height Int?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([productId, category])
+}
+
+/** ตะกร้าค้างไว้ได้ข้ามเครื่อง เพราะผูกกับบัญชี ไม่ได้เก็บใน localStorage */
+model Cart {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int    @default(1)
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+}
+
+model Order {
+  id      String      @id @default(cuid())
+  orderNo String      @unique          // เลขที่อ่านง่ายสำหรับคุยกับลูกค้า เช่น RL-260906-0007
+  userId  String
+  status  OrderStatus @default(PENDING)
+  type    ProductType                  // ออเดอร์ใบนี้เป็นของพร้อมส่ง หรือ พรีออเดอร์
+
+  // ยอดทั้งหมดเป็น snapshot ณ เวลาสั่ง — ห้ามคำนวณใหม่จากราคาสินค้าปัจจุบัน
+  // เพราะแอดมินแก้ราคาทีหลังได้ ออเดอร์เก่าต้องคงยอดเดิมไว้เป็นหลักฐาน
+  subtotal    Float
+  shippingFee Float
+  total       Float
+
+  deliveryMethod ShopDelivery
+
+  // ที่อยู่จัดส่ง — snapshot เช่นกัน (ผู้ซื้อแก้โปรไฟล์ทีหลังไม่ควรกระทบใบเก่า)
+  recipientName  String?
+  recipientPhone String?
+  address        String? @db.Text
+  province       String?
+  postalCode     String?
+  customerNote   String? @db.Text
+
+  // ต้องชำระให้เสร็จภายในเวลานี้ ไม่งั้นระบบคืนสต็อก (null = จ่ายแล้ว/จบแล้ว)
+  expiresAt DateTime?
+  paidAt    DateTime?
+
+  // ร่องรอยการจ่ายผ่าน Stripe — ชุดเดียวกับ Registration ไว้ reconcile ย้อนหลัง
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String?
+  paymentMethod         String? // "card" | "promptpay"
+  receiptUrl            String? @db.Text
+
+  // การจัดส่ง/รับของ
+  trackingNo String?
+  shippedAt  DateTime?
+  pickedUpAt DateTime?
+  adminNote  String?   @db.Text
+
+  // เวลาที่ผู้ซื้อกดยินยอม PDPA (ที่อยู่จัดส่งเป็นข้อมูลส่วนบุคคล)
+  pdpaConsentAt DateTime?
+
+  /**
+   * ตั้งค่าเมื่อ Stripe แจ้งว่าจ่ายเงินสำเร็จ แต่ออเดอร์ไม่อยู่ในสถานะ PENDING แล้ว
+   * (หมดเวลาชำระ หรือถูกยกเลิกไปก่อน — สต็อกถูกคืนให้คนอื่นไปแล้ว)
+   *
+   * เคสนี้เงินเข้าจริงแต่ลูกค้าไม่ได้ของ ห้ามปล่อยเงียบ ต้องมีคนตามเรื่อง
+   * จึงบันทึกไว้ให้หน้าแอดมินเด้งเตือน พร้อมเก็บ payment intent ไว้ใช้คืนเงิน/ตามรอย
+   */
+  paymentIssueAt DateTime?
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([status, expiresAt])
+  @@index([paymentIssueAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  // SetNull เพราะลบสินค้าออกจากร้านแล้ว ออเดอร์เก่าต้องยังอ่านได้อยู่
+  productId String?
+  variantId String?
+
+  // snapshot ณ เวลาสั่ง — ชื่อและราคาต้องไม่เปลี่ยนตามสินค้าปัจจุบัน
+  productName String
+  variantName String
+  unitPrice   Float
+  quantity    Int
+  lineTotal   Float
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+/** ตั้งค่าร้าน — มีแถวเดียวเสมอ (id = "default") แอดมินแก้ได้ในหน้าตั้งค่า */
+model ShopSetting {
+  id                   String  @id @default("default")
+  shippingBaseFee      Float   @default(55)  // ค่าส่งชิ้นแรก
+  shippingExtraPerItem Float   @default(10)  // ชิ้นถัดไปบวกชิ้นละ
+  pickupLocation       String? @db.Text      // จุดรับของ แสดงตอนเลือก "รับเอง"
+  announcement         String? @db.Text      // ประกาศบนหน้าร้าน
+
+  updatedAt DateTime @updatedAt
 }

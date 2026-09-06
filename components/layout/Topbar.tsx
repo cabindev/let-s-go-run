@@ -5,9 +5,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { Avatar } from "@/components/ui/Avatar"
+import { CartButton } from "./CartButton"
 import { Wordmark } from "./Wordmark"
 
-export function Topbar() {
+export function Topbar({ cartCount = 0 }: { cartCount?: number }) {
     const { data: session, status } = useSession()
     const pathname = usePathname()
     const [open, setOpen] = useState(false)
@@ -30,6 +31,8 @@ export function Topbar() {
                 <Wordmark className="lg:invisible" />
 
                 <div className="flex items-center gap-3">
+                    {session?.user && <CartButton count={cartCount} />}
+
                     {status === "loading" ? (
                         <div className="w-9 h-9 rounded-full bg-paper-3 animate-pulse" />
                     ) : session?.user ? (

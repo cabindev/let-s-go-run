@@ -16,7 +16,7 @@ export interface SavedImage extends Partial<Size> {
  */
 export async function saveImage(
     file: File,
-    folder: "events" | "avatars" | "results" | "signatures"
+    folder: "events" | "avatars" | "results" | "signatures" | "products"
 ): Promise<SavedImage> {
     if (!ALLOWED.has(file.type)) {
         throw new Error("รองรับเฉพาะไฟล์รูปภาพ JPG, PNG, WEBP หรือ GIF")

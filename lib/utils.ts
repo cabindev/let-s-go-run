@@ -86,6 +86,19 @@ export function formatDateTimeInput(date: Date | string) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+/**
+ * อ่านค่าจากฟอร์มให้เป็นสตริงเสมอ
+ *
+ * ฟิลด์ที่ไม่ได้ถูกเรนเดอร์ (เช่น ช่องที่อยู่ตอนเลือก "รับเอง" หรือช่องพรีออเดอร์ตอนเลือก
+ * "สินค้าพร้อมส่ง") จะไม่มีอยู่ใน FormData เลย และ `formData.get()` คืน null
+ * ซึ่ง Zod `.optional()` ไม่รับ (มันรับแค่ undefined) จะกลายเป็น error "Invalid input"
+ * ที่ไล่หาต้นตอยาก — จึงแปลงเป็นสตริงว่างตั้งแต่ตอนอ่าน
+ */
+export function formString(formData: FormData, key: string) {
+    const value = formData.get(key)
+    return typeof value === "string" ? value : ""
+}
+
 export function initials(name?: string | null, email?: string | null) {
     const source = name?.trim() || email || "?"
     return source.charAt(0).toUpperCase()

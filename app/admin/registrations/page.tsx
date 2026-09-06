@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { cancelRegistrationAsAdmin } from "@/app/actions/admin"
 import { Card } from "@/components/ui/Card"
 import { Avatar } from "@/components/ui/Avatar"
-import { Badge, RegStatusBadge, REG_STATUS } from "@/components/ui/Badge"
+import { Badge, Notice, RegStatusBadge, REG_STATUS } from "@/components/ui/Badge"
 import { ButtonLink } from "@/components/ui/Button"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ConfirmAction } from "@/components/ui/ConfirmAction"
@@ -41,7 +41,7 @@ export default async function AdminRegistrationsPage({
     if (q) exportParams.set("q", q)
     const exportHref = `/api/admin/registrations/export${exportParams.size ? `?${exportParams}` : ""}`
 
-    const [registrations, filteredTotal, events, counts] = await Promise.all([
+    const [registrations, filteredTotal, events, counts, paymentIssues] = await Promise.all([
         prisma.registration.findMany({
             where,
             orderBy: { registeredAt: "desc" },
@@ -56,6 +56,16 @@ export default async function AdminRegistrationsPage({
         prisma.registration.count({ where }),
         prisma.event.findMany({ select: { id: true, title: true }, orderBy: { date: "desc" } }),
         prisma.registration.groupBy({ by: ["status"], _count: { _all: true } }),
+        // เงินเข้าแล้วแต่ใบสมัครหมดอายุ/ถูกยกเลิกไปก่อน — ต้องเด้งเตือนจนกว่าจะมีคนจัดการ
+        prisma.registration.findMany({
+            where: { paymentIssueAt: { not: null } },
+            orderBy: { paymentIssueAt: "desc" },
+            select: {
+                id: true, status: true, fullName: true,
+                user: { select: { email: true } },
+                event: { select: { title: true } },
+            },
+        }),
     ])
 
     const countOf = (s: RegistrationStatus) => counts.find((c) => c.status === s)?._count._all ?? 0
@@ -77,6 +87,25 @@ export default async function AdminRegistrationsPage({
                     Excel
                 </ButtonLink>
             </div>
+
+            {paymentIssues.length > 0 && (
+                <Notice
+                    tone="danger"
+                    title={`⚠ มี ${paymentIssues.length} ใบสมัครที่เงินเข้าแล้วแต่ระบบรับไม่ได้`}
+                >
+                    <p className="mb-2">
+                        ผู้สมัครชำระเงินสำเร็จ แต่ตอนเงินเข้าใบสมัครหมดเวลาหรือถูกยกเลิกไปแล้ว
+                        ที่นั่งถูกคืนให้คนอื่นไปแล้ว — <strong>ต้องคืนเงินหรือคืนที่นั่งให้ผู้สมัคร</strong>
+                    </p>
+                    <ul className="space-y-1">
+                        {paymentIssues.map((r) => (
+                            <li key={r.id} className="text-[13px]">
+                                <strong>{r.fullName || r.user.email}</strong> · {r.event.title} · สถานะ {r.status}
+                            </li>
+                        ))}
+                    </ul>
+                </Notice>
+            )}
 
             {/* สรุปตามสถานะ — กดเพื่อกรอง */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -141,6 +170,7 @@ export default async function AdminRegistrationsPage({
                                             {r.pickupStatus === "PICKED_UP" && <Badge tone="lime">รับที่บูธแล้ว</Badge>}
                                             {r.pickupStatus === "SHIPPED" && <Badge tone="sky">ส่งไปรษณีย์แล้ว</Badge>}
                                             {needsShipping && <Badge tone="danger">รอส่งไปรษณีย์</Badge>}
+                                            {r.paymentIssueAt && <Badge tone="danger">เงินเข้าแต่ใบสมัครไม่สมบูรณ์</Badge>}
                                         </div>
 
                                         <p className="text-[11px] text-ink-mute truncate mt-0.5">

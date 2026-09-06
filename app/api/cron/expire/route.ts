@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { expireStaleRegistrations } from "@/lib/expiry"
+import { expireStaleOrders } from "@/lib/order-stock"
 
 /**
  * ปล่อยที่นั่งของรายการที่ไม่ชำระเงินตามกำหนด
@@ -20,6 +21,10 @@ export async function GET(request: NextRequest) {
         }
     }
 
+    // ออเดอร์ร้านค้าต่างจากที่นั่งงานวิ่งตรงที่ "ต้องคืนสต็อกจริง" ไม่ใช่แค่เปลี่ยนสถานะ
+    // ถ้าไม่มีตัวกวาด ของที่ถูกจองไว้แล้วไม่จ่ายจะค้างจนไม่มีใครซื้อได้อีก
     const expired = await expireStaleRegistrations()
-    return NextResponse.json({ expired, at: new Date().toISOString() })
+    const expiredOrders = await expireStaleOrders()
+
+    return NextResponse.json({ expired, expiredOrders, at: new Date().toISOString() })
 }

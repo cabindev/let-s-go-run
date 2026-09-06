@@ -5,10 +5,11 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { Avatar } from "@/components/ui/Avatar"
+import { CartButton } from "./CartButton"
 import { Wordmark } from "./Wordmark"
 
 /** แถบบนของหน้าแรก — ไม่มี sidebar จึงต้องมีเมนูครบในแถบนี้ */
-export function PublicHeader() {
+export function PublicHeader({ cartCount = 0 }: { cartCount?: number }) {
     const { data: session, status } = useSession()
     const pathname = usePathname()
     const [open, setOpen] = useState(false)
@@ -32,11 +33,19 @@ export function PublicHeader() {
 
                 <nav className="flex items-center gap-1 sm:gap-2">
                     <Link
+                        href="/shop"
+                        className="hidden sm:inline-flex h-10 px-4 items-center rounded-full text-[15px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors"
+                    >
+                        ร้านค้า
+                    </Link>
+                    <Link
                         href="/leaderboard"
                         className="hidden sm:inline-flex h-10 px-4 items-center rounded-full text-[15px] font-semibold text-ink-soft hover:text-ink hover:bg-paper-2 transition-colors"
                     >
                         อันดับ
                     </Link>
+
+                    {session?.user && <CartButton count={cartCount} />}
 
                     {status === "loading" ? (
                         <div className="w-9 h-9 rounded-full bg-paper-3 animate-pulse" />
