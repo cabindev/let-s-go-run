@@ -75,7 +75,21 @@ export default async function EventInviteCodesPage({
     const inviteCat = new Map(inviteByCat.map((r) => [r.categoryId!, r._count._all]))
 
     const issued = codes.reduce((sum, c) => sum + c.maxUses, 0)
-    const used = codes.reduce((sum, c) => sum + c.usedCount, 0)
+
+    /**
+     * "ใช้ไปกี่สิทธิ์" นับจากใบสมัครจริง ไม่ใช่อ่านจาก InviteCode.usedCount
+     *
+     * usedCount มีไว้เป็นตัวจองสิทธิ์แบบ atomic ตอนสมัคร (เช็ค < maxUses แล้วบวกในคำสั่งเดียว
+     * ซึ่งการ count() ทำแทนไม่ได้) แต่มันเป็นตัวเลขที่ "ถูกดูแลให้ตรง" ไม่ใช่ความจริงในตัวเอง
+     * และเพี้ยนได้จริง — ลบผู้ใช้ทิ้ง ใบสมัครหายไปตาม cascade แต่ usedCount ไม่ถูกลดตาม
+     *
+     * ตัวเลขบนหน้านี้คือตัวเลขที่เอาไปรายงานสปอนเซอร์ จึงต้องมาจากการนับใบสมัครที่มีอยู่จริง
+     */
+    const usedByCode = new Map<string, number>()
+    for (const r of usedRegs) {
+        usedByCode.set(r.inviteCodeId!, (usedByCode.get(r.inviteCodeId!) ?? 0) + 1)
+    }
+    const used = usedRegs.length
 
     return (
         <div className="space-y-10">
@@ -179,7 +193,7 @@ export default async function EventInviteCodesPage({
 
             <InviteCodeManager
                 eventId={event.id}
-                codes={codes}
+                codes={codes.map((c) => ({ ...c, actualUsed: usedByCode.get(c.id) ?? 0 }))}
                 issued={issued}
                 used={used}
                 registrations={usedRegs.map((r) => ({

@@ -851,16 +851,26 @@ export async function updateInviteCodeQuota(id: string, maxUses: number): Promis
     }
 }
 
-/** ลบโค้ดที่ยังไม่มีใครใช้ — ใช้ไปแล้วให้ปิดการใช้งานแทน จะได้ตามที่มาของที่นั่งฟรีได้ตลอด */
+/**
+ * ลบโค้ดที่ยังไม่มีใครใช้ — ใช้ไปแล้วให้ปิดการใช้งานแทน จะได้ตามที่มาของที่นั่งฟรีได้ตลอด
+ *
+ * ตัดสินจาก "มีใบสมัครอ้างถึงโค้ดนี้ไหม" ไม่ใช่จาก usedCount เพราะ usedCount เป็นตัวจอง
+ * สิทธิ์ที่ถูกดูแลให้ตรง ไม่ใช่ความจริงในตัวเอง — สิ่งที่ต้องปกป้องจริงคือประวัติของ
+ * ที่นั่งที่มีคนได้ไปแล้ว ซึ่งวัดจากใบสมัคร ไม่ใช่จากตัวเลข
+ *
+ * นับทุกสถานะรวมที่ยกเลิกไปแล้ว เพราะใบที่ยกเลิกก็ยังเป็นร่องรอยว่าโค้ดนี้เคยถูกใช้
+ */
 export async function deleteInviteCode(id: string): Promise<ActionResult> {
     try {
         await requireAdminAction()
         const code = await prisma.inviteCode.findUnique({
             where: { id },
-            select: { eventId: true, usedCount: true },
+            select: { eventId: true },
         })
         if (!code) return { ok: false, error: "ไม่พบโค้ดนี้" }
-        if (code.usedCount > 0) {
+
+        const usedBy = await prisma.registration.count({ where: { inviteCodeId: id } })
+        if (usedBy > 0) {
             return { ok: false, error: "โค้ดนี้มีคนใช้ไปแล้ว ปิดการใช้งานแทนการลบ" }
         }
 
@@ -891,11 +901,19 @@ export async function deleteInviteCodeGroup(
 
         const codes = await prisma.inviteCode.findMany({
             where: { eventId, groupName },
-            select: { id: true, usedCount: true },
+            select: { id: true },
         })
         if (codes.length === 0) return { ok: false, error: "ไม่พบกลุ่มนี้" }
 
-        const unused = codes.filter((c) => c.usedCount === 0)
+        // "ใช้ไปแล้ว" = มีใบสมัครอ้างถึงจริง ไม่ใช่ usedCount (เหตุผลเดียวกับ deleteInviteCode)
+        const usedRows = await prisma.registration.groupBy({
+            by: ["inviteCodeId"],
+            where: { inviteCodeId: { in: codes.map((c) => c.id) } },
+            _count: { _all: true },
+        })
+        const hasHistory = new Set(usedRows.map((r) => r.inviteCodeId!))
+
+        const unused = codes.filter((c) => !hasHistory.has(c.id))
         const used = codes.length - unused.length
 
         if (unused.length === 0) {

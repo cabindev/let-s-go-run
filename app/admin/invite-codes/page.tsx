@@ -49,6 +49,17 @@ export default async function AdminInviteCodesPage() {
     const publicBy = new Map(publicRows.map((r) => [r.eventId, r._count._all]))
     const inviteBy = new Map(inviteRows.map((r) => [r.eventId, r._count._all]))
 
+    /**
+     * จำนวนที่ใช้ไปของโค้ดแต่ละใบ — นับจากใบสมัครจริง ไม่อ่านจาก InviteCode.usedCount
+     * (usedCount เป็นตัวจองสิทธิ์ตอนสมัคร ดูเหตุผลเต็มที่หน้ารายละเอียดของแต่ละงาน)
+     */
+    const usedRows = await prisma.registration.groupBy({
+        by: ["inviteCodeId"],
+        where: { inviteCodeId: { not: null }, ...inviteSeatWhere() },
+        _count: { _all: true },
+    })
+    const usedByCode = new Map(usedRows.map((r) => [r.inviteCodeId!, r._count._all]))
+
     const withCodes = events.filter((e) => e.inviteCodes.length > 0)
     const withoutCodes = events.filter((e) => e.inviteCodes.length === 0 && !isEventOver(e))
 
@@ -56,7 +67,7 @@ export default async function AdminInviteCodesPage() {
         (s, e) => s + e.inviteCodes.reduce((n, c) => n + c.maxUses, 0), 0
     )
     const totalUsed = withCodes.reduce(
-        (s, e) => s + e.inviteCodes.reduce((n, c) => n + c.usedCount, 0), 0
+        (s, e) => s + e.inviteCodes.reduce((n, c) => n + (usedByCode.get(c.id) ?? 0), 0), 0
     )
 
     return (
@@ -97,7 +108,7 @@ export default async function AdminInviteCodesPage() {
                 for (const c of e.inviteCodes) {
                     const g = groups.get(c.groupName) ?? { issued: 0, used: 0, codes: 0, percent: c.discountPercent, active: 0 }
                     g.issued += c.maxUses
-                    g.used += c.usedCount
+                    g.used += usedByCode.get(c.id) ?? 0
                     g.codes += 1
                     if (c.active) g.active += 1
                     groups.set(c.groupName, g)

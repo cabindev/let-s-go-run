@@ -19,6 +19,14 @@ import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { discountLabel } from "@/lib/invite-codes"
 import { cn, formatDate } from "@/lib/utils"
 
+/**
+ * โค้ดหนึ่งใบ พร้อมจำนวนที่ใช้จริงซึ่งนับมาจากใบสมัคร
+ *
+ * `usedCount` ที่ติดมากับแถวคือตัวจองสิทธิ์ตอนสมัคร ส่วน `actualUsed` คือความจริง
+ * ปกติสองค่านี้ต้องเท่ากัน ถ้าไม่เท่าแปลว่ามีใบสมัครหายไปโดยไม่ผ่านทางยกเลิกปกติ
+ */
+type CodeWithUsage = InviteCode & { actualUsed: number }
+
 interface UsedRegistration {
     id: string
     fullName: string | null
@@ -46,7 +54,7 @@ export function InviteCodeManager({
     registrations,
 }: {
     eventId: string
-    codes: InviteCode[]
+    codes: CodeWithUsage[]
     issued: number
     used: number
     registrations: UsedRegistration[]
@@ -96,7 +104,7 @@ export function InviteCodeManager({
     }
 
     // จัดกลุ่มตามชื่อกลุ่ม — หนึ่งกลุ่มอาจมีโค้ดใบเดียว (แจกทั้งกลุ่ม) หรือหลายใบ (ใบละคน)
-    const groups = new Map<string, InviteCode[]>()
+    const groups = new Map<string, CodeWithUsage[]>()
     for (const c of codes) {
         const list = groups.get(c.groupName) ?? []
         list.push(c)
@@ -246,7 +254,7 @@ export function InviteCodeManager({
 
             {[...groups.entries()].map(([groupName, list]) => {
                 const groupIssued = list.reduce((s, c) => s + c.maxUses, 0)
-                const groupUsed = list.reduce((s, c) => s + c.usedCount, 0)
+                const groupUsed = list.reduce((s, c) => s + c.actualUsed, 0)
                 const people = registrations.filter((r) => list.some((c) => c.id === r.inviteCodeId))
                 const allCodes = list.map((c) => c.code).join("\n")
 
@@ -298,7 +306,7 @@ export function InviteCodeManager({
                                         title={`ลบกลุ่ม "${groupName}" ทั้งหมด?`}
                                         message={
                                             groupUsed > 0
-                                                ? `จะลบโค้ดที่ยังไม่มีใครใช้ ${list.filter((c) => c.usedCount === 0).length} ใบ ` +
+                                                ? `จะลบโค้ดที่ยังไม่มีใครใช้ ${list.filter((c) => c.actualUsed === 0).length} ใบ ` +
                                                   `ส่วนอีก ${groupUsed} ใบที่มีคนใช้สิทธิ์ไปแล้วจะเก็บไว้ เพื่อให้ตามที่มาของที่นั่งได้`
                                                 : `โค้ดทั้ง ${list.length} ใบของกลุ่มนี้จะถูกลบถาวร ยังไม่มีใครใช้สิทธิ์ จึงไม่กระทบผู้สมัคร`
                                         }
@@ -321,7 +329,10 @@ export function InviteCodeManager({
 
                         <ul className="mt-5 divide-y divide-line border-t border-line">
                             {list.map((c) => {
+                                // ป้ายสถานะยึด usedCount เพราะนั่นคือค่าที่ใช้ตัดสินตอนมีคนกดใช้จริง
+                                // ส่วนตัวเลขที่โชว์ยึด actualUsed เพราะเป็นตัวเลขที่เอาไปรายงาน
                                 const full = c.usedCount >= c.maxUses
+                                const drifted = c.actualUsed !== c.usedCount
                                 // คนที่ใช้โค้ดใบนี้ — โชว์ติดกับโค้ดเลย เพราะคำถามหน้างานคือ
                                 // "โค้ดใบนี้ใครถือ" ไม่ใช่ "มีคนใช้แล้วกี่คน"
                                 const users = people.filter((p) => p.inviteCodeId === c.id)
@@ -358,8 +369,17 @@ export function InviteCodeManager({
                                         )}
 
                                         <span className="text-[12px] text-ink-mute tnum">
-                                            {c.usedCount}/{c.maxUses}
+                                            {c.actualUsed}/{c.maxUses}
                                         </span>
+
+                                        {drifted && (
+                                            <span
+                                                className="text-[11px] text-danger"
+                                                title={`ตัวจองสิทธิ์บันทึกไว้ ${c.usedCount} แต่นับใบสมัครจริงได้ ${c.actualUsed}`}
+                                            >
+                                                ⚠ ตัวนับไม่ตรง (จองไว้ {c.usedCount})
+                                            </span>
+                                        )}
 
                                         {/* โค้ดใบละคนจะมีชื่อเดียว ส่วนโค้ดเดียวทั้งกลุ่มอาจมีหลายสิบชื่อ
                                             จึงตัดที่ 3 ชื่อ ที่เหลือดูได้ในรายชื่อเต็มด้านล่าง */}
@@ -407,7 +427,7 @@ export function InviteCodeManager({
                                             >
                                                 {c.active ? "ปิด" : "เปิด"}
                                             </button>
-                                            {c.usedCount === 0 && (
+                                            {c.actualUsed === 0 && (
                                                 <ConfirmAction
                                                     action={deleteInviteCode.bind(null, c.id)}
                                                     title="ลบโค้ดนี้?"
