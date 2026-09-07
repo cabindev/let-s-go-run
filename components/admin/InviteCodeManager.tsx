@@ -2,11 +2,12 @@
 
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Download } from "lucide-react"
+import { Check, Copy, Download } from "lucide-react"
 import type { InviteCode } from "@prisma/client"
 import {
     createInviteCodes,
     deleteInviteCode,
+    deleteInviteCodeGroup,
     toggleInviteCode,
     updateInviteCodeQuota,
 } from "@/app/actions/admin"
@@ -16,7 +17,7 @@ import { Card } from "@/components/ui/Card"
 import { Field, Select, TextArea, inputClass } from "@/components/ui/Field"
 import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { discountLabel } from "@/lib/invite-codes"
-import { formatDate } from "@/lib/utils"
+import { cn, formatDate } from "@/lib/utils"
 
 interface UsedRegistration {
     id: string
@@ -272,10 +273,41 @@ export function InviteCodeManager({
                                 <button
                                     type="button"
                                     onClick={() => copy(allCodes, groupName)}
-                                    className="eyebrow text-ink hover:text-ink-soft transition-colors"
+                                    className={cn(
+                                        "eyebrow transition-colors inline-flex items-center gap-1.5",
+                                        copied === groupName ? "text-lime" : "text-ink hover:text-ink-soft"
+                                    )}
                                 >
-                                    {copied === groupName ? "คัดลอกแล้ว ✓" : `คัดลอกโค้ด (${list.length})`}
+                                    {copied === groupName ? (
+                                        <>
+                                            <Check className="w-3.5 h-3.5" strokeWidth={2.6} />
+                                            คัดลอกแล้ว
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                            คัดลอกโค้ด ({list.length})
+                                        </>
+                                    )}
                                 </button>
+                                {/* ลบทั้งกลุ่ม — ทางออกตอนออกโค้ดผิด (ชื่อผิด ส่วนลดผิด จำนวนผิด)
+                                    จะได้ไม่ต้องกดลบทีละใบ 20 ครั้งก่อนสร้างใหม่ */}
+                                {groupUsed < groupIssued && (
+                                    <ConfirmAction
+                                        action={deleteInviteCodeGroup.bind(null, eventId, groupName)}
+                                        title={`ลบกลุ่ม "${groupName}" ทั้งหมด?`}
+                                        message={
+                                            groupUsed > 0
+                                                ? `จะลบโค้ดที่ยังไม่มีใครใช้ ${list.filter((c) => c.usedCount === 0).length} ใบ ` +
+                                                  `ส่วนอีก ${groupUsed} ใบที่มีคนใช้สิทธิ์ไปแล้วจะเก็บไว้ เพื่อให้ตามที่มาของที่นั่งได้`
+                                                : `โค้ดทั้ง ${list.length} ใบของกลุ่มนี้จะถูกลบถาวร ยังไม่มีใครใช้สิทธิ์ จึงไม่กระทบผู้สมัคร`
+                                        }
+                                        confirmLabel="ลบทั้งกลุ่ม"
+                                        className="eyebrow text-ink-mute hover:text-danger transition-colors"
+                                    >
+                                        ลบทั้งกลุ่ม
+                                    </ConfirmAction>
+                                )}
                             </div>
                         </div>
 
@@ -295,13 +327,26 @@ export function InviteCodeManager({
                                 const users = people.filter((p) => p.inviteCodeId === c.id)
                                 return (
                                     <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3">
+                                        {/* ไอคอนคัดลอกอยู่ติดโค้ดเสมอ ไม่ได้โผล่ตอน hover — บนมือถือไม่มี hover
+                                            และถ้าไม่มีอะไรบอก แอดมินจะลากเมาส์เลือกข้อความเอาเองซึ่งพลาดง่าย */}
                                         <button
                                             type="button"
                                             onClick={() => copy(c.code, c.id)}
-                                            title="คลิกเพื่อคัดลอก"
-                                            className="font-mono text-[15px] tracking-[0.15em] hover:text-ink-soft transition-colors"
+                                            title="คัดลอกโค้ด"
+                                            className={cn(
+                                                "group inline-flex items-center gap-2 rounded-lg -mx-1 px-1 py-0.5 transition-colors",
+                                                copied === c.id ? "text-lime" : "hover:text-ink-soft"
+                                            )}
                                         >
-                                            {copied === c.id ? "คัดลอกแล้ว ✓" : c.code}
+                                            <span className="font-mono text-[15px] tracking-[0.15em]">{c.code}</span>
+                                            {copied === c.id ? (
+                                                <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.6} />
+                                            ) : (
+                                                <Copy
+                                                    className="w-3.5 h-3.5 shrink-0 text-ink-mute group-hover:text-ink transition-colors"
+                                                    strokeWidth={2}
+                                                />
+                                            )}
                                         </button>
 
                                         {!c.active ? (

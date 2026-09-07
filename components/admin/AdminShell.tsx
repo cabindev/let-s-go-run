@@ -8,56 +8,17 @@ import { X, Menu } from "lucide-react"
 import { Wordmark } from "@/components/layout/Wordmark"
 import { cn } from "@/lib/utils"
 
-interface NavLink {
-    href: string
-    label: string
-    exact?: boolean
-    /**
-     * คำอธิบายใต้ชื่อเมนู — ใส่เฉพาะอันที่ชื่อยังบอกไม่ครบว่าจัดการอะไร
-     *
-     * ไม่ใส่ทุกอันโดยตั้งใจ ตอนลองใส่ครบเมนูยาวจนต้องเลื่อนถึงจะเจอ "ออกจากระบบ"
-     * ซึ่งแย่กว่าเดิม — หัวข้อหมวดทำหน้าที่แยกงานวิ่งกับร้านค้าได้อยู่แล้ว
-     */
-    hint?: string
-}
-
-/**
- * เมนูหลังบ้าน แบ่งเป็นหมวดตาม "ของสองก้อน" ที่ระบบนี้ดูแล
- *
- * งานวิ่งกับร้านค้าเป็นคนละเรื่องกันโดยสิ้นเชิง (คนละตาราง คนละรอบจัดส่ง คนละใบสั่ง)
- * แต่ก่อนหน้านี้เมนูเรียงต่อกันเป็นแถวเดียว 10 อัน ทำให้ "สินค้า" กับ "ผู้สมัคร"
- * ดูเป็นระดับเดียวกัน ทั้งที่คนละระบบ — แยกหัวข้อแล้วมองปราดเดียวรู้ว่าจะไปทางไหน
- *
- * "ทั้งระบบ" คือของที่ใช้ร่วมกันทั้งสองฝั่ง ไม่ได้เป็นของใครโดยเฉพาะ
- */
-const NAV_GROUPS: { title: string | null; links: NavLink[] }[] = [
-    {
-        title: null,
-        links: [{ href: "/admin", label: "ภาพรวม", exact: true }],
-    },
-    {
-        title: "งานวิ่ง",
-        links: [
-            { href: "/admin/events", label: "กิจกรรม" },
-            { href: "/admin/registrations", label: "ผู้สมัคร" },
-            { href: "/admin/invite-codes", label: "สิทธิพิเศษ", hint: "โควตาสปอนเซอร์" },
-            { href: "/admin/checkin", label: "CheckBIB", hint: "สแกนรับเสื้อหน้างาน" },
-            { href: "/admin/submissions", label: "ผลวิ่ง VR", hint: "ผลสะสมระยะ" },
-            { href: "/admin/achievements", label: "ความสำเร็จ" },
-        ],
-    },
-    {
-        title: "ร้านค้า",
-        links: [
-            { href: "/admin/products", label: "สินค้า", hint: "เสื้อ ของที่ระลึก สต็อก" },
-            { href: "/admin/orders", label: "ออเดอร์" },
-            { href: "/admin/shop", label: "ตั้งค่าร้าน", hint: "ค่าส่ง จุดรับของ" },
-        ],
-    },
-    {
-        title: "ทั้งระบบ",
-        links: [{ href: "/admin/users", label: "ผู้ใช้งาน" }],
-    },
+const LINKS = [
+    { href: "/admin", label: "ภาพรวม", exact: true },
+    { href: "/admin/events", label: "กิจกรรม" },
+    { href: "/admin/registrations", label: "ผู้สมัคร" },
+    { href: "/admin/invite-codes", label: "สิทธิพิเศษ" },
+    { href: "/admin/checkin", label: "CheckBIB" },
+    { href: "/admin/submissions", label: "ผลวิ่ง VR" },
+    { href: "/admin/products", label: "สินค้า" },
+    { href: "/admin/orders", label: "ออเดอร์" },
+    { href: "/admin/users", label: "ผู้ใช้งาน" },
+    { href: "/admin/achievements", label: "ความสำเร็จ" },
 ]
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -66,55 +27,38 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
     const nav = (
         <nav className="px-4">
-            {NAV_GROUPS.map((group, gi) => (
-                <div key={group.title ?? "root"} className={cn(gi > 0 && "mt-5")}>
-                    {group.title && (
-                        <p className="eyebrow text-ink-mute px-3 mb-1">{group.title}</p>
-                    )}
-                    <ul className="space-y-0.5">
-                        {group.links.map((l) => {
-                            const active = l.exact ? pathname === l.href : pathname.startsWith(l.href)
-                            return (
-                                <li key={l.href}>
-                                    <Link
-                                        href={l.href}
-                                        onClick={() => setOpen(false)}
-                                        className={cn(
-                                            "block px-3 py-2 rounded-2xl transition-colors",
-                                            active ? "bg-ink text-white" : "text-ink-soft hover:bg-paper-2 hover:text-ink"
-                                        )}
-                                    >
-                                        <span className="block text-sm font-semibold tracking-tight">{l.label}</span>
-                                        {l.hint && (
-                                            <span
-                                                className={cn(
-                                                    "block text-[11px] mt-0.5 leading-snug",
-                                                    active ? "text-white/60" : "text-ink-mute"
-                                                )}
-                                            >
-                                                {l.hint}
-                                            </span>
-                                        )}
-                                    </Link>
-                                </li>
-                            )
-                        })}
-                    </ul>
-                </div>
-            ))}
+            <ul className="space-y-0.5">
+                {LINKS.map((l) => {
+                    const active = l.exact ? pathname === l.href : pathname.startsWith(l.href)
+                    return (
+                        <li key={l.href}>
+                            <Link
+                                href={l.href}
+                                onClick={() => setOpen(false)}
+                                className={cn(
+                                    "flex items-center justify-between px-3 py-3 rounded-2xl text-sm font-semibold tracking-tight transition-colors",
+                                    active ? "bg-ink text-white" : "text-ink-soft hover:bg-paper-2 hover:text-ink"
+                                )}
+                            >
+                                {l.label}
+                            </Link>
+                        </li>
+                    )
+                })}
+            </ul>
 
-            <div className="mt-6 pt-4 border-t border-line space-y-0.5">
+            <div className="mt-8 pt-6 border-t border-line space-y-0.5">
                 <Link
                     href="/"
                     onClick={() => setOpen(false)}
-                    className="block px-3 py-2 rounded-2xl text-sm font-semibold tracking-tight text-ink-soft hover:bg-paper-2 hover:text-ink transition-colors"
+                    className="block px-3 py-3 rounded-2xl text-sm font-semibold tracking-tight text-ink-soft hover:bg-paper-2 hover:text-ink transition-colors"
                 >
                     กลับหน้าเว็บ
                 </Link>
                 <button
                     type="button"
                     onClick={() => signOut({ callbackUrl: "/" })}
-                    className="w-full text-left px-3 py-2 rounded-2xl text-sm font-semibold tracking-tight text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
+                    className="w-full text-left px-3 py-3 rounded-2xl text-sm font-semibold tracking-tight text-ink-mute hover:text-danger hover:bg-paper-2 transition-colors"
                 >
                     ออกจากระบบ
                 </button>

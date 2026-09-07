@@ -872,3 +872,52 @@ export async function deleteInviteCode(id: string): Promise<ActionResult> {
         return { ok: false, error: e instanceof Error ? e.message : "ลบไม่สำเร็จ" }
     }
 }
+
+/**
+ * ลบทั้งกลุ่มรวดเดียว — ใช้ตอนออกโค้ดผิด (พิมพ์ชื่อกลุ่มผิด ตั้งส่วนลดผิด จำนวนผิด)
+ *
+ * ออกโค้ดทีละ 20 ใบแล้วมารู้ทีหลังว่าพิมพ์ชื่อผิด การกดลบทีละใบ 20 ครั้งไม่ใช่ทางออก
+ *
+ * ลบเฉพาะใบที่ยังไม่มีใครใช้เสมอ ใบที่มีคนใช้แล้วจะข้ามไว้ ไม่ลบตาม — เพราะที่นั่งฟรี
+ * ทุกที่ต้องตามที่มาได้ตลอด (กติกาเดียวกับ deleteInviteCode) แล้วรายงานกลับว่าเหลือกี่ใบ
+ * ให้แอดมินตัดสินใจต่อเองว่าจะปิดการใช้งานหรือปล่อยไว้
+ */
+export async function deleteInviteCodeGroup(
+    eventId: string,
+    groupName: string
+): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+
+        const codes = await prisma.inviteCode.findMany({
+            where: { eventId, groupName },
+            select: { id: true, usedCount: true },
+        })
+        if (codes.length === 0) return { ok: false, error: "ไม่พบกลุ่มนี้" }
+
+        const unused = codes.filter((c) => c.usedCount === 0)
+        const used = codes.length - unused.length
+
+        if (unused.length === 0) {
+            return {
+                ok: false,
+                error: `โค้ดในกลุ่มนี้มีคนใช้ไปแล้วทั้ง ${used} ใบ ลบไม่ได้ — ปิดการใช้งานทีละใบแทน`,
+            }
+        }
+
+        const { count } = await prisma.inviteCode.deleteMany({
+            where: { id: { in: unused.map((c) => c.id) } },
+        })
+
+        revalidatePath(`/admin/invite-codes/${eventId}`)
+        revalidatePath("/admin/invite-codes")
+        return {
+            ok: true,
+            message: used
+                ? `ลบ ${count} ใบแล้ว · เหลือ ${used} ใบที่มีคนใช้สิทธิ์ไปแล้ว จึงเก็บไว้`
+                : `ลบกลุ่ม "${groupName}" ทั้งหมด ${count} ใบแล้ว`,
+        }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ลบไม่สำเร็จ" }
+    }
+}
