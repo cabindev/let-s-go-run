@@ -78,7 +78,7 @@ export function InviteCodeBox({
                 onClick={() => setOpen(true)}
                 className="text-[13px] text-ink-mute hover:text-ink transition-colors underline underline-offset-4 decoration-line"
             >
-                มีรหัสสิทธิพิเศษ?
+                ใช้โค้ด
             </button>
         )
     }
