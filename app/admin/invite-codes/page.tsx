@@ -126,10 +126,11 @@ export default async function AdminInviteCodesPage() {
                             </Link>
                         </div>
 
+                        {/* รูปแบบเดียวกับหน้ารายละเอียด — ชื่อนำหน้าตัวเลขเสมอ ไม่เขียนเป็นสมการ */}
                         <p className="text-[12px] text-ink-mute tnum mt-3">
-                            ผู้เข้าร่วมจริง: {pub}
-                            {e.maxParticipants ? `/${e.maxParticipants}` : ""} ทั่วไป + {inv} สิทธิพิเศษ ={" "}
-                            <span className="text-ink font-semibold">รวม {pub + inv} คน</span>
+                            ทั่วไป {pub}
+                            {e.maxParticipants ? `/${e.maxParticipants}` : ""} · สิทธิพิเศษ {inv} ·{" "}
+                            <span className="text-ink font-semibold">ต้องเตรียมของให้ {pub + inv} คน</span>
                         </p>
 
                         <ul className="mt-5 divide-y divide-line border-t border-line">

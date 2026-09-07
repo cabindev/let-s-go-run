@@ -89,50 +89,91 @@ export default async function EventInviteCodesPage({
                 </p>
             </div>
 
-            {/* ยอดรวมจริง — ตัวเลขที่ใช้สั่งของ ต้องอยู่บนสุดและอ่านได้ในแวบเดียว */}
+            {/*
+                ตัวเลขที่ใช้สั่งของ ต้องอยู่บนสุดและอ่านได้ในแวบเดียว
+
+                เขียนเป็นรายการ "ชื่อ—จำนวน" ไม่ใช่สมการ 20 + 0 = 20 เพราะตอนยังไม่มีใคร
+                ใช้สิทธิ์ สมการจะกลายเป็นบรรทัดที่ไม่ได้บอกอะไรเลย และตัวเลขใหญ่สามก้อน
+                เรียงกันทำให้ต้องหยุดอ่านว่าอันไหนคืออะไร
+            */}
             <Card className="p-6 sm:p-8">
-                <p className="eyebrow">จำนวนผู้เข้าร่วมจริง</p>
-                <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
-                    <span className="numeral text-4xl tnum">{publicSeats}</span>
-                    <span className="text-[13px] text-ink-soft pb-1">
-                        ทั่วไป{event.maxParticipants ? ` / ${event.maxParticipants}` : ""}
-                    </span>
-                    <span className="numeral text-2xl text-ink-mute pb-0.5">+</span>
-                    <span className="numeral text-4xl tnum">{inviteSeats}</span>
-                    <span className="text-[13px] text-ink-soft pb-1">สิทธิพิเศษ</span>
-                    <span className="numeral text-2xl text-ink-mute pb-0.5">=</span>
-                    <span className="numeral text-4xl tnum">{publicSeats + inviteSeats}</span>
-                    <span className="text-[13px] text-ink pb-1 font-semibold">คน</span>
-                </div>
-                <p className="text-[12px] text-ink-mute mt-4 leading-relaxed">
-                    สิทธิพิเศษอยู่<strong>นอก</strong>จำนวนรับสมัครที่ประกาศไว้ — ใช้ตัวเลข{" "}
-                    <strong>รวม {publicSeats + inviteSeats} คน</strong> ในการสั่งเสื้อ เหรียญ และแจ้งประกัน
-                    ส่วนเกินสูงสุดเท่ากับสิทธิ์ที่ออกไว้ทั้งหมด ({issued} สิทธิ์) ไม่เกินกว่านั้น
-                </p>
+                <p className="eyebrow">จำนวนคนที่ต้องเตรียมของให้</p>
+
+                <dl className="mt-5 space-y-4">
+                    <div className="flex items-baseline justify-between gap-4">
+                        <dt className="min-w-0">
+                            <span className="text-[14px] tracking-tight font-medium">ผู้สมัครทั่วไป</span>
+                            <span className="block text-[11px] text-ink-mute mt-0.5">
+                                จ่ายค่าสมัครเอง
+                                {event.maxParticipants
+                                    ? ` · เหลือรับได้อีก ${Math.max(0, event.maxParticipants - publicSeats)} ที่`
+                                    : " · ไม่จำกัดจำนวน"}
+                            </span>
+                        </dt>
+                        <dd className="numeral text-2xl tnum shrink-0">
+                            {publicSeats}
+                            {event.maxParticipants && (
+                                <span className="text-ink-mute text-base"> / {event.maxParticipants}</span>
+                            )}
+                        </dd>
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-4">
+                        <dt className="min-w-0">
+                            <span className="text-[14px] tracking-tight font-medium">สิทธิพิเศษ (ใช้โค้ด)</span>
+                            <span className="block text-[11px] text-ink-mute mt-0.5">
+                                ไม่เสียค่าสมัคร ·{" "}
+                                {event.maxParticipants
+                                    ? `ไม่นับรวมใน ${event.maxParticipants} ที่ที่ประกาศไว้`
+                                    : "แยกจากผู้สมัครทั่วไป"}
+                            </span>
+                        </dt>
+                        <dd className="numeral text-2xl tnum shrink-0">{inviteSeats}</dd>
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-4 border-t border-line pt-4">
+                        <dt className="min-w-0">
+                            <span className="text-[14px] tracking-tight font-semibold">รวมทั้งหมด</span>
+                            <span className="block text-[11px] text-ink-mute mt-0.5">
+                                สั่งเสื้อ เหรียญ และแจ้งประกันตามตัวเลขนี้
+                            </span>
+                        </dt>
+                        <dd className="numeral text-4xl tnum shrink-0">{publicSeats + inviteSeats}</dd>
+                    </div>
+                </dl>
+
+                {issued > 0 && event.maxParticipants && (
+                    <p className="text-[12px] text-ink-mute mt-5 leading-relaxed">
+                        ออกโค้ดไว้ {issued} สิทธิ์ ถ้าใช้ครบทุกใบและผู้สมัครทั่วไปเต็ม
+                        จำนวนคนจริงจะอยู่ที่ <strong>{event.maxParticipants + issued} คน</strong> — มากสุดเท่านี้ ไม่เกินกว่านี้
+                    </p>
+                )}
 
                 {categories.length > 0 && (
-                    <ul className="mt-6 divide-y divide-line border-t border-line">
-                        {categories.map((c) => {
-                            const pub = publicCat.get(c.id) ?? 0
-                            const inv = inviteCat.get(c.id) ?? 0
-                            return (
-                                <li key={c.id} className="flex items-baseline justify-between gap-4 py-2.5">
-                                    <span className="text-[13px] tracking-tight">{c.name}</span>
-                                    <span className="text-[12px] text-ink-mute tnum shrink-0">
-                                        {pub}
-                                        {c.maxSlots ? `/${c.maxSlots}` : ""} ทั่วไป
-                                        {inv > 0 && (
-                                            <>
-                                                {" + "}
-                                                {inv} สิทธิพิเศษ ={" "}
-                                                <span className="text-ink font-semibold">{pub + inv}</span>
-                                            </>
-                                        )}
-                                    </span>
-                                </li>
-                            )
-                        })}
-                    </ul>
+                    <div className="mt-6 pt-5 border-t border-line">
+                        <p className="eyebrow text-ink-mute mb-1">แยกตามรุ่น</p>
+                        <ul className="divide-y divide-line">
+                            {categories.map((c) => {
+                                const pub = publicCat.get(c.id) ?? 0
+                                const inv = inviteCat.get(c.id) ?? 0
+                                return (
+                                    <li key={c.id} className="flex items-baseline justify-between gap-4 py-2.5">
+                                        <span className="text-[13px] tracking-tight">{c.name}</span>
+                                        <span className="text-[12px] tnum shrink-0">
+                                            <span className="text-ink-mute">
+                                                ทั่วไป {pub}
+                                                {c.maxSlots ? `/${c.maxSlots}` : ""}
+                                                {inv > 0 && ` · สิทธิพิเศษ ${inv}`}
+                                            </span>
+                                            {inv > 0 && (
+                                                <span className="font-semibold"> · รวม {pub + inv}</span>
+                                            )}
+                                        </span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </div>
                 )}
             </Card>
 
