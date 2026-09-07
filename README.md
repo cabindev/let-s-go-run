@@ -1,117 +1,171 @@
-# ActiveRun
+# RunLudtong
 
-แพลตฟอร์มรับสมัครงานวิ่งของไทย (คล้าย race.thai.run) — ผู้จัดงานสร้างกิจกรรมวิ่ง ผู้ใช้สมัคร/จ่ายเงิน/สะสมระยะทาง/ปลดล็อกความสำเร็จ มีระบบหลังบ้านให้แอดมินจัดการงาน ตรวจสลิป และดูภาพรวม
+แพลตฟอร์มรับสมัครงานวิ่ง + ร้านค้าของที่ระลึก — ผู้จัดสร้างงาน ผู้ใช้สมัคร/จ่ายเงิน/สะสมระยะ/ปลดล็อกความสำเร็จ และซื้อเสื้อ-ของที่ระลึกได้ในระบบเดียวกัน มีหลังบ้านให้แอดมินจัดการงาน ผู้สมัคร สินค้า ออเดอร์ และโควตาสิทธิพิเศษ
+
+**ขึ้นใช้งานจริงแล้วที่ [runludtong.com](https://runludtong.com)** — deploy บน Plesk VPS (14.207.143.39) ผ่าน `server.js` (custom Express server เพราะ Passenger ต้องการ entry file ที่เรียก `.listen()` เอง)
 
 ## Stack
 
 | ส่วน | ใช้ | หมายเหตุ |
 |---|---|---|
 | Framework | Next.js 16 (App Router, Turbopack) | **เวอร์ชันนี้ต่างจากที่เทรนมาเยอะ** — อ่าน `node_modules/next/dist/docs/` ก่อนเขียนโค้ดใหม่เสมอ (ดู `AGENTS.md`) |
-| UI | React 19, Tailwind CSS 4 | ดีไซน์โทนมินิมอล ขาว-ดำ-แดง แบบ Nike, ใช้ `lucide-react` เป็น icon set หลัก ไม่ใช้ emoji ใน UI |
-| Database | MySQL (ผ่าน MAMP, port 3306) + Prisma ORM 6 | schema อยู่ที่ `prisma/schema.prisma` |
-| Auth | NextAuth v4 (JWT strategy) | Credentials (email/password) + Google OAuth — **ไม่มี PrismaAdapter/Account table** ดู `docs/google-oauth.md` |
-| Payment | Stripe (Checkout Sessions + Webhook) | รองรับบัตร + PromptPay ผ่าน dynamic payment methods |
+| UI | React 19, Tailwind CSS 4 | ดีไซน์มินิมอล ใช้ `lucide-react` เป็น icon set หลัก ไม่ใช้ emoji ใน UI |
+| Database | MySQL (local ผ่าน MAMP port 3306) + Prisma ORM 6 | schema อยู่ที่ `prisma/schema.prisma` |
+| Auth | NextAuth v4 (JWT strategy) | Credentials + Google OAuth — **ไม่มี PrismaAdapter/Account table** ดู `docs/google-oauth.md` |
+| Payment | Stripe (Checkout Sessions + Webhook) | บัตร + PromptPay · **ใช้คีย์ live จริงแล้ว** · ผู้จ่ายรับภาระค่าธรรมเนียม (`lib/checkout-fees.ts`) |
+| Email | Nodemailer + SMTP (Gmail) | `lib/mail.ts` — ส่งแบบ "ห้ามพัง" มี timeout 3 ชั้น ส่งไม่ออกก็ไม่ทำให้คำสั่งซื้อล้ม |
 | Validation | Zod | ใช้ในทุก server action ที่รับ input จากฟอร์ม |
 | Language | TypeScript, ข้อความ/คอมเมนต์เป็นภาษาไทย | โค้ดใหม่ควรคอมเมนต์เป็นไทยให้เข้ากับของเดิม |
 
 ## แนวคิดหลักของระบบ
 
+### งานวิ่ง
+
 **Event** มี 2 ประเภท แยก route กันชัดเจน:
-- `ONSITE` — วิ่งในงานจริง ไม่ต้องส่งผล จบงานแล้วนับระยะให้อัตโนมัติถ้าจ่ายเงินแล้ว → route `/events/[id]`
-- `VIRTUAL` — วิ่งสะสมระยะที่ไหนก็ได้ ต้องส่งผลเอง (บังคับแนบรูปหลักฐานทุกครั้ง) → route `/virtual/[id]`
+- `ONSITE` — วิ่งในงานจริง ไม่ต้องส่งผล จบงานแล้วนับระยะให้อัตโนมัติถ้าจ่ายเงินแล้ว → `/events/[id]`
+- `VIRTUAL` — วิ่งสะสมระยะที่ไหนก็ได้ ต้องส่งผลเอง (บังคับแนบรูปหลักฐาน) → `/virtual/[id]`
 
-**Registration** มีสถานะ (`RegistrationStatus`): `PENDING` (รอจ่าย) → `WAITING` (ส่งสลิปรอตรวจ) หรือจ่ายผ่าน Stripe ตรงเป็น `PAID` เลย → `PAID` / `REJECTED` (สลิปไม่ผ่าน) / `EXPIRED` (ไม่จ่ายในเวลาที่กำหนด ที่นั่งคืนอัตโนมัติ) / `CANCELLED`
+**Registration** มี 4 สถานะ: `PENDING` (รอจ่าย) → `PAID` / `EXPIRED` (ไม่จ่ายในเวลา ที่นั่งคืนอัตโนมัติ) / `CANCELLED`
 
-**วิธีจ่ายเงิน 2 ทาง** คู่ขนานกัน:
-1. โอนเงิน + อัปโหลดสลิป → แอดมินตรวจด้วยตาที่ `/admin/slips` (`approveSlip`/`rejectSlip`)
-2. Stripe Checkout (บัตร/PromptPay) → webhook ยืนยันอัตโนมัติ ไม่ต้องรอแอดมิน (`app/api/stripe/webhook`)
+> จ่ายผ่าน **Stripe ทางเดียวเท่านั้น** — ระบบอัปโหลดสลิปให้แอดมินตรวจด้วยตาถูกถอดออกไปแล้ว (สถานะ `WAITING`/`REJECTED` และหน้า `/admin/slips` ไม่มีอีกแล้ว)
 
-ทั้งสองทางจบที่ฟังก์ชันเดียวกันในทางปฏิบัติ:ตั้ง `status: PAID`, ออกเลข BIB (`withBib` ใน `lib/vr.ts` — ใช้ atomic increment ผ่าน `Event.bibCounter` กันเลขชนกัน), คำนวณ `totalDistance` ใหม่ (`recalculateUserStats`), เช็คปลดล็อกความสำเร็จ (`unlockAchievements`)
+**การกันที่นั่ง** คำนวณจาก `expiresAt` สดทุกครั้ง (`heldSeatWhere()` ใน `lib/expiry.ts`) ที่นั่งจึงถูกปล่อยคืนทันทีที่หมดเวลา ไม่ต้องรอ cron มากวาด — cron แค่เปลี่ยน *ป้ายสถานะ* ให้ตรงเท่านั้น
 
-**Achievement / Level** — Achievement เป็นเหรียญที่แอดมินตั้งเกณฑ์เองได้ (จำนวนกิจกรรม หรือ ระยะสะสม) ส่วน Level (Bronze→Diamond) คำนวณจาก `totalDistance` ล้วนๆ ไม่ผูกกับ DB (`lib/levels.ts`) ไอคอนทั้งสองระบบ render ผ่าน `AchievementIcon`/`LevelIcon` (แปลง emoji ที่เก็บใน DB เป็น `lucide-react` icon จริง เพราะ emoji บังคับสีไม่ได้)
+**BIB** ออกด้วย atomic increment ผ่าน `Event.bibCounter` กันเลขชนกันตอนคนจ่ายพร้อมกัน
+
+### โควตาสิทธิพิเศษ (สปอนเซอร์ / แขกผู้จัดงาน)
+
+โค้ดที่ให้สมัครฟรีหรือลดราคาโดยที่ผู้สมัครทั่วไปไม่รู้ว่ามีอยู่ — `InviteCode` ตารางเดียวรองรับทุกแบบ ต่างกันแค่ `maxUses`:
+
+| ต้องการ | ตั้งค่า |
+|---|---|
+| โค้ดเดียวแจกทั้งกลุ่ม | 1 แถว `maxUses = 20` |
+| โค้ดใช้ครั้งเดียวรายคน | 20 แถว `maxUses = 1` ชื่อกลุ่มเดียวกัน |
+
+หลักการที่ระบบยึด:
+
+- **ที่นั่งจากโค้ดอยู่นอกจำนวนรับสมัครที่ประกาศ** — รับ 400 + โค้ด 40 = 440 คนจริง จึงมี `publicSeatWhere()` แยกจาก `heldSeatWhere()` ประตูรับสมัครกับตัวเลข "ที่นั่งเหลือ" ที่ผู้สมัครเห็นใช้ตัวแรก ส่วนหน้าแอดมินใช้ตัวหลังเพราะต้องเห็นยอดรวมจริงไว้สั่งเสื้อ/แจ้งประกัน
+- **ผู้ถือโค้ดข้ามโควตาทั้งของงานและของรุ่น** ถ้าข้ามแค่อย่างเดียว สปอนเซอร์ที่อยากวิ่งรุ่นที่เต็มจะใช้สิทธิ์ไม่ได้ · ส่วนเกินมีเพดานเท่าจำนวนสิทธิ์ที่ออกไว้เสมอ
+- **โค้ดที่ทำให้ยอดเป็น 0 บังคับรับของหน้างาน** ทับค่าฝั่งเซิร์ฟเวอร์เสมอ ไม่ใช่แค่ซ่อนตัวเลือก — เงื่อนไขผูกกับ "ยอดเป็นศูนย์" ไม่ใช่ "เป็นโค้ดสปอนเซอร์" กติกาเดียวจึงคุมได้ทั้งโค้ดฟรีและโค้ดลดบางส่วน (ที่ยังส่งไปรษณีย์ได้)
+- **ยอด 0 = ใช้ทางเดินงานฟรีเดิม** ยืนยันทันที ออก BIB เลย ไม่แตะ Stripe
+- **ตัดสิทธิ์แบบ atomic** `updateMany` + `usedCount < maxUses` เช็ค `count === 1` ในทรานแซกชันเดียวกับที่ล็อกแถว Event
+- **ตัวเลขที่แสดง นับจากใบสมัครจริง ไม่ใช่ `usedCount`** — `usedCount` มีไว้จองสิทธิ์ตอนสมัครเท่านั้น มันเพี้ยนได้ (ลบผู้ใช้ทิ้ง ใบสมัครหายตาม cascade แต่ตัวนับไม่ลด) ถ้าสองค่าไม่ตรงกันหน้าแอดมินจะขึ้นเตือน
+- **ช่องกรอกโค้ดต้องไม่โฆษณาตัวเอง** เป็นลิงก์เล็ก ๆ พับไว้ชื่อ "ใช้โค้ด" ไม่มี placeholder ตัวอย่าง (ตัวอย่างบอกทั้งความยาวและชุดตัวอักษรให้คนเดา) และไม่ใช้คำว่า "สิทธิพิเศษ" ในหน้าที่คนทั่วไปเห็น เพราะคนที่จ่ายเต็มราคาไม่ควรรู้สึกว่าจ่ายแพงกว่าคนอื่น
+
+### ร้านค้า
+
+ตาราง `Product` / `ProductVariant` / `Cart` / `Order` แยกจากงานวิ่งสิ้นเชิง แต่อยู่ในโปรเจกต์/ฐานข้อมูลเดียวกันเพื่อใช้ `User`, Stripe, auth, ดีไซน์ และอีเมลร่วมกัน · `Product.eventId` เป็น optional ผูกกับงานวิ่งก็ได้ ไม่ผูกก็ได้
+
+- **สต็อกตัดตอนสร้างออเดอร์** (จอง) คืนตอนหมดเวลา/ยกเลิก — `$transaction` + `SELECT ... FOR UPDATE` + `updateMany({ where: { stock: { gte: qty } } })` เช็ค `count === 1`
+- **ตะกร้าที่มีทั้งของพร้อมส่งและพรีออเดอร์จะถูกแยกเป็น 2 ออเดอร์** เพราะรอบจัดส่งต่างกัน แต่ละใบคิดค่าส่งของตัวเอง
+- **ค่าส่ง** ชิ้นแรกเต็มราคา ชิ้นถัดไปบวกเพิ่มชิ้นละเท่าที่ตั้งไว้ (`shippingFee()` ใน `lib/shop.ts`) แอดมินตั้งเองที่ `/admin/shop`
+
+### Achievement / Level
+
+Achievement เป็นเหรียญที่แอดมินตั้งเกณฑ์เองได้ (จำนวนกิจกรรม หรือ ระยะสะสม) ส่วน Level (Bronze→Diamond) คำนวณจาก `totalDistance` ล้วน ๆ ไม่ผูกกับ DB (`lib/levels.ts`)
 
 ## โครงสร้างโปรเจกต์
 
 ```
 app/
-  (home)/            หน้าแรก (list งาน + filter)
+  (home)/              หน้าแรก (list งาน + สินค้า + filter)
   (main)/
-    events/[id]/      รายละเอียดงาน ONSITE + สมัคร
+    events/[id]/       รายละเอียดงาน ONSITE + สมัคร
     virtual/[id]/      รายละเอียดงาน VIRTUAL + ส่งผลวิ่ง
-    payment/[id]/      หน้าจ่ายเงิน (โอน/Stripe)
-    profile/           โปรไฟล์ผู้ใช้ (สถิติ, ประวัติ, achievement)
-    leaderboard/
-  admin/               หลังบ้าน (ต้อง role ADMIN — กันด้วย middleware.ts + requireAdminPage())
-  actions/             Server Actions ทั้งหมด (registration, checkout, submission, admin, auth, profile)
+    payment/[id]/      หน้าจ่ายเงินค่าสมัคร
+    shop/ cart/ checkout/ orders/   ร้านค้า
+    profile/ leaderboard/
+  admin/               หลังบ้าน (กันด้วย middleware.ts + requireAdminPage())
+    events/ registrations/ invite-codes/ checkin/ submissions/
+    products/ orders/ shop/ users/ achievements/
+  actions/             Server Actions ทั้งหมด
   api/
-    auth/[...nextauth]/  NextAuth handler
-    stripe/webhook/       Stripe webhook (ตรวจ signature เอง)
-    cron/expire/           กวาดสถานะ EXPIRED (ไม่มี cron job อัตโนมัติเรียกตอนนี้ ต้องเรียกเอง)
-  auth/signin, signup/  หน้า login/สมัคร
+    auth/[...nextauth]/   NextAuth handler
+    stripe/webhook/       Stripe webhook — เส้นเดียวรับทั้งค่าสมัครและออเดอร์ร้านค้า
+                          แยกทางด้วย session.metadata.kind
+    cron/expire/          กวาด EXPIRED ทั้งใบสมัครและออเดอร์
+    admin/**/export/      ไฟล์ Excel (exceljs)
+  auth/                signin, signup, forgot-password, reset-password
 
-lib/                   Business logic ล้วนๆ (ไม่มี UI) — events, expiry, stats, achievements, levels, vr, stripe
+lib/                   Business logic ล้วน ๆ ไม่มี UI
 components/
-  ui/                  Base components (Button, Badge, Card, AchievementIcon, LevelIcon, ...)
-  events/ payment/ profile/ auth/ admin/ layout/   Feature-specific components
+  ui/                  Base components
+  events/ shop/ payment/ profile/ auth/ admin/ layout/
 
 prisma/
   schema.prisma        Models ทั้งหมด
-  migrations/           ประวัติ migration
-  seed.ts               ข้อมูลตัวอย่าง (npm run db:seed)
+  migrations/          ประวัติ migration
+  seed.ts              ข้อมูลตัวอย่าง (npm run db:seed)
+
+docs/
+  production-migrations.md   วิธีรัน migration บน production + ประวัติทุกครั้งที่รัน
+  google-oauth.md
 ```
 
 ## Local development
 
 ```bash
 npm install
-cp .env.example .env   # ถ้ามี — ไม่งั้นดู .env ที่มีอยู่แล้วเป็นตัวอย่าง
 npx prisma migrate deploy
 npm run db:seed        # ถ้าต้องการข้อมูลตัวอย่าง
 npm run dev
 ```
 
-**Environment variables ที่ต้องมี** (ดู `.env`): `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `CRON_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — รายละเอียด Stripe/Google ดูใน `docs/`
+**Environment variables** (ดู `.env`): `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `CRON_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
 
-**ทดสอบ Stripe ใน local** ต้องรัน `stripe listen --forward-to localhost:3000/api/stripe/webhook` ค้างไว้คู่กับ `npm run dev`
+**ทดสอบ Stripe ใน local** รัน `stripe listen --forward-to localhost:3000/api/stripe/webhook` ค้างไว้คู่กับ `npm run dev`
 
-## ก่อนขึ้น Production
+**ทดสอบโดยไม่ให้อีเมลหลุดออกไปจริง** — สั่ง `SMTP_USER= SMTP_PASSWORD= npm run dev` ค่าที่ตั้งทับตอนสั่งจะชนะค่าใน `.env` (Next ไม่ override ค่าที่มีอยู่แล้วใน env) แล้ว `safeSend()` จะข้ามการส่งพร้อม log `[mail] ยังไม่ได้ตั้งค่า SMTP` ให้ตรวจย้อนหลังได้
 
-ตอนนี้ค่า config ทั้งหมดเป็นของ **local/test เท่านั้น** — สิ่งที่ต้องเตรียมใหม่ก่อนขึ้นเซิร์ฟเวอร์จริง:
+## Deploy ขึ้น production
 
-### 1. Google OAuth ต้องใช้ URL จริง
+1. `git push` ขึ้น GitHub
+2. **ถ้ามี migration ใหม่** — ทำก่อน deploy เสมอ ตาม `docs/production-migrations.md` (**export ฐานข้อมูลก่อนทุกครั้ง ไม่มีข้อยกเว้น**) รัน SQL มือผ่าน phpMyAdmin เพราะ `DATABASE_URL` ที่ Plesk ฉีดให้ไปไม่ถึง shell
+3. Plesk → Git → **Pull now** → **Deploy now** (auto-pull ไม่ทำงาน ต้องกดเอง)
 
-`.env` ตอนนี้ผูก `NEXTAUTH_URL="http://localhost:3000"` และ OAuth client (โปรเจกต์ `activerun-507003`) ตั้ง origin/redirect URI ไว้แค่ localhost — ต้องทำ:
+### ที่ยังค้างอยู่
 
-1. เปลี่ยน `NEXTAUTH_URL` ใน `.env` ของเซิร์ฟเวอร์จริงเป็นโดเมนจริง (เช่น `https://activerun.app`)
-2. เข้า [Google Cloud Console](https://console.cloud.google.com) → โปรเจกต์ `activerun` → **Google Auth Platform → Clients** → เปิด client "activerun" → **เพิ่ม** (ไม่ต้องลบของ localhost ทิ้ง เก็บไว้ dev ต่อได้):
-   - Authorized JavaScript origins: `https://โดเมนจริง`
-   - Authorized redirect URIs: `https://โดเมนจริง/api/auth/callback/google`
-3. **Google Auth Platform → Audience** — กด **Publish app** เพื่อออกจากโหมด Testing (ตอนนี้ล็อกอินได้เฉพาะอีเมลที่เพิ่มเป็น test user เท่านั้น) — scope ที่ขอ (`openid email profile`) เป็น scope พื้นฐาน ปกติไม่ต้องรอ Google verify เพิ่ม
-4. รายละเอียดเต็มดู `docs/google-oauth.md`
-
-### 2. ระบบ "ลืมรหัสผ่าน" — ยังไม่มี ต้องสร้างใหม่
-
-ตอนนี้ auth ฝั่ง credentials มีแค่ signup/signin เท่านั้น **ไม่มีทาง reset รหัสผ่านเลยถ้าลืม** (เช็คแล้ว ไม่มีโค้ด/หน้า/แม้แต่ email service ในโปรเจกต์) ผู้ใช้ที่ลืมรหัสผ่านตอนนี้ต้องให้แอดมินช่วยรีเซ็ตในฐานข้อมูลตรงๆ เท่านั้น — ก่อนขึ้น production ควรมีอย่างน้อย:
-
-- **Email service** — ยังไม่มี package ส่งอีเมลเลย (เช่น Resend, Nodemailer + SMTP) ต้องเลือกและติดตั้งก่อน เป็นของใหม่ที่ต้องเพิ่ม
-- **Model เก็บ reset token** — เพิ่ม model ใหม่ใน `prisma/schema.prisma` เช่น `PasswordResetToken { token, userId, expiresAt }` (คล้ายแนวทางเดียวกับที่ `expiresAt` ใช้กันเวลาหมดอายุการจ่ายเงินอยู่แล้ว)
-- **หน้า + server action**: `/auth/forgot-password` (กรอกอีเมล → ส่งลิงก์), `/auth/reset-password?token=...` (ตั้งรหัสผ่านใหม่), เช็ค token หมดอายุ/ใช้แล้วไม่ให้ใช้ซ้ำ
-- ลิงก์ "ลืมรหัสผ่าน?" ใต้ฟอร์ม `SignInForm.tsx` (ตอนนี้ยังไม่มีลิงก์นี้เลย)
-
-### 3. อื่นๆ ที่มักลืม
-
-- **`NEXTAUTH_SECRET` ตอนนี้เป็นค่า placeholder `"secret"` ตรงๆ** — ต้องเปลี่ยนเป็นค่าสุ่มยาวๆ ก่อนขึ้นจริงเด็ดขาด (รันได้ด้วย `openssl rand -base64 32`) ถ้าใช้ค่าเดิมเท่ากับใครก็ปลอม JWT session ได้
-- **Stripe** — สลับจาก `sk_test_...`/`pk_test_...` เป็นคีย์ live จริง และไปสร้าง webhook endpoint ใหม่ใน Stripe Dashboard ชี้มาที่โดเมนจริง (ตอนนี้ `STRIPE_WEBHOOK_SECRET` เป็นของ `stripe listen` local เท่านั้น ใช้กับ production ไม่ได้) — แนะนำเปลี่ยนเป็น restricted API key ด้วย ดูรายละเอียดเรื่องนี้ที่คุยไว้ก่อนหน้า
-- **`DATABASE_URL`** — ตอนนี้ชี้ไป MySQL local ผ่าน MAMP ต้องเปลี่ยนเป็น production database
-- **ไฟล์อัปโหลด (`public/uploads/`)** — บันทึกลง local filesystem ตรงๆ ถ้า deploy ขึ้น hosting แบบ serverless (เช่น Vercel) ไฟล์จะ**ไม่คงอยู่ถาวร** ต้องย้ายไปใช้ object storage (S3, Cloudflare R2, ฯลฯ) ก่อนขึ้นจริง
-- **Cron** — `/api/cron/expire` ยังไม่มีตัวเรียกอัตโนมัติ ถ้าต้องการให้สถานะ `EXPIRED` อัปเดตเองตามเวลาจริง ต้องตั้ง scheduler (เช่น Vercel Cron) ให้เรียก endpoint นี้เป็นระยะ
+- **Cron `/api/cron/expire` ยังไม่มีตัวเรียกอัตโนมัติ** — ควรตั้ง Plesk Scheduled Task แบบ "Run a command" (ไม่ใช่ "Fetch a URL" เพราะส่ง header ไม่ได้) ยิงทุก 15 นาที พร้อม `Authorization: Bearer $CRON_SECRET` · การกัน/ปล่อยที่นั่งทำงานถูกอยู่แล้วโดยไม่ต้องมี cron แต่ป้ายสถานะจะไม่อัปเดตเอง
+- **ไฟล์อัปโหลด (`public/uploads/`)** บันทึกลง filesystem ตรง ๆ อยู่บน VPS จึงคงอยู่ถาวร แต่ถ้าย้ายไป serverless ต้องเปลี่ยนไปใช้ object storage
+- **หมุน secret ที่เคยหลุดในแชต** — Google client secret และ SMTP app password
 
 ## Gotchas ที่เจอมาแล้ว (กันเสียเวลาซ้ำ)
 
-- **แก้ `prisma/schema.prisma` แล้วต้อง `npx prisma generate` ใหม่ + restart dev server** — ไม่งั้น Prisma Client ที่ dev server โหลดค้างไว้จะไม่รู้จัก field ใหม่ (error "Invalid `prisma.x.update()` invocation")
-- **แก้ `.env` ก็ต้อง restart dev server** เหมือนกัน (Next.js ไม่ hot-reload env vars)
-- **`prisma migrate dev` ใช้ไม่ได้ใน non-interactive shell** (error "environment is non-interactive") — ใช้ `prisma migrate diff --from-schema-datasource ... --to-schema-datamodel ...` เพื่อ gen SQL แล้วสร้างโฟลเดอร์ migration เอง ตามด้วย `prisma migrate deploy`
-- **ระวัง Turbopack cache ค้าง** หลังแก้ import/export ข้าม module โดยเฉพาะไฟล์ที่มี `'use server'` — ถ้าเจอ error ที่อ้างโค้ดเก่าที่แก้ไปแล้ว ให้ `rm -rf .next` แล้ว restart
-- **ไฟล์ที่มี `'use server'` export ได้เฉพาะ async function** — ค่าคงที่/array ต้องย้ายไปไฟล์ธรรมดา (เจอตอนเอา `PAYABLE_STATUS` ไปแชร์ระหว่าง server action กับ route handler)
-- **`Event.bibCounter`** คือตัวนับ atomic สำหรับออกเลข BIB — อย่ากลับไปใช้วิธี `MAX(bib) + 1` แบบเดิม เพราะไม่ atomic พิสูจน์แล้วว่าพังจริงเมื่อมีคนยืนยันจ่ายเงินพร้อมกันหลายคน
-- **ไม่มี cron job อัตโนมัติ** เรียก `/api/cron/expire` — การกันที่นั่ง/ปล่อยที่นั่งคืนทำงานถูกต้องอยู่แล้วเพราะคำนวณจาก `expiresAt` สดทุกครั้ง แต่สถานะ `EXPIRED` ในหน้าจอจะไม่อัปเดตเองถ้าไม่มีคนเรียก endpoint นี้
+### Prisma
+
+- **แก้ schema แล้วต้อง `npx prisma generate` + restart dev server** ไม่งั้น Prisma Client ที่ dev server โหลดค้างจะไม่รู้จัก field ใหม่ · ถ้ายังพังอยู่ให้ `rm -rf .next` ด้วย เพราะ Turbopack cache client ตัวเก่าไว้อีกชั้น
+- **`prisma generate` ต้องอยู่ใน `build` script ไม่ใช่พึ่ง `postinstall` อย่างเดียว** — `postinstall` ทำงานเฉพาะตอน npm ติดตั้งอะไรจริง ๆ ถ้า dependency ไม่เปลี่ยน จะได้ Prisma Client ตัวเก่าแล้ว type check พังทั้งไฟล์ (เคยทำ production build ล่มมาแล้ว)
+- **`prisma migrate dev` ใช้ไม่ได้ใน non-interactive shell** — ใช้ `prisma migrate diff` gen SQL แล้วสร้างโฟลเดอร์ migration เอง ตามด้วย `prisma migrate deploy`
+- **`_count` ใส่ตัวกรองให้ relation เดียวกันได้แค่ชุดเดียว** ถ้าต้องนับสองแบบ (เช่น ที่นั่งสาธารณะ vs สิทธิพิเศษ) ต้องยิง `groupBy` แยกอีกรอบ
+
+### ความถูกต้องของข้อมูล
+
+- **`Event.bibCounter` คือตัวนับ atomic สำหรับออกเลข BIB** อย่ากลับไปใช้ `MAX(bib) + 1` พิสูจน์แล้วว่าพังจริงเมื่อมีคนจ่ายพร้อมกัน
+- **เปลี่ยนสถานะแล้วค่อยทำ side-effect ต้องเช็ค `count === 1` จาก `updateMany` เสมอ** (คืนสต็อก คืนสิทธิ์โค้ด ออก BIB) และ **เงื่อนไข WHERE ต้องเป็น "สถานะที่ยังทำได้" ไม่ใช่สถานะที่อ่านมาก่อนเข้าทรานแซกชัน** — เคยพลาดตรงนี้จนกดยกเลิกซ้ำแล้วคืนสิทธิ์ให้สปอนเซอร์งอกเกินที่ออกไว้
+- **ตัวนับที่ดูแลเอง (`usedCount`) ไม่ใช่ความจริง** ใช้จองสิทธิ์แบบ atomic ได้ แต่เวลาจะ *แสดงผล* ให้นับจากข้อมูลจริง — cascade delete ทำให้ตัวนับเพี้ยนได้โดยไม่มีใครรู้
+- **`formData.get()` คืน `null` สำหรับ field ที่ไม่ได้ถูกเรนเดอร์** ซึ่ง Zod `.optional()` ไม่รับ (รับแค่ `undefined`) จะได้ error "Invalid input" ที่ไล่หาต้นตอยาก — ใช้ `formString()` ใน `lib/utils.ts`
+
+### Next.js / React
+
+- **ไฟล์ที่มี `'use server'` export ได้เฉพาะ async function** ค่าคงที่/array ต้องย้ายไปไฟล์ธรรมดา
+- **`redirect()` โยน exception** ต้องอยู่นอก try/catch ไม่งั้นถูก catch กลืน
+- **`position: sticky` สร้าง stacking context** ทำให้ `z-index` ของลูกถูกจำกัดอยู่แค่ในนั้น — lightbox/modal ต้อง `createPortal` ไป `document.body`
+- **แก้ `.env` ต้อง restart dev server** Next ไม่ hot-reload env vars
+
+### ดีไซน์
+
+- **ห้ามใช้ `bg-paper-2` เป็นพื้นการ์ด** เพราะสีเดียวกับพื้นหน้า จะมองไม่เห็นขอบการ์ด ใช้ `bg-paper` + `border-line`
+- **อย่าเขียนตัวเลขเป็นสมการ** เช่น `20 + 0 = 20` — ตอนค่าใดค่าหนึ่งเป็นศูนย์มันไม่ได้บอกอะไรเลย ใช้รายการ "ชื่อ → จำนวน → ประโยคอธิบาย" แทน
+
+### วันที่ / ภาษาไทย
+
+- **`<input type="date">` บนเบราว์เซอร์ภาษาไทยโชว์ปี พ.ศ.** ผู้ใช้พิมพ์ 2569 ลงไปแล้วระบบเก็บเป็น ค.ศ. 2569 ตรง ๆ พอ `formatDate()` บวก 543 อีกรอบจะได้ "3112" — ปีที่เกิน 2400 ให้ลบ 543 กลับ (`parseThaiFriendlyDate()` ใน `app/actions/admin.ts`)
+
+### อีเมล
+
+- **อย่าใช้ SVG ในอีเมล** Gmail ตัดทิ้ง Outlook ไม่แสดง — โลโก้ในเมลใช้ PNG (`public/runludtong-logo-email.png`) และต้องเป็น URL เต็มเสมอ
+- **การส่งอีเมลต้องไม่ทำให้ธุรกรรมล้ม** `safeSend()` ไม่เคย throw และมี deadline 8 วินาที (เคยเจอ webhook ช้า 4 วินาทีเพราะรอ SMTP)
+
+### phpMyAdmin
+
+- **พาสต์ SQL ก้อนยาวแล้วบรรทัดซ้ำได้** เคยเจอ `#1060 Duplicate column name` · `CREATE TABLE` ล้มทั้งคำสั่งจึงไม่มีตารางค้าง แต่ `ALTER TABLE` ก่อนหน้าผ่านไปแล้ว — ต้องเช็ค `information_schema` ว่ารันถึงไหนก่อน แล้วรันต่อเฉพาะส่วนที่เหลือ **ห้ามรันซ้ำทั้งก้อน**
