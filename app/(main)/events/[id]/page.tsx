@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
+import type { EventStatus } from "@prisma/client"
 import { ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { publicSeatWhere, expireStaleRegistrations, isExpired } from "@/lib/expiry"
@@ -279,7 +280,13 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
 function RegisterPanel({
     event, options, state, action,
 }: {
-    event: { registerOpenAt: Date | null; registerCloseAt: Date | null; maxParticipants: number | null; date: Date }
+    event: {
+        registerOpenAt: Date | null
+        registerCloseAt: Date | null
+        maxParticipants: number | null
+        date: Date
+        status: EventStatus
+    }
     options: ReturnType<typeof toOptions>
     state: ReturnType<typeof registerState>
     action: React.ReactNode
@@ -288,32 +295,57 @@ function RegisterPanel({
     const minPrice = Math.min(...prices)
     const maxPrice = Math.max(...prices)
 
+    /**
+     * ผู้จัดกดปิด/ยกเลิกเอง — กำหนดการที่ตั้งไว้ไม่มีผลแล้ว
+     *
+     * ถ้ายังโชว์ "ปิดรับสมัคร 30 ก.ย." ทั้งที่วันนี้ 7 ก.ย. และปุ่มข้างล่างบอกว่าปิดแล้ว
+     * คนอ่านจะงงว่าตกลงปิดหรือยัง — ต่างจากกรณีเลยวันปิดไปเองซึ่งวันที่อธิบายตัวมันเองได้อยู่แล้ว
+     */
+    const closedEarly = event.status === "CLOSED" || event.status === "CANCELLED"
+
     return (
         <Card className="p-5 sm:p-6 space-y-6">
             <div>
                 <p className="eyebrow">ช่วงรับสมัคร</p>
-                <dl className="mt-3 space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                        <dt className="text-ink-mute shrink-0">เปิดรับสมัคร</dt>
-                        <dd className="text-right tnum">
-                            {event.registerOpenAt
-                                ? `${formatDate(event.registerOpenAt)} ${formatTime(event.registerOpenAt)}`
-                                : "เปิดรับแล้ว"}
-                        </dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                        <dt className="text-ink-mute shrink-0">ปิดรับสมัคร</dt>
-                        <dd className="text-right tnum">
-                            {event.registerCloseAt
-                                ? `${formatDate(event.registerCloseAt)} ${formatTime(event.registerCloseAt)}`
-                                : formatDateLong(event.date)}
-                        </dd>
-                    </div>
-                </dl>
-                {event.maxParticipants && (
-                    <p className="text-[13px] text-ink-mute mt-3">
-                        หรือปิดรับสมัครทันทีเมื่อมีผู้สมัครครบเต็มจำนวน
-                    </p>
+
+                {closedEarly ? (
+                    <>
+                        <p className="text-[15px] font-semibold tracking-tight mt-3">
+                            {event.status === "CANCELLED" ? "กิจกรรมนี้ถูกยกเลิก" : "ผู้จัดปิดรับสมัครแล้ว"}
+                        </p>
+                        {event.registerCloseAt && (
+                            <p className="text-[13px] text-ink-mute mt-2 tnum">
+                                กำหนดเดิม {formatDate(event.registerCloseAt)} {formatTime(event.registerCloseAt)} —
+                                ไม่มีผลแล้ว
+                            </p>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <dl className="mt-3 space-y-2 text-sm">
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-ink-mute shrink-0">เปิดรับสมัคร</dt>
+                                <dd className="text-right tnum">
+                                    {event.registerOpenAt
+                                        ? `${formatDate(event.registerOpenAt)} ${formatTime(event.registerOpenAt)}`
+                                        : "เปิดรับแล้ว"}
+                                </dd>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <dt className="text-ink-mute shrink-0">ปิดรับสมัคร</dt>
+                                <dd className="text-right tnum">
+                                    {event.registerCloseAt
+                                        ? `${formatDate(event.registerCloseAt)} ${formatTime(event.registerCloseAt)}`
+                                        : formatDateLong(event.date)}
+                                </dd>
+                            </div>
+                        </dl>
+                        {event.maxParticipants && (
+                            <p className="text-[13px] text-ink-mute mt-3">
+                                หรือปิดรับสมัครทันทีเมื่อมีผู้สมัครครบเต็มจำนวน
+                            </p>
+                        )}
+                    </>
                 )}
             </div>
 
