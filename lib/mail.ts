@@ -53,12 +53,24 @@ const INK_MUTE = "#71717A"
 const LINE = "#DEDEE2"
 
 /** โครงอีเมลกลาง — หัวจดหมายและฟุตเตอร์เหมือนกันทุกฉบับ */
+/**
+ * โลโก้บนหัวอีเมล
+ *
+ * ใช้ PNG ไม่ใช่ SVG ที่เว็บใช้ — Gmail กับ Outlook ไม่แสดง SVG ในอีเมล (Gmail ตัดทิ้งเลย)
+ * ไฟล์เป็น 320px (สองเท่าของขนาดที่แสดง) เพื่อให้คมบนจอความละเอียดสูง
+ *
+ * ต้องเป็น URL เต็มเสมอ พาธแบบ /logo.png ใช้ไม่ได้เพราะอีเมลไม่มี "หน้าเว็บปัจจุบัน"
+ * ให้อ้างอิง และผู้รับหลายคนปิดการโหลดรูปไว้ จึงต้องมี alt ที่อ่านแล้วรู้เรื่องเสมอ
+ */
+function logo() {
+    return `<img src="${origin()}/runludtong-logo-email.png" alt="RunLudtong"
+        width="160" height="144" style="display:block; border:0; width:160px; height:auto; margin:0 0 24px;">`
+}
+
 function layout(title: string, body: string) {
     return `
         <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: ${INK};">
-            <p style="font-size: 20px; font-weight: 700; margin: 0 0 24px;">
-                Run<span style="background:#FADF4B; padding: 0 4px; border-radius: 2px;">Ludtong</span>
-            </p>
+            ${logo()}
             <h1 style="font-size: 18px; margin: 0 0 16px;">${title}</h1>
             ${body}
             <p style="font-size: 12px; color: ${INK_MUTE}; line-height: 1.6; margin: 32px 0 0; border-top: 1px solid ${LINE}; padding-top: 16px;">
