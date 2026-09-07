@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { heldSeatWhere, expireStaleRegistrations } from "@/lib/expiry"
+import { publicSeatWhere, expireStaleRegistrations } from "@/lib/expiry"
 import { requireUser } from "@/lib/auth-helpers"
 import { registerState, toOptions } from "@/lib/events"
 import { getTakenSlots } from "@/app/actions/register-flow"
@@ -21,7 +21,7 @@ export default async function VirtualRegisterPage({ params }: { params: Promise<
             where: { id },
             include: {
                 categories: { orderBy: [{ sortOrder: "asc" }, { distance: "asc" }] },
-                _count: { select: { registrations: { where: heldSeatWhere() } } },
+                _count: { select: { registrations: { where: publicSeatWhere() } } },
             },
         }),
         prisma.user.findUnique({ where: { id: sessionUser.id }, select: { name: true, phone: true, dateOfBirth: true } }),

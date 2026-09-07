@@ -124,6 +124,7 @@ model Event {
   categories    RaceCategory[]
   registrations Registration[]
   products      Product[]              // สินค้าในร้านที่ผูกกับงานนี้ (เช่น เสื้อของงาน) — ไม่ผูกก็ได้
+  inviteCodes   InviteCode[]           // โควตาสิทธิพิเศษ (สปอนเซอร์/แขกผู้จัด) — อยู่นอก maxParticipants
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -245,9 +246,22 @@ model Registration {
   shippingTrackingNo String?
   pickupSignatureUrl String?  @db.Text // ลายเซ็นนิ้วบนจอตอนรับที่บูธ — เป็นหลักฐานยืนยัน
 
+  /**
+   * โค้ดสิทธิพิเศษที่ใช้สมัคร (null = สมัครแบบปกติ เสียเงินเอง)
+   *
+   * มีค่าเมื่อไหร่ ที่นั่งใบนี้จะ **ไม่ถูกนับในโควตาสาธารณะ** ของงาน (ดู publicSeatWhere())
+   * เพราะสิทธิพิเศษถูกออกแบบให้อยู่นอกจำนวนรับสมัครที่ประกาศไว้
+   *
+   * `inviteGroupName` เก็บซ้ำโดยตั้งใจ (snapshot แบบเดียวกับ OrderItem) — ลบโค้ดทิ้งแล้ว
+   * ยังต้องตอบได้ว่าที่นั่งฟรีใบนี้มาจากกลุ่มไหน
+   */
+  inviteCodeId    String?
+  inviteGroupName String?
+
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
   category    RaceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  inviteCode  InviteCode?        @relation(fields: [inviteCodeId], references: [id], onDelete: SetNull)
   submissions RunSubmission[]
 
   @@unique([userId, eventId])
@@ -258,6 +272,50 @@ model Registration {
   @@index([status])
   @@index([status, expiresAt])
   @@index([paymentIssueAt])
+  @@index([inviteCodeId])
+  @@index([eventId, inviteCodeId])
+}
+
+/**
+ * โค้ดสิทธิพิเศษของงาน — สปอนเซอร์, แขกผู้จัดงาน, ทีมงาน
+ *
+ * ที่นั่งจากโค้ดอยู่ **นอกโควตารับสมัครที่ประกาศไว้** ทั้งยอดรวมของงานและโควตารายรุ่น
+ * (รับ 400 + โค้ด 40 = 440 คนจริง) แอดมินเป็นคนประเมินของ/เสื้อ/ประกันจากยอดรวมนั้นเอง
+ * ส่วนเกินมีเพดานตายตัวเสมอ = จำนวนสิทธิ์ที่ออกไว้ ไม่มีทางบานปลายเกินนั้น
+ *
+ * รองรับสองรูปแบบด้วยตารางเดียว ต่างกันแค่ maxUses:
+ *   - โค้ดเดียวแจกทั้งกลุ่ม → 1 แถว maxUses = 20
+ *   - โค้ดใช้ครั้งเดียวรายคน → 20 แถว maxUses = 1 (groupName เดียวกัน)
+ */
+model InviteCode {
+  id        String  @id @default(cuid())
+  eventId   String
+  code      String  @unique          // ระบบสุ่มให้ ไม่ให้แอดมินตั้งเอง (โค้ดที่คนตั้งเองเดาง่าย)
+  groupName String                   // "วิริยะประกันภัย" / "แขกผู้จัดงาน" — ใช้จัดกลุ่มและรายงาน
+
+  /**
+   * ส่วนลดเป็นเปอร์เซ็นต์เท่านั้น (100 = ฟรี)
+   *
+   * ไม่รองรับลดเป็นบาทโดยตั้งใจ — แต่ละรุ่นราคาไม่เท่ากัน ลดเป็นบาทเท่ากันจะกลายเป็น
+   * เปอร์เซ็นต์ไม่เท่ากัน (฿100 จาก ฿400 = 25% แต่จาก ฿700 = 14%) ซึ่งอธิบายยากเมื่อ
+   * คนในกลุ่มเดียวกันเทียบตัวเลขกัน
+   */
+  discountPercent Int @default(100)
+
+  maxUses   Int       @default(1)
+  usedCount Int       @default(0)     // เพิ่มแบบมีเงื่อนไขในทรานแซกชัน กันแย่งสิทธิ์พร้อมกัน
+  expiresAt DateTime?                 // null = ไม่มีกำหนด (ยังติดวันปิดรับสมัครของงานอยู่ดี)
+  active    Boolean   @default(true)  // ปิดชั่วคราวได้โดยไม่ต้องลบ (ลบแล้วเสียประวัติ)
+  note      String?   @db.Text
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([eventId, groupName])
 }
 
 /**

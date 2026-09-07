@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import { heldSeatWhere, expireStaleRegistrations, isExpired } from "@/lib/expiry"
+import { publicSeatWhere, expireStaleRegistrations, isExpired } from "@/lib/expiry"
 import { getSession } from "@/lib/auth-helpers"
 import { Card } from "@/components/ui/Card"
 import { RichText } from "@/components/ui/RichText"
@@ -42,7 +42,7 @@ export default async function VirtualEventPage({
         include: {
             categories: { orderBy: [{ sortOrder: "asc" }, { distance: "asc" }] },
             images: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }] },
-            _count: { select: { registrations: { where: heldSeatWhere() } } },
+            _count: { select: { registrations: { where: publicSeatWhere() } } },
         },
     })
 

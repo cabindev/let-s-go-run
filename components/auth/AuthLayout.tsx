@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { Wordmark } from "@/components/layout/Wordmark"
 
 /** เปลือกหน้า auth — เต็มจอ ดำ ตัวหนังสือใหญ่ */
 export function AuthLayout({
@@ -15,9 +15,7 @@ export function AuthLayout({
     return (
         <div className="min-h-screen bg-paper flex flex-col">
             <header className="h-20 px-5 sm:px-8 flex items-center max-w-md w-full mx-auto">
-                <Link href="/" className="display text-lg uppercase tracking-[-0.03em] text-ink">
-                    Run<span className="bg-move text-ink px-1 rounded-sm">Ludtong</span>
-                </Link>
+                <Wordmark />
             </header>
 
             <main className="flex-1 flex items-center px-5 sm:px-8 pb-16">

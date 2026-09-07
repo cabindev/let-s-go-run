@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
-import { heldSeatWhere } from "@/lib/expiry"
+import { heldSeatWhere, inviteSeatWhere } from "@/lib/expiry"
 import { eventHref } from "@/lib/events"
 import { deleteEvent } from "@/app/actions/admin"
 import { Card } from "@/components/ui/Card"
@@ -19,12 +19,22 @@ export default async function AdminEventsPage() {
             _count: {
                 select: {
                     // นับ "ที่นั่งที่ถูกจอง" (รวมคนที่ยังไม่จ่าย) และ "ยืนยันแล้ว" แยกกัน
+                    // ตรงนี้ใช้ heldSeatWhere() ตั้งใจ — หน้าแอดมินต้องเห็น "คนจริงทั้งหมด"
+                    // รวมสิทธิพิเศษด้วย เพราะเป็นตัวเลขที่ใช้สั่งเสื้อ/เหรียญ/แจ้งประกัน
                     registrations: { where: heldSeatWhere() },
                 },
             },
             registrations: { where: { status: "PAID" }, select: { id: true } },
         },
     })
+
+    // ที่นั่งสิทธิพิเศษของแต่ละงาน — แยกออกมาเพราะ _count ใส่ตัวกรองให้ relation เดียวกันได้แค่ชุดเดียว
+    const inviteRows = await prisma.registration.groupBy({
+        by: ["eventId"],
+        where: inviteSeatWhere(),
+        _count: { _all: true },
+    })
+    const inviteByEvent = new Map(inviteRows.map((r) => [r.eventId, r._count._all]))
 
     return (
         <div className="space-y-10">
@@ -50,7 +60,10 @@ export default async function AdminEventsPage() {
                 </Card>
             ) : (
                 <ul className="divide-y divide-line">
-                    {events.map((e) => (
+                    {events.map((e) => {
+                        const invited = inviteByEvent.get(e.id) ?? 0
+                        const publicSeats = e._count.registrations - invited
+                        return (
                         <li key={e.id} className="flex items-center gap-4 py-4">
                             <div className="min-w-0 flex-1">
                                 <Link href={`/admin/events/${e.id}/edit`} className="font-semibold tracking-tight hover:text-ink-soft transition-colors line-clamp-1">
@@ -60,7 +73,7 @@ export default async function AdminEventsPage() {
                                     {formatDate(e.date)} · {formatTime(e.date)} · {e.location}
                                 </p>
                                 <p className="text-[11px] text-ink-mute tnum">
-                                    {formatPrice(e.price)} · {e.distance} กม. · จอง {e._count.registrations}
+                                    {formatPrice(e.price)} · {e.distance} กม. · จอง {publicSeats}
                                     {e.maxParticipants ? `/${e.maxParticipants}` : ""} คน · ยืนยันแล้ว {e.registrations.length}
                                     {e._count.registrations > e.registrations.length && (
                                         <>
@@ -71,6 +84,13 @@ export default async function AdminEventsPage() {
                                         </>
                                     )}
                                 </p>
+                                {/* สิทธิพิเศษอยู่นอกโควตา — ยอดรวมจริงคือตัวเลขที่ใช้สั่งของ ต้องเห็นคู่กันเสมอ */}
+                                {invited > 0 && (
+                                    <p className="text-[11px] text-ink-mute tnum">
+                                        + สิทธิพิเศษ {invited} คน ·{" "}
+                                        <span className="text-ink font-semibold">รวมจริง {e._count.registrations} คน</span>
+                                    </p>
+                                )}
                                 <div className="mt-2">
                                     <EventStatusBadge status={e.status} date={e.type === "VIRTUAL" ? (e.endDate ?? e.date) : e.date} />
                                 </div>
@@ -79,6 +99,9 @@ export default async function AdminEventsPage() {
                             <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
                                 <Link href={eventHref(e)} target="_blank" className="eyebrow text-ink-mute hover:text-ink transition-colors">
                                     ดูหน้าจริง
+                                </Link>
+                                <Link href={`/admin/events/${e.id}/codes`} className="eyebrow text-ink-soft hover:text-ink transition-colors">
+                                    สิทธิพิเศษ
                                 </Link>
                                 <Link href={`/admin/events/${e.id}/edit`} className="eyebrow text-ink-soft hover:text-ink transition-colors">
                                     แก้ไข
@@ -98,7 +121,8 @@ export default async function AdminEventsPage() {
                                 </ConfirmAction>
                             </div>
                         </li>
-                    ))}
+                        )
+                    })}
                 </ul>
             )}
         </div>

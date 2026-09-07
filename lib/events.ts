@@ -57,7 +57,20 @@ export type RegisterState =
  * VIRTUAL : `date` คือวันเริ่มสะสมระยะ และ `endDate` คือวันสิ้นสุด
  *           สมัครได้จนถึงวันสิ้นสุด แม้วันเริ่มจะผ่านไปแล้ว
  */
-export function registerState(event: Event, joined: number, now = new Date()): RegisterState {
+export function registerState(
+    event: Event,
+    joined: number,
+    now = new Date(),
+    /**
+     * ข้ามเฉพาะเช็ค "จำนวนผู้สมัครเต็มแล้ว" — ใช้กับคนที่ถือโค้ดสิทธิพิเศษ
+     * เพราะที่นั่งของสปอนเซอร์อยู่นอกโควตาที่ประกาศไว้
+     *
+     * ข้ามได้แค่เรื่องจำนวนเท่านั้น เงื่อนไขที่เหลือ (งานถูกยกเลิก / ปิดรับสมัคร /
+     * เลยวันจัดงาน / ยังไม่ถึงเวลาเปิด) ยังบังคับกับทุกคนเท่ากัน — สิทธิพิเศษคือ
+     * "ไม่เสียค่าสมัครและไม่กินโควตา" ไม่ใช่ "ทำอะไรก็ได้"
+     */
+    { ignoreCapacity = false }: { ignoreCapacity?: boolean } = {}
+): RegisterState {
     if (event.status === "CANCELLED") return { open: false, reason: "กิจกรรมนี้ถูกยกเลิก" }
     if (event.status === "CLOSED") return { open: false, reason: "ปิดรับสมัครแล้ว" }
 
@@ -71,7 +84,7 @@ export function registerState(event: Event, joined: number, now = new Date()): R
     if (event.registerCloseAt && now > event.registerCloseAt) {
         return { open: false, reason: "หมดเวลารับสมัครแล้ว" }
     }
-    if (event.maxParticipants && joined >= event.maxParticipants) {
+    if (!ignoreCapacity && event.maxParticipants && joined >= event.maxParticipants) {
         return { open: false, reason: "จำนวนผู้สมัครเต็มแล้ว" }
     }
     return { open: true }

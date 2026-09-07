@@ -8,6 +8,9 @@ import { saveImage } from "@/lib/upload"
 import { IMAGE_GROUPS, groupField } from "@/lib/image-groups"
 import type { ImageCategory } from "@prisma/client"
 import { recalculateUserStats } from "@/lib/stats"
+import { releaseInviteSeat } from "@/lib/expiry"
+import { generateInviteCode } from "@/lib/invite-codes"
+import { formString } from "@/lib/utils"
 import type { ActionResult } from "./registration"
 
 const eventSchema = z.object({
@@ -544,15 +547,25 @@ export async function cancelRegistrationAsAdmin(id: string): Promise<ActionResul
 
         const reg = await prisma.registration.findUnique({
             where: { id },
-            select: { userId: true, eventId: true, status: true },
+            select: { userId: true, eventId: true, status: true, inviteCodeId: true },
         })
         if (!reg) return { ok: false, error: "ไม่พบรายการลงทะเบียน" }
         if (reg.status === "CANCELLED") return { ok: false, error: "รายการนี้ถูกยกเลิกไปแล้ว" }
 
-        await prisma.registration.update({
-            where: { id },
-            data: { status: "CANCELLED" },
+        // คืนสิทธิ์โค้ดเฉพาะเมื่อเปลี่ยนสถานะได้จริง กันคืนซ้ำถ้ามีคนกดพร้อมกัน
+        // เงื่อนไขเป็น "ยังไม่ถูกยกเลิก" ไม่ใช่สถานะที่อ่านมาก่อนเข้าทรานแซกชัน
+        // (ดูเหตุผลเต็มที่ cancelRegistration ใน app/actions/registration.ts)
+        const cancelled = await prisma.$transaction(async (tx) => {
+            const { count } = await tx.registration.updateMany({
+                where: { id, status: { not: "CANCELLED" } },
+                data: { status: "CANCELLED" },
+            })
+            if (count !== 1) return false
+            await releaseInviteSeat(tx, reg.inviteCodeId)
+            return true
         })
+        if (!cancelled) return { ok: false, error: "รายการนี้ถูกยกเลิกไปแล้ว" }
+
         await recalculateUserStats(reg.userId)
 
         revalidatePath("/admin/registrations")
@@ -671,5 +684,164 @@ export async function confirmPickupAdmin(
         return { ok: true, data: serializeCheckin(updated) }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ * โค้ดสิทธิพิเศษ (สปอนเซอร์ / แขกผู้จัดงาน / ทีมงาน)
+ * ------------------------------------------------------------------ */
+
+const inviteCodeSchema = z.object({
+    eventId: z.string().min(1),
+    groupName: z.string().trim().min(1, "กรุณาระบุชื่อกลุ่ม").max(120),
+    // จำนวนสิทธิ์ทั้งหมดที่กลุ่มนี้ได้ ไม่ใช่จำนวนโค้ด — แบบ "โค้ดเดียว" จะยุบเป็นโค้ดใบเดียว
+    quantity: z.coerce.number().int().min(1, "จำนวนสิทธิ์ต้องมากกว่า 0").max(500),
+    mode: z.enum(["SINGLE", "PER_PERSON"]),
+    discountPercent: z.coerce.number().int().min(1).max(100),
+    expiresAt: z.string().trim().optional().or(z.literal("")),
+    note: z.string().trim().max(500).optional().or(z.literal("")),
+})
+
+/**
+ * ออกโค้ดสิทธิพิเศษให้กลุ่มหนึ่ง
+ *
+ * SINGLE     = โค้ดใบเดียว maxUses = จำนวนสิทธิ์ (แจกทั้งกลุ่ม สะดวก แต่ส่งต่อกันได้)
+ * PER_PERSON = โค้ดใบละสิทธิ์ (รั่วไม่ได้ ตามได้รายคน — ใช้กับคู่สัญญาอย่างสปอนเซอร์)
+ *
+ * แอดมินตั้งโค้ดเองไม่ได้โดยตั้งใจ — โค้ดที่คนตั้งเอง (VIRIYAH20, FREE2026) เดาได้ในไม่กี่ครั้ง
+ */
+export async function createInviteCodes(formData: FormData): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+
+        const parsed = inviteCodeSchema.safeParse({
+            eventId: formData.get("eventId"),
+            groupName: formData.get("groupName"),
+            quantity: formData.get("quantity"),
+            mode: formData.get("mode"),
+            discountPercent: formData.get("discountPercent"),
+            expiresAt: formString(formData, "expiresAt"),
+            note: formString(formData, "note"),
+        })
+        if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message }
+        const d = parsed.data
+
+        const event = await prisma.event.findUnique({ where: { id: d.eventId }, select: { id: true } })
+        if (!event) return { ok: false, error: "ไม่พบกิจกรรมนี้" }
+
+        const expiresAt = d.expiresAt ? new Date(d.expiresAt) : null
+        if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+            return { ok: false, error: "วันหมดอายุไม่ถูกต้อง" }
+        }
+
+        const rows =
+            d.mode === "SINGLE"
+                ? [{ maxUses: d.quantity }]
+                : Array.from({ length: d.quantity }, () => ({ maxUses: 1 }))
+
+        // สร้างทีละใบ เผื่อโค้ดสุ่มชนกับของเดิม (โอกาส ~1 ใน 1.1 ล้านล้าน แต่ createMany
+        // จะพังทั้งชุดถ้าชนแม้ใบเดียว) — ชนแล้วสุ่มใหม่ให้อัตโนมัติ
+        let created = 0
+        for (const row of rows) {
+            for (let attempt = 0; attempt < 5; attempt++) {
+                try {
+                    await prisma.inviteCode.create({
+                        data: {
+                            eventId: d.eventId,
+                            code: generateInviteCode(),
+                            groupName: d.groupName,
+                            discountPercent: d.discountPercent,
+                            maxUses: row.maxUses,
+                            expiresAt,
+                            note: d.note || null,
+                        },
+                    })
+                    created++
+                    break
+                } catch (e) {
+                    const isDuplicate =
+                        typeof e === "object" && e !== null && "code" in e && e.code === "P2002"
+                    if (!isDuplicate || attempt === 4) throw e
+                }
+            }
+        }
+
+        revalidatePath(`/admin/events/${d.eventId}/codes`)
+        return {
+            ok: true,
+            message:
+                d.mode === "SINGLE"
+                    ? `ออกโค้ด 1 ใบ ใช้ได้ ${d.quantity} สิทธิ์`
+                    : `ออกโค้ด ${created} ใบ ใบละ 1 สิทธิ์`,
+        }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ออกโค้ดไม่สำเร็จ" }
+    }
+}
+
+/** เปิด/ปิดโค้ดชั่วคราว — ไม่ลบ เพราะลบแล้วเสียประวัติว่าใครเคยใช้ */
+export async function toggleInviteCode(id: string, active: boolean): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+        const code = await prisma.inviteCode.update({
+            where: { id },
+            data: { active },
+            select: { eventId: true },
+        })
+        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        return { ok: true, message: active ? "เปิดใช้งานโค้ดแล้ว" : "ปิดใช้งานโค้ดแล้ว" }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
+    }
+}
+
+/**
+ * เพิ่ม/ลดจำนวนสิทธิ์ของโค้ดใบหนึ่ง
+ *
+ * ลดต่ำกว่าที่ใช้ไปแล้วไม่ได้ — จะทำให้ usedCount > maxUses ซึ่งอ่านแล้วสับสน
+ * และทำให้รายงานที่ส่งให้สปอนเซอร์ไม่ตรงกับความจริง
+ */
+export async function updateInviteCodeQuota(id: string, maxUses: number): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+        if (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 500) {
+            return { ok: false, error: "จำนวนสิทธิ์ไม่ถูกต้อง" }
+        }
+
+        const code = await prisma.inviteCode.findUnique({
+            where: { id },
+            select: { eventId: true, usedCount: true },
+        })
+        if (!code) return { ok: false, error: "ไม่พบโค้ดนี้" }
+        if (maxUses < code.usedCount) {
+            return { ok: false, error: `ลดต่ำกว่าจำนวนที่ใช้ไปแล้ว (${code.usedCount}) ไม่ได้` }
+        }
+
+        await prisma.inviteCode.update({ where: { id }, data: { maxUses } })
+        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        return { ok: true, message: "ปรับจำนวนสิทธิ์แล้ว" }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
+    }
+}
+
+/** ลบโค้ดที่ยังไม่มีใครใช้ — ใช้ไปแล้วให้ปิดการใช้งานแทน จะได้ตามที่มาของที่นั่งฟรีได้ตลอด */
+export async function deleteInviteCode(id: string): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+        const code = await prisma.inviteCode.findUnique({
+            where: { id },
+            select: { eventId: true, usedCount: true },
+        })
+        if (!code) return { ok: false, error: "ไม่พบโค้ดนี้" }
+        if (code.usedCount > 0) {
+            return { ok: false, error: "โค้ดนี้มีคนใช้ไปแล้ว ปิดการใช้งานแทนการลบ" }
+        }
+
+        await prisma.inviteCode.delete({ where: { id } })
+        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        return { ok: true, message: "ลบโค้ดแล้ว" }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ลบไม่สำเร็จ" }
     }
 }

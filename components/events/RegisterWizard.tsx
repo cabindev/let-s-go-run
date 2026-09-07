@@ -9,6 +9,8 @@ import { Button, Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
 import { Field, TextArea, inputClass } from "@/components/ui/Field"
 import { Stepper, REGISTER_STEPS } from "./Stepper"
+import { InviteCodeBox, type AppliedInvite } from "./InviteCodeBox"
+import { discountedPrice } from "@/lib/invite-codes"
 import { submitRegistration } from "@/app/actions/register-flow"
 import { SHIRT_SIZES, SHIRT_SIZE_CHART, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, registrationAmount, categoryAvailability, type Option } from "@/lib/events"
 import { cn, formatDate, formatDateRange, formatPrice, formatTime } from "@/lib/utils"
@@ -60,7 +62,17 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     const [pdpaConsent, setPdpaConsent] = useState(false)
     const pdpaNotice = event.pdpaNotice?.trim() || DEFAULT_PDPA_NOTICE
 
-    const available = options.filter((o) => !o.maxSlots || o.taken < o.maxSlots)
+    /**
+     * โค้ดสิทธิพิเศษ — มีผลกับราคาทุกรุ่น วิธีรับของ และการเช็คที่นั่งเต็ม
+     * จึงอยู่ที่ขั้นแรกสุด ก่อนผู้สมัครเลือกอะไร
+     */
+    const [invite, setInvite] = useState<AppliedInvite | null>(null)
+
+    /** ราคาที่ผู้สมัครคนนี้ต้องจ่ายจริงต่อรุ่น — ฝั่งเซิร์ฟเวอร์คำนวณซ้ำเองอยู่แล้ว ตรงนี้แค่แสดงผล */
+    const priceOf = (o: Option) => (invite ? discountedPrice(o.price, invite.discountPercent) : o.price)
+
+    // ที่นั่งสิทธิพิเศษอยู่นอกโควตา คนถือโค้ดจึงเลือกรุ่นที่เต็มแล้วได้
+    const available = options.filter((o) => invite || !o.maxSlots || o.taken < o.maxSlots)
     const [selected, setSelected] = useState<Option | null>(available.length === 1 ? available[0] : null)
 
     const isVirtual = event.type === "VIRTUAL"
@@ -86,7 +98,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     const set = (k: keyof Details) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
         setDetails((d) => ({ ...d, [k]: e.target.value }))
 
-    const totalAmount = selected ? registrationAmount(selected.price, details.deliveryMethod) : 0
+    /**
+     * สิทธิ์ที่ทำให้ค่าสมัครเป็นศูนย์ = รับของที่งานเท่านั้น
+     * (เซิร์ฟเวอร์ทับค่าเป็น PICKUP อีกชั้นเสมอ ตรงนี้แค่ทำให้หน้าจอตรงกับที่จะเกิดขึ้นจริง)
+     */
+    const entryFee = selected ? priceOf(selected) : 0
+    const forcePickup = !!invite && !!selected && entryFee <= 0
+    const deliveryMethod = forcePickup ? "PICKUP" : details.deliveryMethod
+    const totalAmount = selected ? registrationAmount(entryFee, deliveryMethod) : 0
 
     const goto = (n: number) => {
         setError(null)
@@ -120,10 +139,10 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         if (details.hasMedicalCondition === "YES" && !details.medicalConditionDetail.trim()) {
             return setError("Please specify your medical condition / กรุณาระบุรายละเอียดโรคประจำตัว")
         }
-        if (event.offerShipping && !details.deliveryMethod) {
+        if (event.offerShipping && !forcePickup && !details.deliveryMethod) {
             return setError("Please choose a delivery method / กรุณาเลือกวิธีรับของ")
         }
-        if (details.deliveryMethod === "SHIPPING" && !details.address.trim()) {
+        if (deliveryMethod === "SHIPPING" && !details.address.trim()) {
             return setError("Please enter a shipping address / กรุณากรอกที่อยู่จัดส่งสำหรับการส่งไปรษณีย์")
         }
         goto(2)
@@ -147,11 +166,12 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         fd.set("bloodType", details.bloodType)
         fd.set("nationalId", details.nationalId)
         fd.set("hasParticipatedBefore", details.hasParticipatedBefore)
-        fd.set("deliveryMethod", details.deliveryMethod)
+        fd.set("deliveryMethod", deliveryMethod)
         fd.set("dateOfBirth", details.dateOfBirth)
         fd.set("hasMedicalCondition", details.hasMedicalCondition)
         fd.set("medicalConditionDetail", details.medicalConditionDetail)
         fd.set("pdpaConsent", "1")
+        if (invite) fd.set("inviteCode", invite.code)
 
         startTransition(async () => {
             const res = await submitRegistration(fd)
@@ -203,13 +223,20 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     </p>
 
                     {available.length === 0 ? (
-                        <Notice tone="danger" title="Sold Out / ที่นั่งเต็มทุกประเภทแล้ว">
-                            Check out other events on the home page / ลองติดตามงานอื่นในหน้าแรก
-                        </Notice>
+                        <>
+                            <Notice tone="danger" title="Sold Out / ที่นั่งเต็มทุกประเภทแล้ว">
+                                Check out other events on the home page / ลองติดตามงานอื่นในหน้าแรก
+                            </Notice>
+                            {/* ที่นั่งเต็มไม่ได้แปลว่าคนถือสิทธิพิเศษหมดสิทธิ์ — โควตาเขาแยกกันคนละก้อน */}
+                            <InviteCodeBox eventId={event.id} applied={invite} onApply={setInvite} />
+                        </>
                     ) : (
                         <ul className="space-y-3">
                             {options.map((o) => {
-                                const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
+                                const availability = categoryAvailability(o.taken, o.maxSlots)
+                                const full = availability.full && !invite
+                                const availabilityLabel = invite ? "สิทธิพิเศษ" : availability.label
+                                const finalPrice = priceOf(o)
                                 const active = selected?.id === o.id && selected?.name === o.name
                                 return (
                                     <li key={o.id ?? "default"}>
@@ -247,17 +274,29 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                                         </div>
                                                         <p className="text-[14px] text-ink-mute mt-1 tnum">
                                                             {isVirtual ? `สะสมให้ครบ ${o.distance} กม.` : `${o.distance} กม.`}
-                                                            {o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
+                                                            {!invite && o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="numeral text-2xl shrink-0">{formatPrice(o.price)}</span>
+                                                {/* มีส่วนลดให้ขีดฆ่าราคาเดิมไว้ เพื่อให้เห็นว่าสิทธิ์ถูกใช้จริงแล้ว */}
+                                                <span className="shrink-0 text-right">
+                                                    {finalPrice !== o.price && (
+                                                        <span className="block text-[13px] text-ink-mute line-through tnum">
+                                                            {formatPrice(o.price)}
+                                                        </span>
+                                                    )}
+                                                    <span className="numeral text-2xl">{formatPrice(finalPrice)}</span>
+                                                </span>
                                             </div>
                                         </button>
                                     </li>
                                 )
                             })}
                         </ul>
+                    )}
+
+                    {available.length > 0 && (
+                        <InviteCodeBox eventId={event.id} applied={invite} onApply={setInvite} />
                     )}
 
                     <Button size="lg" className="w-full" onClick={nextFromCategory} disabled={!selected}>
@@ -277,7 +316,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             label={isVirtual ? "Target Distance / ระยะเป้าหมาย" : "Category / ประเภท"}
                             value={`${selected.name} · ${selected.distance} กม.`}
                         />
-                        <Row label="Entry Fee / ค่าสมัคร" value={formatPrice(selected.price)} />
+                        <Row
+                            label="Entry Fee / ค่าสมัคร"
+                            value={
+                                invite
+                                    ? `${formatPrice(entryFee)} · สิทธิพิเศษ ${invite.groupName}`
+                                    : formatPrice(selected.price)
+                            }
+                        />
                     </Card>
 
                     <Field
@@ -370,7 +416,13 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         />
                     )}
 
-                    {event.offerShipping && (
+                    {event.offerShipping && forcePickup && (
+                        <Notice tone="sky" title="รับของที่งาน">
+                            สิทธิพิเศษรับของที่หน้างานเท่านั้น ยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธในวันงาน
+                        </Notice>
+                    )}
+
+                    {event.offerShipping && !forcePickup && (
                         <RadioGroup
                             label="Delivery Method / วิธีรับของ"
                             name="deliveryMethod"
@@ -389,12 +441,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         />
                     )}
 
-                    <TextArea
-                        label="Shipping Address / ที่อยู่จัดส่ง" name="address" rows={3}
-                        required={details.deliveryMethod === "SHIPPING"}
-                        value={details.address} onChange={set("address")}
-                        placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)"
-                    />
+                    {!forcePickup && (
+                        <TextArea
+                            label="Shipping Address / ที่อยู่จัดส่ง" name="address" rows={3}
+                            required={deliveryMethod === "SHIPPING"}
+                            value={details.address} onChange={set("address")}
+                            placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)"
+                        />
+                    )}
 
                     <div className="border-t border-line pt-7 space-y-7">
                         <p className="eyebrow">Emergency Contact / ผู้ติดต่อกรณีฉุกเฉิน</p>
@@ -469,13 +523,16 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                 value={details.hasParticipatedBefore === "YES" ? "Yes / เคย" : "No / ไม่เคย"}
                             />
                         )}
-                        {details.deliveryMethod && (
+                        {deliveryMethod && (
                             <Row
                                 label="Delivery Method / วิธีรับของ"
-                                value={details.deliveryMethod === "SHIPPING"
+                                value={deliveryMethod === "SHIPPING"
                                     ? `Mail delivery / ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})`
                                     : "Pick up at venue / รับที่งาน"}
                             />
+                        )}
+                        {invite && (
+                            <Row label="สิทธิพิเศษ" value={`${invite.groupName} · ${invite.code}`} />
                         )}
                     </Card>
 
@@ -486,7 +543,9 @@ export function RegisterWizard({ event, options, defaults }: Props) {
 
                     {totalAmount === 0 && (
                         <Notice tone="lime">
-                            This event is free — confirm to join instantly / งานนี้ไม่มีค่าสมัคร กดยืนยันแล้วเข้าร่วมได้ทันที
+                            {invite
+                                ? `ใช้สิทธิพิเศษของ ${invite.groupName} — ไม่มีค่าสมัคร กดยืนยันแล้วได้เลข BIB ทันที`
+                                : "This event is free — confirm to join instantly / งานนี้ไม่มีค่าสมัคร กดยืนยันแล้วเข้าร่วมได้ทันที"}
                         </Notice>
                     )}
 
