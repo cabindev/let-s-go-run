@@ -12,6 +12,7 @@ const LINKS = [
     { href: "/admin", label: "ภาพรวม", exact: true },
     { href: "/admin/events", label: "กิจกรรม" },
     { href: "/admin/registrations", label: "ผู้สมัคร" },
+    { href: "/admin/invite-codes", label: "สิทธิพิเศษ" },
     { href: "/admin/checkin", label: "CheckBIB" },
     { href: "/admin/submissions", label: "ผลวิ่ง VR" },
     { href: "/admin/products", label: "สินค้า" },

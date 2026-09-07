@@ -766,7 +766,8 @@ export async function createInviteCodes(formData: FormData): Promise<ActionResul
             }
         }
 
-        revalidatePath(`/admin/events/${d.eventId}/codes`)
+        revalidatePath(`/admin/invite-codes/${d.eventId}`)
+        revalidatePath("/admin/invite-codes")
         return {
             ok: true,
             message:
@@ -788,7 +789,8 @@ export async function toggleInviteCode(id: string, active: boolean): Promise<Act
             data: { active },
             select: { eventId: true },
         })
-        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        revalidatePath(`/admin/invite-codes/${code.eventId}`)
+        revalidatePath("/admin/invite-codes")
         return { ok: true, message: active ? "เปิดใช้งานโค้ดแล้ว" : "ปิดใช้งานโค้ดแล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
@@ -818,7 +820,8 @@ export async function updateInviteCodeQuota(id: string, maxUses: number): Promis
         }
 
         await prisma.inviteCode.update({ where: { id }, data: { maxUses } })
-        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        revalidatePath(`/admin/invite-codes/${code.eventId}`)
+        revalidatePath("/admin/invite-codes")
         return { ok: true, message: "ปรับจำนวนสิทธิ์แล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
@@ -839,7 +842,8 @@ export async function deleteInviteCode(id: string): Promise<ActionResult> {
         }
 
         await prisma.inviteCode.delete({ where: { id } })
-        revalidatePath(`/admin/events/${code.eventId}/codes`)
+        revalidatePath(`/admin/invite-codes/${code.eventId}`)
+        revalidatePath("/admin/invite-codes")
         return { ok: true, message: "ลบโค้ดแล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "ลบไม่สำเร็จ" }

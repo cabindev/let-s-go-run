@@ -78,8 +78,8 @@ export default async function EventInviteCodesPage({
     return (
         <div className="space-y-10">
             <div>
-                <Link href="/admin/events" className="eyebrow text-ink-mute hover:text-ink transition-colors">
-                    ← กิจกรรม
+                <Link href="/admin/invite-codes" className="eyebrow text-ink-mute hover:text-ink transition-colors">
+                    ← สิทธิพิเศษทุกงาน
                 </Link>
                 <h1 className="display text-3xl sm:text-4xl mt-3">โควตาสิทธิพิเศษ</h1>
                 <p className="text-[13px] text-ink-soft mt-2">

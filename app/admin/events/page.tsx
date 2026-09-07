@@ -100,7 +100,7 @@ export default async function AdminEventsPage() {
                                 <Link href={eventHref(e)} target="_blank" className="eyebrow text-ink-mute hover:text-ink transition-colors">
                                     ดูหน้าจริง
                                 </Link>
-                                <Link href={`/admin/events/${e.id}/codes`} className="eyebrow text-ink-soft hover:text-ink transition-colors">
+                                <Link href={`/admin/invite-codes/${e.id}`} className="eyebrow text-ink-soft hover:text-ink transition-colors">
                                     สิทธิพิเศษ
                                 </Link>
                                 <Link href={`/admin/events/${e.id}/edit`} className="eyebrow text-ink-soft hover:text-ink transition-colors">
