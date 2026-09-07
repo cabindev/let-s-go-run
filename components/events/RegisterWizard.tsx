@@ -235,7 +235,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             {options.map((o) => {
                                 const availability = categoryAvailability(o.taken, o.maxSlots)
                                 const full = availability.full && !invite
-                                const availabilityLabel = invite ? "สิทธิพิเศษ" : availability.label
+                                const availabilityLabel = invite ? "ใช้โค้ดได้" : availability.label
                                 const finalPrice = priceOf(o)
                                 const active = selected?.id === o.id && selected?.name === o.name
                                 return (
@@ -320,7 +320,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             label="Entry Fee / ค่าสมัคร"
                             value={
                                 invite
-                                    ? `${formatPrice(entryFee)} · สิทธิพิเศษ ${invite.groupName}`
+                                    ? `${formatPrice(entryFee)} · ${invite.groupName}`
                                     : formatPrice(selected.price)
                             }
                         />
@@ -418,7 +418,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
 
                     {event.offerShipping && forcePickup && (
                         <Notice tone="sky" title="รับของที่งาน">
-                            สิทธิพิเศษรับของที่หน้างานเท่านั้น ยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธในวันงาน
+                            โค้ดนี้รับของที่หน้างานเท่านั้น ยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธในวันงาน
                         </Notice>
                     )}
 
@@ -532,7 +532,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             />
                         )}
                         {invite && (
-                            <Row label="สิทธิพิเศษ" value={`${invite.groupName} · ${invite.code}`} />
+                            <Row label="โค้ดที่ใช้" value={`${invite.groupName} · ${invite.code}`} />
                         )}
                     </Card>
 
@@ -544,7 +544,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                     {totalAmount === 0 && (
                         <Notice tone="lime">
                             {invite
-                                ? `ใช้สิทธิพิเศษของ ${invite.groupName} — ไม่มีค่าสมัคร กดยืนยันแล้วได้เลข BIB ทันที`
+                                ? `${invite.groupName} — ไม่มีค่าสมัคร กดยืนยันแล้วได้เลข BIB ทันที`
                                 : "This event is free — confirm to join instantly / งานนี้ไม่มีค่าสมัคร กดยืนยันแล้วเข้าร่วมได้ทันที"}
                         </Notice>
                     )}

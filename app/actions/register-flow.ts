@@ -84,7 +84,7 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
                 where: { code: normalizeInviteCode(d.inviteCode) },
             })
             if (!found || found.eventId !== d.eventId) {
-                return { ok: false, error: "ไม่พบรหัสสิทธิพิเศษนี้ในงานนี้" }
+                return { ok: false, error: "ไม่พบโค้ดนี้" }
             }
             const codeState = inviteCodeState(found)
             if (!codeState.ok) return { ok: false, error: codeState.reason }
@@ -232,7 +232,7 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
                     data: { usedCount: { increment: 1 } },
                 })
                 if (claimed.count !== 1) {
-                    return { ok: false as const, error: "รหัสนี้ถูกใช้ครบจำนวนแล้ว" }
+                    return { ok: false as const, error: "โค้ดนี้ถูกใช้ครบจำนวนแล้ว" }
                 }
             }
 

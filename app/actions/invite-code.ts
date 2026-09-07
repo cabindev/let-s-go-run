@@ -23,14 +23,14 @@ export async function checkInviteCode(eventId: string, input: string): Promise<I
         await requireUserAction()
 
         const code = normalizeInviteCode(input)
-        if (!code) return { ok: false, error: "กรุณากรอกรหัส" }
+        if (!code) return { ok: false, error: "กรุณากรอกโค้ด" }
 
         const found = await prisma.inviteCode.findUnique({ where: { code } })
 
         // โค้ดของงานอื่นให้ตอบเหมือนไม่มีอยู่จริง ไม่บอกว่า "โค้ดนี้เป็นของงานอื่น"
         // เพราะนั่นคือการยืนยันให้คนเดาโค้ดรู้ว่าเดาถูกแล้ว
         if (!found || found.eventId !== eventId) {
-            return { ok: false, error: "ไม่พบรหัสนี้ กรุณาตรวจสอบอีกครั้ง" }
+            return { ok: false, error: "ไม่พบโค้ดนี้ กรุณาตรวจสอบอีกครั้ง" }
         }
 
         const state = inviteCodeState(found)

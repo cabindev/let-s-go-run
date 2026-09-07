@@ -62,9 +62,9 @@ export type InviteCodeState =
  * แต่ห้ามบอกจำนวนสิทธิ์คงเหลือ นั่นเป็นข้อมูลของสปอนเซอร์
  */
 export function inviteCodeState(code: InviteCode, now: Date = new Date()): InviteCodeState {
-    if (!code.active) return { ok: false, reason: "รหัสนี้ถูกปิดการใช้งานแล้ว" }
-    if (code.expiresAt && code.expiresAt <= now) return { ok: false, reason: "รหัสนี้หมดอายุแล้ว" }
-    if (code.usedCount >= code.maxUses) return { ok: false, reason: "รหัสนี้ถูกใช้ครบจำนวนแล้ว" }
+    if (!code.active) return { ok: false, reason: "โค้ดนี้ถูกปิดการใช้งานแล้ว" }
+    if (code.expiresAt && code.expiresAt <= now) return { ok: false, reason: "โค้ดนี้หมดอายุแล้ว" }
+    if (code.usedCount >= code.maxUses) return { ok: false, reason: "โค้ดนี้ถูกใช้ครบจำนวนแล้ว" }
     return { ok: true }
 }
 

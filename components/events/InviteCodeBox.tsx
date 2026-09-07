@@ -52,9 +52,7 @@ export function InviteCodeBox({
         return (
             <div className="rounded-2xl border border-lime bg-lime/5 px-4 py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-[13px] font-semibold tracking-tight">
-                        สิทธิพิเศษ — {applied.groupName}
-                    </p>
+                    <p className="text-[13px] font-semibold tracking-tight">{applied.groupName}</p>
                     <p className="text-[12px] text-ink-mute mt-0.5">
                         {discountLabel(applied.discountPercent)}
                         {applied.discountPercent >= 100 && " · รับของที่งานเท่านั้น"}
@@ -86,9 +84,12 @@ export function InviteCodeBox({
     return (
         <div className="rounded-2xl border border-line bg-paper px-4 py-4 space-y-3">
             <label htmlFor="inviteCode" className="eyebrow block">
-                รหัสสิทธิพิเศษ
+                โค้ด
             </label>
             <div className="flex gap-2">
+                {/* ไม่ใส่ placeholder ตัวอย่างโดยตั้งใจ — ตัวอย่างอย่าง "K7M2PQXA" บอกทั้งความยาว
+                    และชุดตัวอักษรที่ใช้ ซึ่งเป็นข้อมูลตั้งต้นให้คนไล่เดา คนที่ถือโค้ดจริงไม่ต้องมีตัวอย่าง
+                    อยู่แล้วเพราะมีของอยู่ในมือ */}
                 <input
                     id="inviteCode"
                     value={value}
@@ -97,7 +98,6 @@ export function InviteCodeBox({
                     autoComplete="off"
                     spellCheck={false}
                     maxLength={40}
-                    placeholder="เช่น K7M2PQXA"
                     onChange={(e) => setValue(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
