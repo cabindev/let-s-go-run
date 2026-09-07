@@ -1,14 +1,13 @@
 import Link from "next/link"
+import { Wordmark } from "./Wordmark"
 
 export function Footer() {
     return (
         <footer className="border-t border-line mt-20">
             <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div>
-                    <p className="display text-base uppercase tracking-[-0.03em]">
-                        Run<span className="bg-move text-ink px-1 rounded-sm">Ludtong</span>
-                    </p>
-                    <p className="text-[14px] text-ink-mute mt-1.5">ระบบรับสมัครงานวิ่ง</p>
+                    <Wordmark />
+                    <p className="text-[14px] text-ink-mute mt-3">ระบบรับสมัครงานวิ่ง</p>
                     <p className="text-[14px] text-ink-mute mt-1">
                         34 หมู่ 7 ตำบลยุหว่า อำเภอสันป่าตอง จังหวัดเชียงใหม่ 50120
                     </p>
