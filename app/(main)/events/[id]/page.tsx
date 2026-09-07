@@ -9,7 +9,7 @@ import { RichText } from "@/components/ui/RichText"
 import { Badge, EventStatusBadge, RegStatusBadge, Notice } from "@/components/ui/Badge"
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
-import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions, categoryAvailability } from "@/lib/events"
+import { EVENT_TYPE_LABEL, headlineDistance, registerState, toOptions, categoryAvailability, AVAILABILITY_TONE } from "@/lib/events"
 import { getTakenSlots } from "@/app/actions/register-flow"
 import { generateCheckinQr } from "@/lib/checkin-qr"
 import { cn, formatDate, formatDateLong, formatDateRange, formatPrice, formatTime, formatTimeRange, relativeDay } from "@/lib/utils"
@@ -204,10 +204,10 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                     <ImageSection images={gallery} category="ROUTE" />
 
                     <section>
-                        <p className="eyebrow mb-3">ระยะที่เปิดรับสมัคร</p>
+                        <p className="eyebrow mb-3">{state.open ? "ระยะที่เปิดรับสมัคร" : "ระยะการแข่งขัน"}</p>
                         <ul className="divide-y divide-line border-y border-line">
                             {options.map((o) => {
-                                const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
+                                const { label: availabilityLabel, tone } = categoryAvailability(o.taken, o.maxSlots, state.open)
                                 return (
                                     <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
                                         <span className="min-w-0">
@@ -215,7 +215,7 @@ export default async function EventDetailsPage({ params }: { params: Promise<{ i
                                                 <span className="text-sm font-semibold tracking-tight truncate">{o.name}</span>
                                                 <span className={cn(
                                                     "eyebrow px-2 py-0.5 rounded-full shrink-0",
-                                                    full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                                    AVAILABILITY_TONE[tone]
                                                 )}>
                                                     {availabilityLabel}
                                                 </span>

@@ -135,10 +135,26 @@ export const GENDER_OPTIONS = [
 export const BLOOD_TYPES = ["O", "A", "B", "AB"] as const
 
 /** สถานะที่นั่งของประเภทหนึ่งๆ — ใช้ร่วมกันทั้งหน้ารายละเอียดงานและฟอร์มสมัคร */
-export function categoryAvailability(taken: number, maxSlots: number | null) {
+/**
+ * ป้ายสถานะของแต่ละรุ่นบนหน้างาน
+ *
+ * ต้องรู้ด้วยว่างานยังเปิดรับสมัครอยู่ไหม ไม่ใช่ดูแค่ที่นั่งเหลือ — งานที่ปิดรับสมัครแล้ว
+ * แต่ทุกรุ่นยังขึ้น "ว่าง" อ่านแล้วเข้าใจผิดว่ายังสมัครได้ ทั้งที่กดไปก็ถูกปฏิเสธ
+ * (ป้าย "ปิดรับสมัครแล้ว" ของทั้งงานอยู่คนละมุมจอ คนละสายตา)
+ */
+export function categoryAvailability(taken: number, maxSlots: number | null, open = true) {
     const full = !!maxSlots && taken >= maxSlots
-    return { full, label: full ? "Full / เต็มแล้ว" : "Available / ว่าง" }
+    if (!open) return { full, label: "Closed / ปิดรับสมัคร", tone: "muted" as const }
+    if (full) return { full, label: "Full / เต็มแล้ว", tone: "danger" as const }
+    return { full, label: "Available / ว่าง", tone: "lime" as const }
 }
+
+/** คลาสสีของป้ายสถานะรุ่น — รวมไว้ที่เดียวกันทุกหน้าจะได้ไม่หลุด */
+export const AVAILABILITY_TONE = {
+    muted: "bg-paper-3 text-ink-mute",
+    danger: "bg-danger/10 text-danger",
+    lime: "bg-lime/10 text-lime-700",
+} as const
 
 /** เลขบัตรประชาชนไทย — ตรวจแค่รูปแบบตัวเลข 13 หลัก ไม่ตรวจ checksum */
 export const NATIONAL_ID_PATTERN = /^\d{13}$/

@@ -12,7 +12,7 @@ import { Stat } from "@/components/ui/Stat"
 import { ButtonLink, buttonClass } from "@/components/ui/Button"
 import { ImageSection } from "@/components/events/ImageSection"
 import { FinisherWall, WallTabs } from "@/components/events/FinisherWall"
-import { registerState, toOptions, categoryAvailability } from "@/lib/events"
+import { registerState, toOptions, categoryAvailability, AVAILABILITY_TONE } from "@/lib/events"
 import { getTakenSlots } from "@/app/actions/register-flow"
 import { generateCheckinQr } from "@/lib/checkin-qr"
 import { getFinisherWall, submitState, targetOf } from "@/lib/vr"
@@ -235,10 +235,12 @@ export default async function VirtualEventPage({
             <ImageSection images={gallery} category="ROUTE" />
 
             <section>
-                <p className="eyebrow mb-3">ระยะเป้าหมายที่เปิดรับสมัคร</p>
+                <p className="eyebrow mb-3">
+                    {regState.open ? "ระยะเป้าหมายที่เปิดรับสมัคร" : "ระยะเป้าหมายของงาน"}
+                </p>
                 <ul className="divide-y divide-line border-y border-line">
                     {options.map((o) => {
-                        const { full, label: availabilityLabel } = categoryAvailability(o.taken, o.maxSlots)
+                        const { label: availabilityLabel, tone } = categoryAvailability(o.taken, o.maxSlots, regState.open)
                         return (
                             <li key={o.id ?? "default"} className="flex items-baseline justify-between gap-4 py-3.5">
                                 <span className="min-w-0">
@@ -246,7 +248,7 @@ export default async function VirtualEventPage({
                                         <span className="text-sm font-semibold tracking-tight truncate">{o.name}</span>
                                         <span className={cn(
                                             "eyebrow px-2 py-0.5 rounded-full shrink-0",
-                                            full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                            AVAILABILITY_TONE[tone]
                                         )}>
                                             {availabilityLabel}
                                         </span>
