@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
+import { Download } from "lucide-react"
 import type { InviteCode } from "@prisma/client"
 import {
     createInviteCodes,
@@ -20,6 +21,8 @@ import { formatDate } from "@/lib/utils"
 interface UsedRegistration {
     id: string
     fullName: string | null
+    phone: string | null
+    shirtSize: string | null
     email: string | null
     bib: string | null
     categoryName: string | null
@@ -110,15 +113,26 @@ export function InviteCodeManager({
                         </p>
                     )}
                 </div>
-                {!open && (
-                    <button
-                        type="button"
-                        onClick={() => setOpen(true)}
-                        className="eyebrow text-ink hover:text-ink-soft transition-colors shrink-0"
-                    >
-                        + ออกโค้ดใหม่
-                    </button>
-                )}
+                <div className="flex items-center gap-4 shrink-0">
+                    {codes.length > 0 && (
+                        <a
+                            href={`/api/admin/invite-codes/export?event=${eventId}`}
+                            className="eyebrow text-ink-soft hover:text-ink transition-colors inline-flex items-center gap-1.5"
+                        >
+                            <Download className="w-3.5 h-3.5" strokeWidth={2.2} />
+                            Excel ทั้งงาน
+                        </a>
+                    )}
+                    {!open && (
+                        <button
+                            type="button"
+                            onClick={() => setOpen(true)}
+                            className="eyebrow text-ink hover:text-ink-soft transition-colors"
+                        >
+                            + ออกโค้ดใหม่
+                        </button>
+                    )}
+                </div>
             </div>
 
             {error && <Notice tone="danger" title="ทำรายการไม่สำเร็จ">{error}</Notice>}
@@ -247,13 +261,22 @@ export function InviteCodeManager({
                                     {list[0].expiresAt && ` · หมดอายุ ${formatDate(list[0].expiresAt)}`}
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => copy(allCodes, groupName)}
-                                className="eyebrow text-ink hover:text-ink-soft transition-colors shrink-0"
-                            >
-                                {copied === groupName ? "คัดลอกแล้ว ✓" : `คัดลอกโค้ดทั้งหมด (${list.length})`}
-                            </button>
+                            <div className="flex items-center gap-4 shrink-0">
+                                <a
+                                    href={`/api/admin/invite-codes/export?event=${eventId}&group=${encodeURIComponent(groupName)}`}
+                                    className="eyebrow text-ink-soft hover:text-ink transition-colors inline-flex items-center gap-1.5"
+                                >
+                                    <Download className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                    Excel
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => copy(allCodes, groupName)}
+                                    className="eyebrow text-ink hover:text-ink-soft transition-colors"
+                                >
+                                    {copied === groupName ? "คัดลอกแล้ว ✓" : `คัดลอกโค้ด (${list.length})`}
+                                </button>
+                            </div>
                         </div>
 
                         {/* แถบความคืบหน้า — ตอบคำถาม "เหลือกี่สิทธิ์" ได้โดยไม่ต้องอ่านตัวเลข */}
@@ -267,8 +290,11 @@ export function InviteCodeManager({
                         <ul className="mt-5 divide-y divide-line border-t border-line">
                             {list.map((c) => {
                                 const full = c.usedCount >= c.maxUses
+                                // คนที่ใช้โค้ดใบนี้ — โชว์ติดกับโค้ดเลย เพราะคำถามหน้างานคือ
+                                // "โค้ดใบนี้ใครถือ" ไม่ใช่ "มีคนใช้แล้วกี่คน"
+                                const users = people.filter((p) => p.inviteCodeId === c.id)
                                 return (
-                                    <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
+                                    <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-3">
                                         <button
                                             type="button"
                                             onClick={() => copy(c.code, c.id)}
@@ -289,6 +315,26 @@ export function InviteCodeManager({
                                         <span className="text-[12px] text-ink-mute tnum">
                                             {c.usedCount}/{c.maxUses}
                                         </span>
+
+                                        {/* โค้ดใบละคนจะมีชื่อเดียว ส่วนโค้ดเดียวทั้งกลุ่มอาจมีหลายสิบชื่อ
+                                            จึงตัดที่ 3 ชื่อ ที่เหลือดูได้ในรายชื่อเต็มด้านล่าง */}
+                                        {users.length > 0 && (
+                                            <span className="text-[13px] tracking-tight min-w-0">
+                                                {users.slice(0, 3).map((u, i) => (
+                                                    <span key={u.id}>
+                                                        {i > 0 && <span className="text-ink-mute">, </span>}
+                                                        {u.bib && <span className="numeral tnum text-ink-mute mr-1">{u.bib}</span>}
+                                                        {u.fullName || u.email || "—"}
+                                                        {u.phone && (
+                                                            <span className="text-[11px] text-ink-mute tnum ml-1.5">{u.phone}</span>
+                                                        )}
+                                                    </span>
+                                                ))}
+                                                {users.length > 3 && (
+                                                    <span className="text-[12px] text-ink-mute"> +{users.length - 3} คน</span>
+                                                )}
+                                            </span>
+                                        )}
 
                                         <div className="ml-auto flex items-center gap-3 shrink-0">
                                             {c.maxUses > 1 && (
@@ -350,9 +396,13 @@ export function InviteCodeManager({
                                                 <p className="text-[13px] tracking-tight">
                                                     {p.bib && <span className="numeral tnum mr-2">{p.bib}</span>}
                                                     {p.fullName ?? p.email ?? "—"}
+                                                    {p.phone && (
+                                                        <span className="text-[11px] text-ink-mute tnum ml-2">{p.phone}</span>
+                                                    )}
                                                 </p>
                                                 <p className="text-[11px] text-ink-mute tnum mt-0.5">
                                                     {p.categoryName && `${p.categoryName} · `}
+                                                    {p.shirtSize && `ไซส์ ${p.shirtSize} · `}
                                                     {formatDate(p.registeredAt)}
                                                     {p.email && ` · ${p.email}`}
                                                 </p>

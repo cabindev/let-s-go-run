@@ -27,7 +27,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
                         </span>
                         <span
                             className={cn(
-                                "text-[14px] font-semibold tracking-tight whitespace-nowrap hidden sm:block",
+                                "text-[12px] font-semibold tracking-tight whitespace-nowrap hidden sm:block",
                                 active ? "text-ink" : "text-ink-mute"
                             )}
                         >
@@ -43,9 +43,16 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
     )
 }
 
+/**
+ * ป้ายขั้นตอนเป็นภาษาอังกฤษล้วน
+ *
+ * เดิมเป็น "Category / เลือกประเภท" ทั้งคู่ พอวางเรียง 4 ขั้นในบรรทัดเดียวแล้วยาวเกินจอ
+ * ภาษาไทยท้ายป้ายเลยถูกตัดหาย อ่านไม่จบประโยค — ตัวเลขกับหัวข้อในแต่ละขั้นบอกบริบท
+ * เป็นภาษาไทยอยู่แล้ว ป้ายตรงนี้จึงเหลือคำอังกฤษสั้น ๆ พอ
+ */
 export const REGISTER_STEPS: Step[] = [
-    { key: "category", label: "Category / เลือกประเภท" },
-    { key: "details", label: "Details / ข้อมูลผู้สมัคร" },
-    { key: "confirm", label: "Review / ตรวจสอบ" },
-    { key: "payment", label: "Payment / ชำระเงิน" },
+    { key: "category", label: "Category" },
+    { key: "details", label: "Details" },
+    { key: "confirm", label: "Review" },
+    { key: "payment", label: "Payment" },
 ]

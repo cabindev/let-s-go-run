@@ -703,6 +703,31 @@ const inviteCodeSchema = z.object({
 })
 
 /**
+ * อ่านวันที่จาก <input type="date"> แล้วแก้เคสที่ผู้ใช้กรอกปี พ.ศ.
+ *
+ * เบราว์เซอร์ที่ตั้งภาษาไทยจะโชว์ปี พ.ศ. ในช่องวันที่ แอดมินจึงพิมพ์ 2569 ลงไปตรง ๆ ได้
+ * แล้วค่าที่ส่งมาเป็น "2569-09-22" จริง ๆ พอเอาไปแสดงผลด้วย formatDate() ที่บวก 543
+ * อีกรอบจะกลายเป็น "22 ก.ย. 3112" — เจอมาแล้วตอนทดสอบจริง
+ *
+ * ปีที่มากกว่า 2400 เป็นปี พ.ศ. แน่นอน (ค.ศ. 2400 คืออีก 400 ปีข้างหน้า) จึงลบ 543 กลับให้
+ * ค่าที่เบราว์เซอร์ส่งมาถูกต้องอยู่แล้วจะไม่โดนแตะ
+ */
+function parseThaiFriendlyDate(input: string | undefined): Date | null | "invalid" {
+    if (!input) return null
+
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input)
+    if (m) {
+        const year = Number(m[1])
+        const normalized = year > 2400 ? `${year - 543}-${m[2]}-${m[3]}` : input
+        const date = new Date(normalized)
+        return Number.isNaN(date.getTime()) ? "invalid" : date
+    }
+
+    const date = new Date(input)
+    return Number.isNaN(date.getTime()) ? "invalid" : date
+}
+
+/**
  * ออกโค้ดสิทธิพิเศษให้กลุ่มหนึ่ง
  *
  * SINGLE     = โค้ดใบเดียว maxUses = จำนวนสิทธิ์ (แจกทั้งกลุ่ม สะดวก แต่ส่งต่อกันได้)
@@ -729,10 +754,8 @@ export async function createInviteCodes(formData: FormData): Promise<ActionResul
         const event = await prisma.event.findUnique({ where: { id: d.eventId }, select: { id: true } })
         if (!event) return { ok: false, error: "ไม่พบกิจกรรมนี้" }
 
-        const expiresAt = d.expiresAt ? new Date(d.expiresAt) : null
-        if (expiresAt && Number.isNaN(expiresAt.getTime())) {
-            return { ok: false, error: "วันหมดอายุไม่ถูกต้อง" }
-        }
+        const expiresAt = parseThaiFriendlyDate(d.expiresAt)
+        if (expiresAt === "invalid") return { ok: false, error: "วันหมดอายุไม่ถูกต้อง" }
 
         const rows =
             d.mode === "SINGLE"

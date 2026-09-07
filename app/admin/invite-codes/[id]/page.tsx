@@ -46,6 +46,8 @@ export default async function EventInviteCodesPage({
             select: {
                 id: true,
                 fullName: true,
+                phone: true,
+                shirtSize: true,
                 bib: true,
                 registeredAt: true,
                 inviteGroupName: true,
@@ -142,6 +144,8 @@ export default async function EventInviteCodesPage({
                 registrations={usedRegs.map((r) => ({
                     id: r.id,
                     fullName: r.fullName,
+                    phone: r.phone,
+                    shirtSize: r.shirtSize,
                     email: r.user.email,
                     bib: r.bib,
                     categoryName: r.category?.name ?? null,
