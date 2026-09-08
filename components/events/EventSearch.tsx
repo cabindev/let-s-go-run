@@ -5,7 +5,7 @@ import { useState, useEffect, useTransition } from "react"
 import { Search } from "lucide-react"
 import { Button, Spinner } from "@/components/ui/Button"
 import { PROVINCES, DISTANCE_BANDS } from "@/lib/events"
-import { inputClass } from "@/components/ui/Field"
+import { cn } from "@/lib/utils"
 
 /**
  * แผงค้นหา — ชื่องาน / ระยะทาง
@@ -14,7 +14,15 @@ import { inputClass } from "@/components/ui/Field"
  */
 const SHOW_PROVINCE = false
 
-export function EventSearch() {
+/**
+ * `header` = เวอร์ชันที่ฝังอยู่ในแถบบน (จอ lg ขึ้นไป) / `page` = การ์ดเต็มบนหน้าแรก (จอเล็ก)
+ *
+ * สองเวอร์ชันนี้ถูก render พร้อมกันแล้วซ่อนทีละอันด้วย CSS จึงต้องแยก id ของช่องกรอก
+ * ไม่งั้นจะมี id ซ้ำกันสองชุดในหน้าเดียว แล้ว <label htmlFor> จะชี้ผิดตัว
+ */
+export function EventSearch({ variant = "page" }: { variant?: "page" | "header" }) {
+    const header = variant === "header"
+    const fieldId = (name: string) => `${variant}-${name}`
     const router = useRouter()
     const pathname = usePathname()
     const params = useSearchParams()
@@ -51,58 +59,82 @@ export function EventSearch() {
     const hasFilter = !!(params.get("q") || params.get("province") || params.get("distance"))
 
     return (
+        /*
+         * แถบค้นหาแถวเดียว — ป้ายกำกับเป็น sr-only แล้วใช้ placeholder แทน
+         *
+         * ของเดิมเป็นการ์ดที่มีป้ายกำกับลอยเหนือทุกช่อง สูงเกือบ 110px กินพื้นที่ครึ่งจอแรก
+         * จนการ์ดงานวิ่งใบแรกตกไปอยู่ใต้เส้นพับ ทั้งที่งานวิ่งคือของหลักที่คนเข้ามาดู
+         */
         <form
             onSubmit={submit}
-            className={`bg-paper border border-line rounded-3xl p-5 grid gap-5 sm:gap-4 sm:items-end ${SHOW_PROVINCE ? "sm:grid-cols-[1fr_1fr_1fr_auto]" : "sm:grid-cols-[1fr_1fr_auto]"
-                }`}
+            role="search"
+            className={cn(
+                "flex items-center",
+                header
+                    ? "w-full h-11 gap-2 pl-4 pr-1.5 bg-paper-2 border border-line rounded-full focus-within:border-ink-mute transition-colors"
+                    : "raise flex-wrap gap-2 p-2 pl-4 sm:pl-5 bg-paper border border-line rounded-3xl sm:rounded-full"
+            )}
         >
-            <div>
-                <label htmlFor="q" className="eyebrow block mb-2">ชื่องาน</label>
+            <div className={cn("flex items-center gap-2.5 flex-1", header ? "min-w-0" : "min-w-[11rem]")}>
+                <Search className="w-[18px] h-[18px] shrink-0 text-ink-mute" strokeWidth={2} />
+                <label htmlFor={fieldId("q")} className="sr-only">ชื่องาน</label>
                 <input
-                    id="q"
+                    id={fieldId("q")}
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="ค้นหาด้วยชื่องาน"
-                    className={`${inputClass} h-11`}
+                    placeholder={header ? "ค้นหางานวิ่ง" : "ค้นหางานวิ่งด้วยชื่องาน"}
+                    className={cn(
+                        "flex-1 min-w-0 bg-transparent tracking-tight text-ink placeholder:text-ink-mute focus:outline-none",
+                        header ? "h-9 text-sm" : "h-11 text-[15px]"
+                    )}
                 />
             </div>
 
             {SHOW_PROVINCE && (
-                <div>
-                    <label htmlFor="province" className="eyebrow block mb-2">จังหวัด</label>
+                <>
+                    <span aria-hidden className="hidden sm:block w-px h-6 bg-line shrink-0" />
+                    <label htmlFor={fieldId("province")} className="sr-only">จังหวัด</label>
                     <select
-                        id="province"
+                        id={fieldId("province")}
                         value={province}
                         onChange={(e) => setProvince(e.target.value)}
-                        className={`${inputClass} h-11`}
+                        className="h-11 shrink-0 bg-transparent text-[15px] tracking-tight text-ink-soft focus:outline-none cursor-pointer"
                     >
                         <option value="">ทุกจังหวัด</option>
                         {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
-                </div>
+                </>
             )}
 
-            <div>
-                <label htmlFor="distance" className="eyebrow block mb-2">ระยะทาง</label>
-                <select
-                    id="distance"
-                    value={band}
-                    onChange={(e) => setBand(e.target.value)}
-                    className={`${inputClass} h-11`}
-                >
-                    <option value="">ทุกระยะ</option>
-                    {DISTANCE_BANDS.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
-                </select>
-            </div>
+            {/* ในแถบบนที่แคบกว่า ช่องระยะทางโผล่เฉพาะจอกว้างพอ — จอแคบกว่านั้นใช้การ์ดบนหน้าแรกแทน */}
+            <span aria-hidden className={cn("w-px h-6 bg-line shrink-0", header ? "hidden xl:block" : "hidden sm:block")} />
+            <label htmlFor={fieldId("distance")} className="sr-only">ระยะทาง</label>
+            <select
+                id={fieldId("distance")}
+                value={band}
+                onChange={(e) => setBand(e.target.value)}
+                className={cn(
+                    "shrink-0 bg-transparent tracking-tight text-ink-soft focus:outline-none cursor-pointer",
+                    header ? "hidden xl:block h-9 text-sm" : "h-11 text-[15px]"
+                )}
+            >
+                <option value="">ทุกระยะ</option>
+                {DISTANCE_BANDS.map((b) => <option key={b.key} value={b.key}>{b.label}</option>)}
+            </select>
 
-            {/* ปุ่มอยู่แถวเดียวกับช่องกรอกบนจอกว้าง */}
-            <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" size="sm" disabled={isPending}>
-                    {isPending ? <Spinner /> : <><Search className="w-4 h-4" strokeWidth={2.2} />ค้นหา</>}
-                </Button>
+            <div className={cn("flex items-center gap-2 shrink-0", !header && "ml-auto sm:ml-0")}>
                 {hasFilter && (
                     <Button type="button" variant="ghost" size="sm" onClick={clear} disabled={isPending}>
                         ล้าง
+                    </Button>
+                )}
+                {header ? (
+                    <Button type="submit" size="sm" aria-label="ค้นหา" disabled={isPending} className="w-9 px-0">
+                        {isPending ? <Spinner /> : <Search className="w-4 h-4" strokeWidth={2.4} />}
+                    </Button>
+                ) : (
+                    <Button type="submit" size="sm" disabled={isPending}>
+                        {isPending ? <Spinner /> : <><Search className="w-4 h-4" strokeWidth={2.2} />ค้นหา</>}
                     </Button>
                 )}
             </div>

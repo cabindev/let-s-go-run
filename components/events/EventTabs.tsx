@@ -49,14 +49,31 @@ export function EventTabs() {
         </button>
     )
 
+    /*
+     * จอกว้าง = แถวเดียวคั่นด้วยเส้นตั้ง / มือถือ = สองแถวเหมือนเดิม
+     *
+     * ชิปทั้ง 8 ตัวยาวไม่ถึงครึ่งบรรทัดบนจอคอม การซ้อนสองแถวจึงเสียความสูงไปเปล่า ๆ
+     * เกือบ 90px ก่อนถึงการ์ดงานใบแรก แต่บนมือถือถ้ายัดแถวเดียวกัน ชิปกรองสถานะ
+     * จะถูกดันไปพ้นขอบจอจนคนไม่รู้ว่ามีให้เลือก เลยแยกสองแถวไว้เหมือนเดิม
+     */
     return (
-        <div className="space-y-3">
-            {/* เลือกประเภทงาน — วิ่งในงาน (ไม่ต้องส่งผล) หรือ วิ่งสะสมระยะ (ต้องส่งผล) */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {/* วิ่งในงาน (ไม่ต้องส่งผล) หรือ วิ่งสะสมระยะ (ต้องส่งผล) */}
+            <div
+                role="group"
+                aria-label="ประเภทงาน"
+                className="flex gap-2 shrink-0 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:overflow-visible"
+            >
                 {TYPES.map((t) => chip(t.label, currentType === t.key, () => push("type", t.key, "")))}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+            <span aria-hidden className="hidden sm:block w-px h-5 bg-line shrink-0 mx-1" />
+
+            <div
+                role="group"
+                aria-label="สถานะงาน"
+                className="flex gap-2 shrink-0 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0"
+            >
                 {TABS.map((t) => chip(t.label, current === t.key, () => push("filter", t.key, "upcoming")))}
             </div>
         </div>

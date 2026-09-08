@@ -15,7 +15,7 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
     return (
         <Link
             href={event.type === "VIRTUAL" ? `/virtual/${event.id}` : `/events/${event.id}`}
-            className="group flex flex-col bg-paper border border-line rounded-3xl overflow-hidden hover:border-ink-mute transition-colors"
+            className="group raise flex flex-col bg-paper border border-line rounded-3xl overflow-hidden hover:border-ink-mute transition-colors"
         >
             {/* ภาพปก — เต็มความกว้าง 16:9 */}
             <div className="relative w-full aspect-video shrink-0 bg-paper-3">
@@ -43,12 +43,12 @@ export function EventListCard({ event }: { event: Event & { categories: RaceCate
                     {event.title}
                 </h3>
 
-                <p className="text-[15px] text-ink-soft mt-1.5 tnum">
+                <p className="text-[14px] text-ink-soft mt-1.5 tnum">
                     {formatDateRange(event.date, event.endDate)}
                 </p>
 
                 {event.organizer && (
-                    <p className="text-[14px] text-ink-mute mt-0.5 truncate">จัดโดย {event.organizer}</p>
+                    <p className="text-[13px] text-ink-mute mt-0.5 truncate">จัดโดย {event.organizer}</p>
                 )}
 
                 <div className="mt-auto pt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 tnum">

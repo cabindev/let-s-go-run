@@ -18,7 +18,14 @@ export interface ProductCardData {
     event: { title: string } | null
 }
 
-export function ProductCard({ product }: { product: ProductCardData }) {
+/**
+ * `compact` = การ์ดเวอร์ชันเล็กสำหรับแถบสินค้าบนหน้าแรก
+ *
+ * หน้าร้านมีสินค้าเป็นตัวเอกจึงใช้การ์ดใหญ่ได้เต็มที่ แต่บนหน้าแรกสินค้าอยู่ท้ายหน้า
+ * ถัดจากรายการงานวิ่ง ถ้าใช้การ์ดขนาดเดียวกันจะเห็นได้แค่ 3 ชิ้นต่อหนึ่งจอ
+ * ย่อลงแล้ววางสี่คอลัมน์ทำให้เห็นของได้มากกว่าโดยใช้ความสูงน้อยลง
+ */
+export function ProductCard({ product, compact }: { product: ProductCardData; compact?: boolean }) {
     const inStock = hasStock(product.variants)
     const prices = product.variants.map((v) => variantPrice(product, v))
     const min = prices.length ? Math.min(...prices) : product.price
@@ -28,7 +35,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     return (
         <Link
             href={`/shop/${product.slug}`}
-            className="group bg-paper border border-line rounded-3xl overflow-hidden hover:border-ink-mute transition-colors flex flex-col"
+            className="group raise bg-paper border border-line rounded-3xl overflow-hidden hover:border-ink-mute transition-colors flex flex-col"
         >
             <div className="aspect-[4/3] bg-paper-2 relative">
                 {cover ? (
@@ -49,8 +56,11 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                 </div>
             </div>
 
-            <div className="p-5 flex-1 flex flex-col">
-                <p className="font-semibold tracking-tight line-clamp-2 group-hover:text-ink-soft transition-colors">
+            <div className={cn("flex-1 flex flex-col", compact ? "p-3.5 sm:p-4" : "p-5")}>
+                <p className={cn(
+                    "font-semibold tracking-tight line-clamp-2 group-hover:text-ink-soft transition-colors",
+                    compact && "text-sm"
+                )}>
                     {product.name}
                 </p>
                 {product.event && (
@@ -61,7 +71,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                         ส่งประมาณ {formatDate(product.estimatedShipAt)}
                     </p>
                 )}
-                <p className="numeral text-xl mt-auto pt-3">
+                <p className={cn("numeral mt-auto", compact ? "text-base pt-2.5" : "text-xl pt-3")}>
                     {min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`}
                 </p>
             </div>

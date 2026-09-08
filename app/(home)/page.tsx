@@ -2,18 +2,15 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth-helpers"
-import { getUserStats } from "@/lib/stats"
-import { getLevel } from "@/lib/levels"
 import { buildEventWhere, EVENT_INCLUDE } from "@/lib/event-query"
-import { Card, SectionTitle, MoreLink } from "@/components/ui/Card"
+import { Card } from "@/components/ui/Card"
 import { EmptyState } from "@/components/ui/EmptyState"
-import { ButtonLink } from "@/components/ui/Button"
 import { EventSearch } from "@/components/events/EventSearch"
 import { EventListCard } from "@/components/events/EventListCard"
 import { EventTabs } from "@/components/events/EventTabs"
 import { ProductCard } from "@/components/shop/ProductCard"
 import { isPurchasable, SHOP_NAME } from "@/lib/shop"
-import { formatNumber } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
@@ -36,27 +33,27 @@ export default async function HomePage({
 
     return (
         <>
-            {/* ───── ส่วนหัว + ค้นหา ───── */}
-            <section className="bg-paper border-b border-line">
-                <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-10">
-                    {session?.user ? (
-                        <Suspense fallback={<div className="h-20" />}>
-                            <UserStrip userId={session.user.id} name={session.user.name} />
-                        </Suspense>
-                    ) : (
-                        <div className="max-w-xl mx-auto text-center">
+            {/*
+              ส่วนหัว — ช่องค้นหาย้ายไปอยู่กลางแถบบนแล้วตั้งแต่จอ lg ขึ้นไป
+              ที่เหลือไว้ตรงนี้คือช่องค้นหาสำหรับจอเล็ก กับข้อความแนะนำระบบสำหรับคนที่ยังไม่ล็อกอิน
+              คนที่ล็อกอินแล้วบนจอคอมจึงเจอการ์ดงานวิ่งทันทีใต้แถบบน (สถิติย้ายเข้าเมนูผู้ใช้)
+            */}
+            <section className={cn("bg-paper border-b border-line", session?.user && "lg:hidden")}>
+                <div className="max-w-6xl mx-auto px-5 sm:px-8 py-6 sm:py-8 space-y-5">
+                    {!session?.user && (
+                        <div className="max-w-xl">
                             <p className="eyebrow">ระบบรับสมัครงานวิ่ง</p>
-                            <h1 className="display text-[clamp(1.4rem,3vw,1.875rem)] mt-1.5">
+                            <h1 className="display text-[clamp(1.4rem,3vw,1.875rem)] mt-1">
                                 หางานวิ่งที่ใช่ แล้วสมัครได้เลย
                             </h1>
-                            <p className="text-ink-soft text-[15px] mt-2">
+                            <p className="text-ink-soft text-[15px] mt-1.5">
                                 ค้นหาจากชื่องานหรือระยะทาง เลือกประเภทที่ต้องการ แล้วสมัครผ่านระบบได้ทันที
                             </p>
                         </div>
                     )}
 
-                    <div className="mt-6 max-w-3xl mx-auto">
-                        <Suspense fallback={<div className="h-44 sm:h-32 rounded-3xl bg-paper-2 animate-pulse" />}>
+                    <div className="lg:hidden">
+                        <Suspense fallback={<div className="h-[60px] rounded-3xl bg-paper-2 animate-pulse" />}>
                             <EventSearch />
                         </Suspense>
                     </div>
@@ -64,7 +61,9 @@ export default async function HomePage({
             </section>
 
             {/* ───── รายการงานวิ่ง ───── */}
-            <section className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-6">
+            <section className="max-w-6xl mx-auto px-5 sm:px-8 py-7 sm:py-9 space-y-5">
+                <SectionHeading title="งานวิ่ง" count={events.length > 0 ? `${events.length} งาน` : undefined} />
+
                 <Suspense fallback={null}>
                     <EventTabs />
                 </Suspense>
@@ -77,12 +76,9 @@ export default async function HomePage({
                         />
                     </Card>
                 ) : (
-                    <>
-                        <p className="eyebrow tnum">{events.length} งาน</p>
-                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            {events.map((e) => <EventListCard key={e.id} event={e} />)}
-                        </div>
-                    </>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {events.map((e) => <EventListCard key={e.id} event={e} />)}
+                    </div>
                 )}
             </section>
 
@@ -108,68 +104,62 @@ async function ShopStrip() {
             images: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }], take: 4 },
             event: { select: { title: true } },
         },
-        take: 6,
+        take: 8,
     })
 
-    const visible = products.filter((p) => isPurchasable(p)).slice(0, 3)
+    const visible = products.filter((p) => isPurchasable(p)).slice(0, 4)
     if (visible.length === 0) return null
 
     return (
         <section className="border-t border-line bg-paper">
-            <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 sm:py-10 space-y-6">
-                <SectionTitle
+            <div className="max-w-6xl mx-auto px-5 sm:px-8 py-7 sm:py-9 space-y-5">
+                <SectionHeading
                     title="สินค้าและของที่ระลึก"
-                    action={<MoreLink href="/shop">ดูสินค้าทั้งหมด</MoreLink>}
+                    description={`${SHOP_NAME} · เลือกไซส์ ใส่ตะกร้า แล้วชำระเงินผ่านระบบได้ทันที รับเองหรือส่งไปรษณีย์ก็ได้`}
+                    href="/shop"
+                    linkLabel="ดูสินค้าทั้งหมด"
                 />
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {visible.map((p) => <ProductCard key={p.id} product={p} />)}
+                <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {visible.map((p) => <ProductCard key={p.id} product={p} compact />)}
                 </div>
-                <p className="text-[13px] text-ink-mute">
-                    {SHOP_NAME} · เลือกไซส์ ใส่ตะกร้า แล้วชำระเงินผ่านระบบได้ทันที รับเองหรือส่งไปรษณีย์ก็ได้
-                </p>
             </div>
         </section>
     )
 }
 
-/** แถบสรุปสถิติแบบสั้น สำหรับผู้ใช้ที่ล็อกอินแล้ว */
-async function UserStrip({ userId, name }: { userId: string; name?: string | null }) {
-    const stats = await getUserStats(userId)
-    const level = getLevel(stats.totalDistance)
-    const firstName = (name || "นักวิ่ง").split(" ")[0]
-
+/**
+ * หัวข้อของแต่ละส่วนบนหน้าแรก
+ *
+ * ของเดิมใช้ .eyebrow — ตัวอักษร 11px สีเทาพิมพ์ใหญ่ ซึ่งออกแบบไว้เป็นป้ายกำกับช่องกรอก
+ * ไม่ใช่หัวข้อ พอเอามาคั่นระหว่างสองส่วนใหญ่ของหน้าแรกเลยแทบมองไม่เห็นว่าตรงไหนคืองานวิ่ง
+ * ตรงไหนคือสินค้า
+ */
+function SectionHeading({
+    title, count, description, href, linkLabel,
+}: {
+    title: string
+    count?: string
+    description?: string
+    href?: string
+    linkLabel?: string
+}) {
     return (
-        <div className="space-y-5">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <p className="eyebrow">สวัสดี</p>
-                    <h1 className="display text-2xl sm:text-3xl mt-1">{firstName}</h1>
-                </div>
-                <Link href="/profile" className="eyebrow hover:text-ink transition-colors shrink-0 pb-1">
-                    ดูโปรไฟล์
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div className="flex items-baseline gap-3 min-w-0">
+                <h2 className="display text-lg sm:text-xl">{title}</h2>
+                {count && <span className="text-[13px] text-ink-mute tnum shrink-0">{count}</span>}
+            </div>
+            {href && linkLabel && (
+                <Link
+                    href={href}
+                    className="text-[14px] font-semibold text-ink-mute hover:text-ink transition-colors shrink-0"
+                >
+                    {linkLabel}
                 </Link>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-                <Mini label="ระยะทางรวม" value={`${formatNumber(stats.totalDistance, 1)} กม.`} />
-                <Mini label="กิจกรรมที่จบ" value={formatNumber(stats.completedEvents)} />
-                <Mini label="ระดับ" value={level.current.name} />
-                <Mini label="อันดับ" value={stats.rank ? `#${stats.rank}` : "—"} />
-                {stats.pendingPayments > 0 && (
-                    <ButtonLink href="/profile#registrations" size="sm" variant="solid" className="ml-auto">
-                        ชำระเงิน {stats.pendingPayments} รายการ
-                    </ButtonLink>
-                )}
-            </div>
-        </div>
-    )
-}
-
-function Mini({ label, value }: { label: string; value: string }) {
-    return (
-        <div>
-            <p className="eyebrow">{label}</p>
-            <p className="numeral text-lg mt-0.5">{value}</p>
+            )}
+            {description && (
+                <p className="w-full text-[14px] text-ink-mute">{description}</p>
+            )}
         </div>
     )
 }
