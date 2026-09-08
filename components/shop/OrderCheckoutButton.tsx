@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react"
 import { createOrderCheckoutSession } from "@/app/actions/order"
-import { Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
-import { amountWithFee, feeOnly, FEE_LABEL, type PaymentMethodChoice } from "@/lib/checkout-fees"
-import { cn, formatBaht } from "@/lib/utils"
+import { PaymentMethodButton } from "@/components/payment/PaymentMethodButton"
+import { amountWithFee, feeOnly, type PaymentMethodChoice } from "@/lib/checkout-fees"
+import { formatBaht } from "@/lib/utils"
 
 const METHODS: PaymentMethodChoice[] = ["promptpay", "card"]
 
@@ -44,24 +44,15 @@ export function OrderCheckoutButton({ orderId, amount }: { orderId: string; amou
                 const isLoading = pending && loadingMethod === method
 
                 return (
-                    <button
+                    <PaymentMethodButton
                         key={method}
-                        type="button"
+                        method={method}
+                        totalText={formatBaht(total)}
+                        feeText={`รวมค่าธรรมเนียม ${formatBaht(fee)}`}
+                        loading={isLoading}
                         disabled={pending}
                         onClick={() => pay(method)}
-                        className={cn(
-                            "w-full flex items-center justify-between gap-3 h-16 px-5 rounded-full border border-line bg-paper",
-                            "hover:border-ink-mute transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
-                    >
-                        <span className="text-sm font-semibold tracking-tight">
-                            {isLoading ? <Spinner /> : FEE_LABEL[method]}
-                        </span>
-                        <span className="text-right">
-                            <span className="numeral text-base block">{formatBaht(total)}</span>
-                            <span className="text-[13px] text-ink-mute">รวมค่าธรรมเนียม {formatBaht(fee)}</span>
-                        </span>
-                    </button>
+                    />
                 )
             })}
 

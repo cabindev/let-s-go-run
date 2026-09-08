@@ -2,11 +2,10 @@
 
 import { useState, useTransition } from "react"
 import { createCheckoutSession } from "@/app/actions/checkout"
-import { Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
-import { amountWithFee, feeOnly, FEE_LABEL, type PaymentMethodChoice } from "@/lib/checkout-fees"
+import { PaymentMethodButton } from "./PaymentMethodButton"
+import { amountWithFee, feeOnly, type PaymentMethodChoice } from "@/lib/checkout-fees"
 import { formatPrice } from "@/lib/utils"
-import { cn } from "@/lib/utils"
 
 const METHODS: PaymentMethodChoice[] = ["promptpay", "card"]
 
@@ -44,24 +43,15 @@ export function CheckoutButton({ registrationId, amount }: { registrationId: str
                 const isLoading = pending && loadingMethod === method
 
                 return (
-                    <button
+                    <PaymentMethodButton
                         key={method}
-                        type="button"
+                        method={method}
+                        totalText={formatPrice(total)}
+                        feeText={`Incl. fee / รวมค่าธรรมเนียม ${formatPrice(fee)}`}
+                        loading={isLoading}
                         disabled={pending}
                         onClick={() => pay(method)}
-                        className={cn(
-                            "w-full flex items-center justify-between gap-3 h-16 px-5 rounded-full border border-line bg-paper",
-                            "hover:border-ink-mute transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
-                    >
-                        <span className="text-sm font-semibold tracking-tight">
-                            {isLoading ? <Spinner /> : FEE_LABEL[method]}
-                        </span>
-                        <span className="text-right">
-                            <span className="numeral text-base block">{formatPrice(total)}</span>
-                            <span className="text-[13px] text-ink-mute">Incl. fee / รวมค่าธรรมเนียม {formatPrice(fee)}</span>
-                        </span>
-                    </button>
+                    />
                 )
             })}
 
