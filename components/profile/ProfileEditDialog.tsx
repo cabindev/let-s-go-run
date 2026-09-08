@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { X } from "lucide-react"
@@ -37,14 +38,21 @@ export function ProfileEditDialog({ user }: Props) {
                 แก้ไข
             </button>
 
-            {open && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+            {/*
+                ต้อง render ผ่าน portal ไปที่ body — ปุ่ม "แก้ไข" ฝังอยู่ในการ์ดกลางหน้า และมี
+                ancestor ที่สร้าง containing block ให้ position:fixed (transform/animation)
+                ทำให้ inset-0 ไปอิงกล่องนั้นแทนที่จะเป็นขอบจอ ผลคือฉากหลังคลุมแค่คอลัมน์เนื้อหา
+                ส่วนตัวการ์ดถูกดันจนหัวโดนตัดหายพ้นขอบบน (แบบเดียวกับที่ ProductGalleryViewer เจอ)
+                portal ทำงานเฉพาะฝั่ง client แต่ตอน SSR/hydrate ค่า open เป็น false อยู่แล้ว
+            */}
+            {open && createPortal(
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
                     <div className="absolute inset-0 bg-ink/25 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
                     <div
                         role="dialog"
                         aria-modal="true"
                         aria-label="ตั้งค่าบัญชี"
-                        className="relative w-full sm:max-w-md bg-paper rounded-t-3xl sm:rounded-3xl max-h-[92vh] overflow-y-auto animate-rise shadow-2xl shadow-black/15"
+                        className="relative w-full sm:max-w-md bg-paper rounded-t-3xl sm:rounded-3xl max-h-[92vh] sm:max-h-full overflow-y-auto animate-rise shadow-2xl shadow-black/15"
                     >
                         <div className="sticky top-0 bg-paper px-6 py-5 flex items-center justify-between">
                             <p className="eyebrow">ตั้งค่าบัญชี</p>
@@ -66,7 +74,8 @@ export function ProfileEditDialog({ user }: Props) {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     )
