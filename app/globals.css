@@ -64,6 +64,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * เงาสองชั้น — ชั้นบางชิดขอบไว้ตัดกับพื้นเทา อีกชั้นฟุ้งกว้างไว้ให้การ์ดดูลอยขึ้นมาจริง
+ * ใช้แทน shadow-* ของ Tailwind เพราะเงาสำเร็จรูปดำเกินไปบนพื้น paper-2 จนขอบการ์ดดูสกปรก
+ */
+.raise { box-shadow: 0 1px 2px rgb(10 10 10 / 0.04), 0 10px 30px -18px rgb(10 10 10 / 0.18); }
+.raise-lg { box-shadow: 0 2px 4px rgb(10 10 10 / 0.05), 0 18px 44px -20px rgb(10 10 10 / 0.22); }
+
 /* ป้ายกำกับตัวเล็ก */
 .eyebrow {
   font-size: 11px;

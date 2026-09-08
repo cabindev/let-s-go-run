@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import {
+    ArrowLeft, CalendarDays, Check, ClipboardCheck, Flag, HeartPulse,
+    IdCard, MapPin, Phone, Route, ShieldCheck, Shirt, Ticket, User, type LucideIcon,
+} from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { Button, Spinner } from "@/components/ui/Button"
 import { Notice } from "@/components/ui/Badge"
@@ -12,7 +15,7 @@ import { Stepper, REGISTER_STEPS } from "./Stepper"
 import { InviteCodeBox, type AppliedInvite } from "./InviteCodeBox"
 import { discountedPrice } from "@/lib/invite-codes"
 import { submitRegistration } from "@/app/actions/register-flow"
-import { SHIRT_SIZES, SHIRT_SIZE_CHART, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, registrationAmount, categoryAvailability, type Option } from "@/lib/events"
+import { SHIRT_SIZES, SHIRT_SIZE_CHART, GENDER_OPTIONS, BLOOD_TYPES, DEFAULT_PDPA_NOTICE, SHIPPING_FEE, AVAILABILITY_TONE, registrationAmount, categoryAvailability, type Option } from "@/lib/events"
 import { cn, formatDate, formatDateRange, formatPrice, formatTime } from "@/lib/utils"
 
 interface Props {
@@ -113,37 +116,48 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
+    /**
+     * แจ้งข้อผิดพลาดแล้วเลื่อนจอขึ้นไปหาข้อความ
+     *
+     * กล่องแจ้งเตือนอยู่หัวหน้าจอ แต่ปุ่ม "ถัดไป" อยู่ท้ายฟอร์มที่ยาวเกินหนึ่งจอ
+     * ถ้าไม่เลื่อนให้ ผู้สมัครจะเห็นแค่ปุ่มที่กดแล้วไม่ไปไหน โดยไม่รู้ว่ามีข้อความบอกเหตุผลอยู่
+     */
+    const fail = (message: string) => {
+        setError(message)
+        window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+
     // ---- ขั้น 1: เลือกประเภท ----
     const nextFromCategory = () => {
-        if (!selected) return setError("Please select a race category / กรุณาเลือกประเภทการแข่งขัน")
+        if (!selected) return fail("Please select a race category / กรุณาเลือกประเภทการแข่งขัน")
         goto(1)
     }
 
     // ---- ขั้น 2: ข้อมูลผู้สมัคร ----
     const nextFromDetails = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        if (!details.fullName.trim()) return setError("Please enter your full name / กรุณากรอกชื่อ-นามสกุล")
-        if (details.phone.trim().length < 8) return setError("Invalid phone number / เบอร์โทรศัพท์ไม่ถูกต้อง")
+        if (!details.fullName.trim()) return fail("Please enter your full name / กรุณากรอกชื่อ-นามสกุล")
+        if (details.phone.trim().length < 8) return fail("Invalid phone number / เบอร์โทรศัพท์ไม่ถูกต้อง")
         if (event.collectNationalId && !/^\d{13}$/.test(details.nationalId.trim())) {
-            return setError("Please enter a valid 13-digit national ID / กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก")
+            return fail("Please enter a valid 13-digit national ID / กรุณากรอกเลขบัตรประชาชนให้ครบ 13 หลัก")
         }
         if (event.collectPreviousParticipation && !details.hasParticipatedBefore) {
-            return setError("Please specify if you've joined this event before / กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่")
+            return fail("Please specify if you've joined this event before / กรุณาระบุว่าเคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่")
         }
         if (event.collectDateOfBirth && !details.dateOfBirth) {
-            return setError("Please enter your date of birth / กรุณากรอกวันเกิด")
+            return fail("Please enter your date of birth / กรุณากรอกวันเกิด")
         }
         if (event.collectBloodType && !details.hasMedicalCondition) {
-            return setError("Please specify if you have any medical conditions / กรุณาระบุว่ามีโรคประจำตัวหรือไม่")
+            return fail("Please specify if you have any medical conditions / กรุณาระบุว่ามีโรคประจำตัวหรือไม่")
         }
         if (details.hasMedicalCondition === "YES" && !details.medicalConditionDetail.trim()) {
-            return setError("Please specify your medical condition / กรุณาระบุรายละเอียดโรคประจำตัว")
+            return fail("Please specify your medical condition / กรุณาระบุรายละเอียดโรคประจำตัว")
         }
         if (event.offerShipping && !forcePickup && !details.deliveryMethod) {
-            return setError("Please choose a delivery method / กรุณาเลือกวิธีรับของ")
+            return fail("Please choose a delivery method / กรุณาเลือกวิธีรับของ")
         }
         if (deliveryMethod === "SHIPPING" && !details.address.trim()) {
-            return setError("Please enter a shipping address / กรุณากรอกที่อยู่จัดส่งสำหรับการส่งไปรษณีย์")
+            return fail("Please enter a shipping address / กรุณากรอกที่อยู่จัดส่งสำหรับการส่งไปรษณีย์")
         }
         goto(2)
     }
@@ -176,7 +190,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
         startTransition(async () => {
             const res = await submitRegistration(fd)
             if (!res.ok) {
-                setError(res.error)
+                fail(res.error)
                 return
             }
             if (res.needsPayment) {
@@ -189,7 +203,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     }
 
     return (
-        <div className="pt-4 max-w-2xl mx-auto space-y-8">
+        <div className="pt-4 max-w-2xl mx-auto space-y-6">
             <Link
                 href={base}
                 className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-mute hover:text-ink transition-colors"
@@ -198,29 +212,57 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                 Back to Event / กลับไปหน้างาน
             </Link>
 
-            {/* หัวข้อ + ขั้นตอน */}
-            <div>
-                <p className="eyebrow">Register / สมัครเข้าร่วม</p>
-                <h1 className="display text-2xl sm:text-3xl mt-2">{event.title}</h1>
-                <p className="text-[15px] text-ink-mute mt-2 tnum">
-                    {isVirtual
-                        ? `สะสมระยะได้ระหว่าง ${formatDateRange(event.date, event.endDate)}`
-                        : `${formatDate(event.date)} · ${formatTime(event.date)} · ${event.location}`}
-                </p>
-            </div>
+            {/*
+              หัวงาน + แถบขั้นตอนอยู่ในการ์ดใบเดียวกัน
+              ผู้สมัครจะได้เห็นพร้อมกันว่า "กำลังสมัครงานไหน" และ "อยู่ขั้นที่เท่าไร"
+              โดยไม่ต้องกวาดตาข้ามช่องว่างสองก้อน
+            */}
+            <Card className="raise-lg overflow-hidden">
+                <div className="flex gap-4 p-4 sm:p-5">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-2xl overflow-hidden bg-paper-3">
+                        {event.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={event.image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="absolute inset-0 flex items-center justify-center text-ink-mute/40">
+                                <Route className="w-8 h-8" strokeWidth={1.5} />
+                            </span>
+                        )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="eyebrow">Register / สมัครเข้าร่วม</p>
+                        <h1 className="display text-xl sm:text-2xl mt-1">{event.title}</h1>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-ink-mute mt-2 tnum">
+                            <span className="inline-flex items-center gap-1.5">
+                                <CalendarDays className="w-4 h-4 shrink-0" strokeWidth={1.9} />
+                                {isVirtual ? formatDateRange(event.date, event.endDate) : `${formatDate(event.date)} · ${formatTime(event.date)}`}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 min-w-0">
+                                {isVirtual ? (
+                                    <><Route className="w-4 h-4 shrink-0" strokeWidth={1.9} />วิ่งที่ไหนก็ได้</>
+                                ) : (
+                                    <><MapPin className="w-4 h-4 shrink-0" strokeWidth={1.9} /><span className="truncate">{event.location}</span></>
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-            <div className="overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
-                <Stepper steps={REGISTER_STEPS} current={step} />
-            </div>
+                <div className="border-t border-line bg-paper-2/60 px-4 sm:px-5 py-3 overflow-x-auto no-scrollbar">
+                    <Stepper steps={REGISTER_STEPS} current={step} />
+                </div>
+            </Card>
 
             {error && <Notice tone="danger">{error}</Notice>}
 
             {/* ---------- ขั้น 1 ---------- */}
             {step === 0 && (
                 <div className="space-y-5">
-                    <p className="eyebrow">
-                        {isVirtual ? "Select Target Distance / เลือกระยะเป้าหมาย" : "Select Race Category / เลือกประเภทการแข่งขัน"}
-                    </p>
+                    <SectionHead
+                        icon={Flag}
+                        title={isVirtual ? "เลือกระยะเป้าหมาย" : "เลือกประเภทการแข่งขัน"}
+                        desc={isVirtual ? "Select target distance" : "Select race category"}
+                    />
 
                     {available.length === 0 ? (
                         <>
@@ -236,6 +278,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                 const availability = categoryAvailability(o.taken, o.maxSlots)
                                 const full = availability.full && !invite
                                 const availabilityLabel = invite ? "ใช้โค้ดได้" : availability.label
+                                const tone = invite ? "lime" : availability.tone
                                 const finalPrice = priceOf(o)
                                 const active = selected?.id === o.id && selected?.name === o.name
                                 return (
@@ -243,12 +286,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                         <button
                                             type="button"
                                             disabled={full}
+                                            aria-pressed={active}
                                             onClick={() => { setSelected(o); setError(null) }}
                                             className={cn(
-                                                "w-full text-left p-4 sm:p-5 rounded-2xl border transition-all",
+                                                "w-full text-left p-4 sm:p-5 rounded-3xl border bg-paper transition-all",
+                                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper-2",
                                                 full && "opacity-45 cursor-not-allowed border-line",
-                                                !full && active && "border-ink bg-paper ring-1 ring-ink shadow-sm shadow-black/[0.06]",
-                                                !full && !active && "border-line bg-paper hover:border-ink-mute hover:shadow-sm hover:shadow-black/[0.04]"
+                                                !full && active && "border-ink ring-1 ring-ink raise-lg",
+                                                !full && !active && "border-line raise hover:border-ink-mute"
                                             )}
                                         >
                                             <div className="flex items-center justify-between gap-4">
@@ -256,23 +301,26 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                                     <span
                                                         aria-hidden
                                                         className={cn(
-                                                            "mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                                                            active ? "border-ink" : "border-line"
+                                                            "mt-0.5 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors",
+                                                            active ? "border-ink bg-ink text-white" : "border-line"
                                                         )}
                                                     >
-                                                        {active && <span className="w-2.5 h-2.5 rounded-full bg-ink" />}
+                                                        {active && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                                                     </span>
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2 flex-wrap">
                                                             <p className="font-semibold tracking-tight">{o.name}</p>
+                                                            {/* ป้ายสถานะใช้ตัวอักษรเล็กแบบเดียวกับ .eyebrow แต่เขียนคลาสเอง
+                                                                เพราะ .eyebrow บังคับสีเทาไว้ในตัว จะทับสีเขียว/แดงของสถานะจนหายไปหมด */}
                                                             <span className={cn(
-                                                                "eyebrow px-2 py-0.5 rounded-full shrink-0",
-                                                                full ? "bg-danger/10 text-danger" : "bg-lime/10 text-lime-700"
+                                                                "shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] whitespace-nowrap",
+                                                                AVAILABILITY_TONE[tone]
                                                             )}>
                                                                 {availabilityLabel}
                                                             </span>
                                                         </div>
-                                                        <p className="text-[14px] text-ink-mute mt-1 tnum">
+                                                        <p className="flex items-center gap-1.5 text-[14px] text-ink-mute mt-1.5 tnum">
+                                                            <Route className="w-4 h-4 shrink-0" strokeWidth={1.9} />
                                                             {isVirtual ? `สะสมให้ครบ ${o.distance} กม.` : `${o.distance} กม.`}
                                                             {!invite && o.maxSlots && ` · เหลือ ${Math.max(0, o.maxSlots - o.taken)}/${o.maxSlots} ที่`}
                                                         </p>
@@ -307,79 +355,146 @@ export function RegisterWizard({ event, options, defaults }: Props) {
 
             {/* ---------- ขั้น 2 ---------- */}
             {step === 1 && selected && (
-                <form onSubmit={nextFromDetails} className="space-y-7">
-                    <p className="eyebrow">Participant Information / ข้อมูลผู้สมัคร</p>
-
-                    <Card className="divide-y divide-line shadow-sm shadow-black/[0.04]">
-                        <Row label="Event / งาน" value={event.title} />
-                        <Row
-                            label={isVirtual ? "Target Distance / ระยะเป้าหมาย" : "Category / ประเภท"}
-                            value={`${selected.name} · ${selected.distance} กม.`}
-                        />
-                        <Row
-                            label="Entry Fee / ค่าสมัคร"
-                            value={
-                                invite
-                                    ? `${formatPrice(entryFee)} · ${invite.groupName}`
-                                    : formatPrice(selected.price)
-                            }
-                        />
-                    </Card>
-
-                    <Field
-                        label="Full Name / ชื่อ-นามสกุล" name="fullName" required
-                        value={details.fullName} onChange={set("fullName")}
-                        placeholder="ชื่อที่ใช้ในการรับของที่ระลึก"
-                    />
-
-                    <div>
-                        <label htmlFor="phone" className="eyebrow block mb-2">Phone Number / เบอร์โทรศัพท์</label>
-                        <div className="relative">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm text-ink-mute pointer-events-none">
-                                🇹🇭 <span className="tnum">+66</span>
-                            </span>
-                            <input
-                                id="phone" name="phone" type="tel" required
-                                value={details.phone} onChange={set("phone")}
-                                placeholder="8x-xxx-xxxx"
-                                className={`${inputClass} h-11 pl-[4.5rem]`}
-                            />
+                <form onSubmit={nextFromDetails} className="space-y-4">
+                    {/* สรุปสิ่งที่เลือกไว้ พร้อมทางกลับไปแก้ — ไม่ต้องกดย้อนกลับเพื่อไปดูว่าเลือกรุ่นไหนไว้ */}
+                    <div className="raise rounded-3xl border border-line bg-paper px-4 sm:px-5 py-4 flex items-center gap-4">
+                        <span className="w-11 h-11 shrink-0 rounded-2xl bg-ink text-white flex items-center justify-center">
+                            <Ticket className="w-5 h-5" strokeWidth={1.9} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="font-semibold tracking-tight truncate">
+                                {selected.name} · {selected.distance} กม.
+                            </p>
+                            <p className="text-[13px] text-ink-mute mt-0.5 tnum">
+                                ค่าสมัคร {formatPrice(entryFee)}
+                                {invite && ` · ${invite.groupName}`}
+                            </p>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => goto(0)}
+                            className="eyebrow shrink-0 text-ink-mute hover:text-ink transition-colors"
+                        >
+                            แก้ไข
+                        </button>
                     </div>
 
-                    {event.collectDateOfBirth && (
+                    <Section icon={User} title="ข้อมูลผู้สมัคร" desc="Participant information">
                         <Field
-                            label="Date of Birth / วันเกิด" name="dateOfBirth" type="date" required
-                            value={details.dateOfBirth} onChange={set("dateOfBirth")}
+                            label="Full Name / ชื่อ-นามสกุล" name="fullName" required
+                            value={details.fullName} onChange={set("fullName")}
+                            placeholder="ชื่อที่ใช้ในการรับของที่ระลึก"
                         />
-                    )}
 
-                    {event.collectGender && (
-                        <RadioGroup
-                            label="Gender / เพศ"
-                            name="gender"
-                            value={details.gender}
-                            onChange={set("gender")}
-                            options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
-                        />
-                    )}
+                        <div>
+                            <label htmlFor="phone" className="eyebrow block mb-2">
+                                Phone Number / เบอร์โทรศัพท์<span className="text-danger ml-1">*</span>
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-sm text-ink-mute pointer-events-none">
+                                    🇹🇭 <span className="tnum">+66</span>
+                                </span>
+                                <input
+                                    id="phone" name="phone" type="tel" required
+                                    value={details.phone} onChange={set("phone")}
+                                    placeholder="8x-xxx-xxxx"
+                                    className={`${inputClass} h-11 pl-[4.25rem]`}
+                                />
+                            </div>
+                        </div>
 
-                    <div>
-                        <label htmlFor="shirtSize" className="eyebrow block mb-2">Shirt Size / ไซส์เสื้อ</label>
-                        <select id="shirtSize" value={details.shirtSize} onChange={set("shirtSize")} className={`${inputClass} h-11`}>
-                            {SHIRT_SIZES.map((s) => (
-                                <option key={s} value={s}>{s} (รอบอก {SHIRT_SIZE_CHART[s]}&quot;)</option>
-                            ))}
-                        </select>
-                        <p className="text-[13px] text-ink-mute mt-2 tnum">
-                            ไซส์ {details.shirtSize} — รอบอกประมาณ {SHIRT_SIZE_CHART[details.shirtSize as keyof typeof SHIRT_SIZE_CHART]}&quot;
-                        </p>
-                    </div>
+                        {event.collectDateOfBirth && (
+                            <Field
+                                label="Date of Birth / วันเกิด" name="dateOfBirth" type="date" required
+                                value={details.dateOfBirth} onChange={set("dateOfBirth")}
+                            />
+                        )}
+
+                        {event.collectGender && (
+                            <ChipGroup
+                                label="Gender / เพศ"
+                                name="gender"
+                                value={details.gender}
+                                onChange={set("gender")}
+                                options={GENDER_OPTIONS.map((g) => ({ value: g.value, label: g.label }))}
+                            />
+                        )}
+                    </Section>
+
+                    <Section icon={Shirt} title="เสื้อและการรับของ" desc="Shirt size & delivery">
+                        <fieldset>
+                            <legend className="eyebrow mb-2">Shirt Size / ไซส์เสื้อ</legend>
+                            {/* ปุ่มไซส์ความสูงเท่ากันทุกใบ พร้อมรอบอกใต้ตัวอักษร — เลือกได้โดยไม่ต้องเปิดตารางไซส์ */}
+                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                                {SHIRT_SIZES.map((s) => {
+                                    const active = details.shirtSize === s
+                                    return (
+                                        <label key={s} className="relative flex cursor-pointer">
+                                            <input
+                                                type="radio" name="shirtSize" value={s} checked={active}
+                                                onChange={set("shirtSize")} className="peer sr-only"
+                                            />
+                                            <span
+                                                className={cn(
+                                                    "w-full h-16 rounded-2xl border flex flex-col items-center justify-center gap-0.5 transition-all",
+                                                    "peer-focus-visible:ring-2 peer-focus-visible:ring-ink peer-focus-visible:ring-offset-2",
+                                                    active
+                                                        ? "border-ink bg-ink text-white raise"
+                                                        : "border-line bg-paper text-ink hover:border-ink-mute"
+                                                )}
+                                            >
+                                                <span className="text-sm font-bold tracking-tight">{s}</span>
+                                                <span className={cn("text-[11px] tnum", active ? "text-white/65" : "text-ink-mute")}>
+                                                    {SHIRT_SIZE_CHART[s]}&quot;
+                                                </span>
+                                            </span>
+                                        </label>
+                                    )
+                                })}
+                            </div>
+                            <p className="text-[13px] text-ink-mute mt-2 tnum">
+                                ไซส์ {details.shirtSize} — รอบอกประมาณ {SHIRT_SIZE_CHART[details.shirtSize as keyof typeof SHIRT_SIZE_CHART]}&quot;
+                            </p>
+                        </fieldset>
+
+                        {event.offerShipping && forcePickup && (
+                            <Notice tone="sky" title="รับของที่งาน">
+                                โค้ดนี้รับของที่หน้างานเท่านั้น ยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธในวันงาน
+                            </Notice>
+                        )}
+
+                        {event.offerShipping && !forcePickup && (
+                            <ChipGroup
+                                label="Delivery Method / วิธีรับของ"
+                                name="deliveryMethod"
+                                required
+                                value={details.deliveryMethod}
+                                onChange={set("deliveryMethod")}
+                                options={[
+                                    { value: "PICKUP", label: "Pick up at venue / รับที่งาน" },
+                                    { value: "SHIPPING", label: `Mail delivery / ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})` },
+                                ]}
+                                helper={
+                                    details.deliveryMethod === "SHIPPING"
+                                        ? "Please fill in your shipping address below / กรุณากรอกที่อยู่จัดส่งด้านล่างให้ครบถ้วน"
+                                        : "Pick up at the venue by showing your QR code / มารับเองที่งาน โดยยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธ"
+                                }
+                            />
+                        )}
+
+                        {!forcePickup && (
+                            <TextArea
+                                label="Shipping Address / ที่อยู่จัดส่ง" name="address" rows={3}
+                                required={deliveryMethod === "SHIPPING"}
+                                value={details.address} onChange={set("address")}
+                                placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)"
+                            />
+                        )}
+                    </Section>
 
                     {event.collectBloodType && (
-                        <div className="rounded-2xl border border-line bg-paper p-4 sm:p-5 space-y-4">
-                            <p className="eyebrow">Medical Information / ข้อมูลทางการแพทย์</p>
-                            <RadioGroup
+                        <Section icon={HeartPulse} title="ข้อมูลทางการแพทย์" desc="Medical information">
+                            <ChipGroup
                                 label="Blood Type / กรุ๊ปเลือด"
                                 name="bloodType"
                                 value={details.bloodType}
@@ -387,7 +502,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                 options={BLOOD_TYPES.map((b) => ({ value: b, label: b }))}
                                 helper="Emergency use only, optional / ใช้ในกรณีฉุกเฉินเท่านั้น ท่านไม่จำเป็นต้องกรอก"
                             />
-                            <RadioGroup
+                            <ChipGroup
                                 label="Do you have any medical conditions? / มีโรคประจำตัวหรือไม่"
                                 name="hasMedicalCondition"
                                 required
@@ -403,55 +518,10 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                                     helper="For your safety during the event, so our medical staff can prepare / เพื่อความปลอดภัยของท่านในระหว่างกิจกรรม เจ้าหน้าที่พยาบาลจะได้เตรียมพร้อมได้ถูกต้อง"
                                 />
                             )}
-                        </div>
+                        </Section>
                     )}
 
-                    {event.collectNationalId && (
-                        <Field
-                            label="National ID / หมายเลขบัตรประชาชน" name="nationalId" required
-                            inputMode="numeric" maxLength={13}
-                            value={details.nationalId} onChange={set("nationalId")}
-                            placeholder="เลข 13 หลัก ไม่ต้องมีขีด"
-                            helper="For accident insurance coverage — must match the registrant's name, stored securely / เพื่อประโยชน์ของผู้เข้าร่วม กรุณากรอกให้ตรงกับชื่อผู้ลงทะเบียน เพื่อสิทธิ์ประกันภัยอุบัติเหตุจากการเข้าร่วมกิจกรรม โดยข้อมูลถูกจัดเก็บอย่างปลอดภัย"
-                        />
-                    )}
-
-                    {event.offerShipping && forcePickup && (
-                        <Notice tone="sky" title="รับของที่งาน">
-                            โค้ดนี้รับของที่หน้างานเท่านั้น ยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธในวันงาน
-                        </Notice>
-                    )}
-
-                    {event.offerShipping && !forcePickup && (
-                        <RadioGroup
-                            label="Delivery Method / วิธีรับของ"
-                            name="deliveryMethod"
-                            required
-                            value={details.deliveryMethod}
-                            onChange={set("deliveryMethod")}
-                            options={[
-                                { value: "PICKUP", label: "Pick up at venue / รับที่งาน" },
-                                { value: "SHIPPING", label: `Mail delivery / ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})` },
-                            ]}
-                            helper={
-                                details.deliveryMethod === "SHIPPING"
-                                    ? "Please fill in your shipping address below / กรุณากรอกที่อยู่จัดส่งด้านล่างให้ครบถ้วน"
-                                    : "Pick up at the venue by showing your QR code / มารับเองที่งาน โดยยื่น QR ให้เจ้าหน้าที่สแกนหน้าบูธ"
-                            }
-                        />
-                    )}
-
-                    {!forcePickup && (
-                        <TextArea
-                            label="Shipping Address / ที่อยู่จัดส่ง" name="address" rows={3}
-                            required={deliveryMethod === "SHIPPING"}
-                            value={details.address} onChange={set("address")}
-                            placeholder="สำหรับจัดส่งเสื้อและของที่ระลึก (ถ้ามี)"
-                        />
-                    )}
-
-                    <div className="border-t border-line pt-7 space-y-7">
-                        <p className="eyebrow">Emergency Contact / ผู้ติดต่อกรณีฉุกเฉิน</p>
+                    <Section icon={Phone} title="ผู้ติดต่อกรณีฉุกเฉิน" desc="Emergency contact">
                         <Field
                             label="Contact Name / ชื่อผู้ติดต่อ" name="emergencyName"
                             value={details.emergencyName} onChange={set("emergencyName")} placeholder="ชื่อ-นามสกุล"
@@ -460,86 +530,127 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             label="Contact Phone / เบอร์ผู้ติดต่อ" name="emergencyPhone" type="tel"
                             value={details.emergencyPhone} onChange={set("emergencyPhone")} placeholder="08x-xxx-xxxx"
                         />
-                    </div>
+                    </Section>
 
-                    {event.collectPreviousParticipation && (
-                        <div className="border-t border-line pt-7">
-                            <RadioGroup
-                                label="Have you joined this event before? / เคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่"
-                                name="hasParticipatedBefore"
-                                required
-                                value={details.hasParticipatedBefore}
-                                onChange={set("hasParticipatedBefore")}
-                                options={[{ value: "YES", label: "Yes / เคย" }, { value: "NO", label: "No / ไม่เคย" }]}
-                            />
-                        </div>
+                    {(event.collectNationalId || event.collectPreviousParticipation) && (
+                        <Section icon={IdCard} title="ข้อมูลเพิ่มเติม" desc="Additional information">
+                            {event.collectNationalId && (
+                                <Field
+                                    label="National ID / หมายเลขบัตรประชาชน" name="nationalId" required
+                                    inputMode="numeric" maxLength={13}
+                                    value={details.nationalId} onChange={set("nationalId")}
+                                    placeholder="เลข 13 หลัก ไม่ต้องมีขีด"
+                                    helper="For accident insurance coverage — must match the registrant's name, stored securely / เพื่อประโยชน์ของผู้เข้าร่วม กรุณากรอกให้ตรงกับชื่อผู้ลงทะเบียน เพื่อสิทธิ์ประกันภัยอุบัติเหตุจากการเข้าร่วมกิจกรรม โดยข้อมูลถูกจัดเก็บอย่างปลอดภัย"
+                                />
+                            )}
+                            {event.collectPreviousParticipation && (
+                                <ChipGroup
+                                    label="Have you joined this event before? / เคยเข้าร่วมกิจกรรมนี้มาก่อนหรือไม่"
+                                    name="hasParticipatedBefore"
+                                    required
+                                    value={details.hasParticipatedBefore}
+                                    onChange={set("hasParticipatedBefore")}
+                                    options={[{ value: "YES", label: "Yes / เคย" }, { value: "NO", label: "No / ไม่เคย" }]}
+                                />
+                            )}
+                        </Section>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 pt-1">
                         <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => goto(0)}>
                             Back / ย้อนกลับ
                         </Button>
-                        <Button type="submit" size="lg" className="flex-1">Next / ถัดไป</Button>
+                        <Button type="submit" size="lg" className="flex-1">
+                            Next / ถัดไป
+                        </Button>
                     </div>
                 </form>
             )}
 
             {/* ---------- ขั้น 3 ---------- */}
             {step === 2 && selected && (
-                <div className="space-y-7">
-                    <p className="eyebrow">Review Before Confirming / ตรวจสอบข้อมูลก่อนยืนยัน</p>
+                <div className="space-y-4">
+                    <SectionHead icon={ClipboardCheck} title="ตรวจสอบข้อมูลก่อนยืนยัน" desc="Review before confirming" />
 
-                    <Card className="divide-y divide-line shadow-sm shadow-black/[0.04]">
-                        <Row label="Event / งาน" value={event.title} />
-                        <Row
-                            label={isVirtual ? "Target Distance / ระยะเป้าหมาย" : "Category / ประเภท"}
-                            value={`${selected.name} · ${selected.distance} กม.`}
-                        />
-                        <Row label="Full Name / ชื่อ-นามสกุล" value={details.fullName} />
-                        <Row label="Phone Number / เบอร์โทรศัพท์" value={details.phone} />
-                        <Row label="Shirt Size / ไซส์เสื้อ" value={details.shirtSize} />
-                        {details.address && <Row label="Shipping Address / ที่อยู่จัดส่ง" value={details.address} />}
-                        {details.emergencyName && (
-                            <Row
-                                label="Emergency Contact / ผู้ติดต่อฉุกเฉิน"
-                                value={`${details.emergencyName}${details.emergencyPhone ? ` · ${details.emergencyPhone}` : ""}`}
-                            />
-                        )}
-                        {details.dateOfBirth && <Row label="Date of Birth / วันเกิด" value={formatDate(details.dateOfBirth)} />}
-                        {details.gender && (
-                            <Row label="Gender / เพศ" value={GENDER_OPTIONS.find((g) => g.value === details.gender)?.label ?? details.gender} />
-                        )}
-                        {details.bloodType && <Row label="Blood Type / กรุ๊ปเลือด" value={details.bloodType} />}
-                        {event.collectBloodType && details.hasMedicalCondition && (
-                            <Row
-                                label="Medical Condition / โรคประจำตัว"
-                                value={details.hasMedicalCondition === "YES" ? details.medicalConditionDetail : "None / ไม่มี"}
-                            />
-                        )}
-                        {details.nationalId && <Row label="National ID / เลขบัตรประชาชน" value={details.nationalId} />}
-                        {details.hasParticipatedBefore && (
-                            <Row
-                                label="Joined Before / เคยเข้าร่วมมาก่อน"
-                                value={details.hasParticipatedBefore === "YES" ? "Yes / เคย" : "No / ไม่เคย"}
-                            />
-                        )}
-                        {deliveryMethod && (
-                            <Row
-                                label="Delivery Method / วิธีรับของ"
-                                value={deliveryMethod === "SHIPPING"
-                                    ? `Mail delivery / ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})`
-                                    : "Pick up at venue / รับที่งาน"}
-                            />
-                        )}
-                        {invite && (
-                            <Row label="โค้ดที่ใช้" value={`${invite.groupName} · ${invite.code}`} />
-                        )}
+                    {/* ใบสรุป — หัวการ์ดบอกงานที่สมัคร ตรงกลางคือข้อมูลที่กรอก ท้ายการ์ดคือยอดเงิน */}
+                    <Card className="raise-lg overflow-hidden">
+                        <div className="flex items-center gap-3 px-5 sm:px-6 py-4 border-b border-line">
+                            <span className="w-10 h-10 shrink-0 rounded-2xl bg-ink text-white flex items-center justify-center">
+                                <Ticket className="w-[18px] h-[18px]" strokeWidth={1.9} />
+                            </span>
+                            <div className="min-w-0">
+                                <p className="font-semibold tracking-tight truncate">{event.title}</p>
+                                <p className="text-[13px] text-ink-mute mt-0.5 tnum">
+                                    {selected.name} · {selected.distance} กม.
+                                </p>
+                            </div>
+                        </div>
+
+                        <dl className="divide-y divide-line">
+                            <Row label="Full Name / ชื่อ-นามสกุล" value={details.fullName} />
+                            <Row label="Phone Number / เบอร์โทรศัพท์" value={details.phone} />
+                            <Row label="Shirt Size / ไซส์เสื้อ" value={details.shirtSize} />
+                            {details.address && <Row label="Shipping Address / ที่อยู่จัดส่ง" value={details.address} />}
+                            {details.emergencyName && (
+                                <Row
+                                    label="Emergency Contact / ผู้ติดต่อฉุกเฉิน"
+                                    value={`${details.emergencyName}${details.emergencyPhone ? ` · ${details.emergencyPhone}` : ""}`}
+                                />
+                            )}
+                            {details.dateOfBirth && <Row label="Date of Birth / วันเกิด" value={formatDate(details.dateOfBirth)} />}
+                            {details.gender && (
+                                <Row label="Gender / เพศ" value={GENDER_OPTIONS.find((g) => g.value === details.gender)?.label ?? details.gender} />
+                            )}
+                            {details.bloodType && <Row label="Blood Type / กรุ๊ปเลือด" value={details.bloodType} />}
+                            {event.collectBloodType && details.hasMedicalCondition && (
+                                <Row
+                                    label="Medical Condition / โรคประจำตัว"
+                                    value={details.hasMedicalCondition === "YES" ? details.medicalConditionDetail : "None / ไม่มี"}
+                                />
+                            )}
+                            {details.nationalId && <Row label="National ID / เลขบัตรประชาชน" value={details.nationalId} />}
+                            {details.hasParticipatedBefore && (
+                                <Row
+                                    label="Joined Before / เคยเข้าร่วมมาก่อน"
+                                    value={details.hasParticipatedBefore === "YES" ? "Yes / เคย" : "No / ไม่เคย"}
+                                />
+                            )}
+                            {deliveryMethod && (
+                                <Row
+                                    label="Delivery Method / วิธีรับของ"
+                                    value={deliveryMethod === "SHIPPING"
+                                        ? `Mail delivery / ส่งไปรษณีย์ (+${formatPrice(SHIPPING_FEE)})`
+                                        : "Pick up at venue / รับที่งาน"}
+                                />
+                            )}
+                            {invite && (
+                                <Row label="โค้ดที่ใช้" value={`${invite.groupName} · ${invite.code}`} />
+                            )}
+                        </dl>
+
+                        {/* แจกแจงยอดทีละบรรทัด — ค่าส่งเป็นเงินที่บวกเพิ่มทีหลัง ต้องเห็นว่ามาจากไหน */}
+                        <div className="border-t border-line bg-paper-2 px-5 sm:px-6 py-4 space-y-2 tnum">
+                            <div className="flex items-baseline justify-between gap-4 text-[14px] text-ink-soft">
+                                <span>Entry Fee / ค่าสมัคร</span>
+                                <span className="flex items-baseline gap-2">
+                                    {invite && entryFee !== selected.price && (
+                                        <span className="text-ink-mute line-through">{formatPrice(selected.price)}</span>
+                                    )}
+                                    <span className="font-semibold text-ink">{formatPrice(entryFee)}</span>
+                                </span>
+                            </div>
+                            {deliveryMethod === "SHIPPING" && (
+                                <div className="flex items-baseline justify-between gap-4 text-[14px] text-ink-soft">
+                                    <span>Shipping / ค่าจัดส่ง</span>
+                                    <span className="font-semibold text-ink">{formatPrice(SHIPPING_FEE)}</span>
+                                </div>
+                            )}
+                            <div className="flex items-baseline justify-between gap-4 pt-3 border-t border-line">
+                                <span className="eyebrow">Total / ยอดที่ต้องชำระ</span>
+                                <span className="numeral text-3xl">{formatPrice(totalAmount)}</span>
+                            </div>
+                        </div>
                     </Card>
-
-                    <div className="rounded-2xl bg-paper border border-line px-5 py-4 flex items-baseline justify-between gap-3">
-                        <span className="eyebrow text-ink-mute">Total Amount / ยอดที่ต้องชำระ</span>
-                        <span className="numeral text-3xl">{formatPrice(totalAmount)}</span>
-                    </div>
 
                     {totalAmount === 0 && (
                         <Notice tone="lime">
@@ -549,28 +660,38 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         </Notice>
                     )}
 
-                    <div className="space-y-3">
-                        <p className="eyebrow">Privacy (PDPA) / ความเป็นส่วนตัว (PDPA)</p>
-                        <div className="max-h-48 overflow-y-auto rounded-2xl border border-line p-4 text-[14px] leading-relaxed text-ink-mute whitespace-pre-line">
+                    <Section icon={ShieldCheck} title="ความเป็นส่วนตัว (PDPA)" desc="Privacy notice">
+                        <div className="max-h-52 overflow-y-auto rounded-2xl border border-line bg-paper-2 p-4 text-[14px] leading-relaxed text-ink-soft whitespace-pre-line">
                             {pdpaNotice}
                         </div>
-                        <label className="flex items-start gap-3 text-[15px]">
+                        <label className="group flex items-start gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
-                                className="mt-0.5"
+                                className="peer sr-only"
                                 checked={pdpaConsent}
                                 onChange={(e) => setPdpaConsent(e.target.checked)}
                             />
-                            ข้าพเจ้าได้อ่านและรับทราบข้อความข้างต้น และยินยอมให้เก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคลตามวัตถุประสงค์ที่แจ้งไว้
+                            <span
+                                className={cn(
+                                    "mt-0.5 w-5 h-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors",
+                                    "peer-focus-visible:ring-2 peer-focus-visible:ring-ink peer-focus-visible:ring-offset-2",
+                                    pdpaConsent ? "bg-ink border-ink text-white" : "border-line bg-paper group-hover:border-ink-mute"
+                                )}
+                            >
+                                {pdpaConsent && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+                            </span>
+                            <span className="text-[14px] leading-relaxed text-ink-soft">
+                                ข้าพเจ้าได้อ่านและรับทราบข้อความข้างต้น และยินยอมให้เก็บรวบรวม ใช้ หรือเปิดเผยข้อมูลส่วนบุคคลตามวัตถุประสงค์ที่แจ้งไว้
+                            </span>
                         </label>
-                    </div>
+                    </Section>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 pt-1">
                         <Button type="button" variant="outline" size="lg" className="flex-1" onClick={() => goto(1)} disabled={pending}>
                             Back / ย้อนกลับ
                         </Button>
                         <Button size="lg" className="flex-1" onClick={confirm} disabled={pending || !pdpaConsent}>
-                            {pending ? <Spinner /> : totalAmount > 0 ? "Confirm & Pay / ยืนยันและไปชำระเงิน" : "Confirm Registration / ยืนยันการสมัคร"}
+                            {pending ? <Spinner /> : totalAmount > 0 ? "Confirm & Pay / ยืนยันและชำระเงิน" : "Confirm / ยืนยันการสมัคร"}
                         </Button>
                     </div>
                 </div>
@@ -579,16 +700,57 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+/** หัวข้อกลุ่มคำถาม — ไอคอนในกล่องมน + ชื่อไทยตัวหนา + คำอังกฤษกำกับใต้บรรทัด */
+function SectionHead({ icon: Icon, title, desc }: { icon: LucideIcon; title: string; desc?: string }) {
     return (
-        <div className="flex items-start justify-between gap-4 px-5 py-3.5">
-            <dt className="text-[15px] text-ink-mute shrink-0">{label}</dt>
-            <dd className="text-sm font-medium text-right break-words min-w-0">{value}</dd>
+        <div className="flex items-start gap-3">
+            <span className="w-9 h-9 shrink-0 rounded-xl border border-line bg-paper-2 text-ink-soft flex items-center justify-center">
+                <Icon className="w-[18px] h-[18px]" strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0">
+                <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+                {desc && <p className="eyebrow">{desc}</p>}
+            </div>
         </div>
     )
 }
 
-function RadioGroup({
+/**
+ * กล่องหนึ่งกลุ่มคำถาม
+ *
+ * ฟอร์มเดิมเป็นช่องกรอกไล่ลงมายาวเป็นพืด แยกกลุ่มด้วยเส้นคั่นบาง ๆ อย่างเดียว
+ * พอซอยเป็นการ์ดทีละเรื่อง สายตาจะรู้ทันทีว่ากำลังตอบเรื่องอะไรอยู่ และเหลืออีกกี่เรื่อง
+ */
+function Section({ icon, title, desc, children }: {
+    icon: LucideIcon
+    title: string
+    desc?: string
+    children: React.ReactNode
+}) {
+    return (
+        <Card className="raise p-5 sm:p-6">
+            <SectionHead icon={icon} title={title} desc={desc} />
+            <div className="mt-5 space-y-6">{children}</div>
+        </Card>
+    )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-4 px-5 sm:px-6 py-3">
+            <dt className="text-[13px] text-ink-mute shrink-0 max-w-[45%] pt-0.5">{label}</dt>
+            <dd className="text-[15px] font-medium text-right break-words min-w-0">{value}</dd>
+        </div>
+    )
+}
+
+/**
+ * ตัวเลือกแบบปุ่มยาแคปซูล — ใช้แทน radio วงกลมของเบราว์เซอร์
+ *
+ * ปุ่มสูง 44px กดโดนง่ายด้วยนิ้วโป้ง และตัวที่เลือกอยู่กลับสีเป็นพื้นดำ
+ * เห็นชัดกว่าจุดเล็ก ๆ ในวงกลม ที่บนจอมือถือกลางแดดแทบมองไม่ออก
+ */
+function ChipGroup({
     label, name, value, onChange, options, helper, required,
 }: {
     label: string
@@ -600,34 +762,39 @@ function RadioGroup({
     required?: boolean
 }) {
     return (
-        <div>
-            <label className="eyebrow block mb-2">{label}</label>
+        <fieldset>
+            <legend className="eyebrow mb-2">
+                {label}{required && <span className="text-danger ml-1">*</span>}
+            </legend>
             <div className="flex flex-wrap gap-2">
                 {options.map((o) => {
                     const active = value === o.value
                     return (
-                        <label
-                            key={o.value}
-                            className={cn(
-                                "px-4 h-11 inline-flex items-center rounded-full border text-sm font-medium cursor-pointer transition-colors",
-                                active ? "border-ink bg-ink text-paper" : "border-line bg-paper hover:border-ink-mute"
-                            )}
-                        >
+                        <label key={o.value} className="relative inline-flex cursor-pointer">
                             <input
                                 type="radio"
                                 name={name}
                                 value={o.value}
                                 checked={active}
                                 onChange={onChange}
-                                required={required}
-                                className="sr-only"
+                                className="peer sr-only"
                             />
-                            {o.label}
+                            <span
+                                className={cn(
+                                    "px-4 h-11 inline-flex items-center rounded-full border text-sm font-medium transition-all",
+                                    "peer-focus-visible:ring-2 peer-focus-visible:ring-ink peer-focus-visible:ring-offset-2",
+                                    active
+                                        ? "border-ink bg-ink text-white raise"
+                                        : "border-line bg-paper text-ink-soft hover:border-ink-mute hover:bg-paper-2"
+                                )}
+                            >
+                                {o.label}
+                            </span>
                         </label>
                     )
                 })}
             </div>
-            {helper && <p className="text-[14px] text-ink-mute mt-2">{helper}</p>}
-        </div>
+            {helper && <p className="text-[13px] text-ink-mute mt-2">{helper}</p>}
+        </fieldset>
     )
 }
