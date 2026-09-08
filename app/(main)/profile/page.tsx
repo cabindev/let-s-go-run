@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import type { Event, Registration } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { requireUser } from "@/lib/auth-helpers"
@@ -39,7 +40,15 @@ export default async function ProfilePage() {
         }),
     ])
 
-    if (!user) return null
+    /*
+     * คุกกี้ยังใช้ได้แต่บัญชีถูกลบไปจากฐานข้อมูลแล้ว
+     *
+     * middleware กับ requireUser() ตรวจแค่ JWT ในคุกกี้ ไม่ได้ถามฐานข้อมูลว่าบัญชียังอยู่ไหม
+     * เจ้าของคุกกี้เก่าจึงผ่านเข้ามาถึงตรงนี้ได้ ของเดิม return null ทำให้ได้หน้าขาวเปล่า
+     * ที่ไม่บอกอะไรเลยว่าเกิดอะไรขึ้น — ส่งกลับไปล็อกอินใหม่ตรง ๆ ชัดเจนกว่า
+     * (ล้างคุกกี้จาก server component ไม่ได้ แต่พอล็อกอินใหม่สำเร็จก็ถูกเขียนทับเอง)
+     */
+    if (!user) redirect("/auth/signin?callbackUrl=/profile")
 
     const level = getLevel(stats.totalDistance)
     const unlocked = achievements.filter((a) => a.unlocked)
