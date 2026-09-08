@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card"
 import { Notice } from "@/components/ui/Badge"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ProductCard } from "@/components/shop/ProductCard"
-import { getShopSetting, isPurchasable, PRODUCT_TYPE_LABEL, SHOP_NAME } from "@/lib/shop"
+import { getShopSetting, PRODUCT_TYPE_LABEL, SHOP_NAME } from "@/lib/shop"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -45,7 +45,13 @@ export default async function ShopPage({
         getShopSetting(),
     ])
 
-    const visible = products.filter((p) => isPurchasable(p))
+    /*
+     * ไม่กรองสินค้าที่ "ซื้อไม่ได้" ออกจากรายการ
+     *
+     * พรีออเดอร์ที่เลยกำหนดยังต้องให้คนเห็นว่ามีของชิ้นนี้อยู่ พร้อมป้ายบอกว่าปิดรับแล้ว
+     * ไม่ใช่หายไปเงียบ ๆ — การกันไม่ให้สั่งจริงทำที่ตอนใส่ตะกร้าและตอนสร้างออเดอร์อยู่แล้ว
+     * (app/actions/cart.ts, app/actions/order.ts, lib/cart.ts) ตรงนี้เป็นแค่การแสดงผล
+     */
 
     return (
         <div className="pt-4 space-y-8">
@@ -77,7 +83,7 @@ export default async function ShopPage({
                 })}
             </div>
 
-            {visible.length === 0 ? (
+            {products.length === 0 ? (
                 <Card>
                     <EmptyState
                         title="ยังไม่มีสินค้าในหมวดนี้"
@@ -86,9 +92,9 @@ export default async function ShopPage({
                 </Card>
             ) : (
                 <>
-                    <p className="eyebrow tnum">{visible.length} รายการ</p>
+                    <p className="eyebrow tnum">{products.length} รายการ</p>
                     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {visible.map((p) => <ProductCard key={p.id} product={p} />)}
+                        {products.map((p) => <ProductCard key={p.id} product={p} />)}
                     </div>
                 </>
             )}

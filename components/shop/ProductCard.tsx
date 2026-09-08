@@ -1,7 +1,7 @@
 import Link from "next/link"
-import type { ProductImageCategory, ProductType } from "@prisma/client"
+import type { ProductImageCategory, ProductStatus, ProductType } from "@prisma/client"
 import { Badge } from "@/components/ui/Badge"
-import { hasStock, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TONE, variantPrice } from "@/lib/shop"
+import { hasStock, PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TONE, purchasableState, variantPrice } from "@/lib/shop"
 import { coverImage } from "@/lib/product-image-groups"
 import { cn, formatDate, formatPrice } from "@/lib/utils"
 
@@ -12,6 +12,8 @@ export interface ProductCardData {
     name: string
     price: number
     type: ProductType
+    status: ProductStatus
+    preorderCloseAt: Date | null
     estimatedShipAt: Date | null
     images: { url: string; category: ProductImageCategory; sortOrder: number }[]
     variants: { stock: number | null; active: boolean; price: number | null }[]
@@ -26,7 +28,16 @@ export interface ProductCardData {
  * ย่อลงแล้ววางสี่คอลัมน์ทำให้เห็นของได้มากกว่าโดยใช้ความสูงน้อยลง
  */
 export function ProductCard({ product, compact }: { product: ProductCardData; compact?: boolean }) {
+    /*
+     * ปิดรับพรีออเดอร์แล้ว = ยังโชว์การ์ดอยู่ แค่บอกให้ชัดว่าสั่งไม่ได้
+     *
+     * ของเดิมกรองสินค้าพวกนี้ออกจากหน้ารายการไปเลย คนที่เคยเห็นของชิ้นนี้เมื่อวาน
+     * กลับมาวันนี้แล้วของหายไปเฉย ๆ โดยไม่มีอะไรอธิบาย — หน้ารายละเอียดทำถูกอยู่แล้ว
+     * (ยังเปิดดูได้ ขึ้นเหตุผล กดซื้อไม่ได้) การ์ดจึงควรพูดภาษาเดียวกัน
+     */
+    const state = purchasableState(product)
     const inStock = hasStock(product.variants)
+    const dimmed = !state.ok || !inStock
     const prices = product.variants.map((v) => variantPrice(product, v))
     const min = prices.length ? Math.min(...prices) : product.price
     const max = prices.length ? Math.max(...prices) : product.price
@@ -43,7 +54,7 @@ export function ProductCard({ product, compact }: { product: ProductCardData; co
                     <img
                         src={cover.url}
                         alt={product.name}
-                        className={cn("w-full h-full object-cover transition-opacity", !inStock && "opacity-40")}
+                        className={cn("w-full h-full object-cover transition-opacity", dimmed && "opacity-40")}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -52,7 +63,8 @@ export function ProductCard({ product, compact }: { product: ProductCardData; co
                 )}
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                     <Badge tone={PRODUCT_TYPE_TONE[product.type]}>{PRODUCT_TYPE_LABEL[product.type]}</Badge>
-                    {!inStock && <Badge tone="neutral">สินค้าหมด</Badge>}
+                    {!state.ok && <Badge tone="neutral">{state.reason}</Badge>}
+                    {state.ok && !inStock && <Badge tone="neutral">สินค้าหมด</Badge>}
                 </div>
             </div>
 

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/Badge"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { ButtonLink } from "@/components/ui/Button"
 import { ConfirmAction } from "@/components/ui/ConfirmAction"
-import { PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TONE, stockLabel } from "@/lib/shop"
+import { PRODUCT_TYPE_LABEL, PRODUCT_TYPE_TONE, purchasableState, stockLabel } from "@/lib/shop"
 import { coverImage } from "@/lib/product-image-groups"
 import { formatPrice } from "@/lib/utils"
 
@@ -55,6 +55,19 @@ export default async function AdminProductsPage() {
                 <ul className="divide-y divide-line">
                     {products.map((p) => {
                         const status = STATUS_LABEL[p.status]
+
+                        /*
+                         * "เปิดขาย" แต่ลูกค้ามองไม่เห็น — เตือนตรงนี้ที่เดียวที่คนตั้งค่าจะเห็น
+                         *
+                         * พรีออเดอร์ที่เลยวันปิดรับไปแล้วจะถูกกรองออกจากทั้งหน้าร้านและหน้าแรก
+                         * เงียบ ๆ ทั้งที่สถานะยังเป็น ACTIVE อยู่ คนตั้งค่าจึงเห็นแค่ป้าย "เปิดขาย"
+                         * แล้วงงว่าของหายไปไหน (เจอกับสินค้า TEST บน production มาแล้ว)
+                         *
+                         * เช็คเฉพาะตอนสถานะเป็น ACTIVE — ร่าง/ซ่อน มีป้ายบอกตัวเองอยู่แล้ว
+                         * ไม่ต้องซ้ำ
+                         */
+                        const blocked = p.status === "ACTIVE" ? purchasableState(p) : { ok: true as const }
+
                         const unlimited = p.variants.some((v) => v.stock === null)
                         const totalStock = p.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0)
                         const stock = unlimited ? null : stockLabel(totalStock)
@@ -93,6 +106,11 @@ export default async function AdminProductsPage() {
                                             <Badge tone="outline">ไม่จำกัดจำนวน</Badge>
                                         )}
                                     </div>
+                                    {!blocked.ok && (
+                                        <p className="text-[12px] text-danger mt-1.5">
+                                            {blocked.reason} · ยังไม่แสดงบนหน้าร้านและหน้าแรก
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">

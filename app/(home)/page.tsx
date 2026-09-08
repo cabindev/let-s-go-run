@@ -9,7 +9,7 @@ import { EventSearch } from "@/components/events/EventSearch"
 import { EventListCard } from "@/components/events/EventListCard"
 import { EventTabs } from "@/components/events/EventTabs"
 import { ProductCard } from "@/components/shop/ProductCard"
-import { isPurchasable, SHOP_NAME } from "@/lib/shop"
+import { SHOP_NAME } from "@/lib/shop"
 import { cn } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -104,11 +104,11 @@ async function ShopStrip() {
             images: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }], take: 4 },
             event: { select: { title: true } },
         },
-        take: 8,
+        take: 4,
     })
 
-    const visible = products.filter((p) => isPurchasable(p)).slice(0, 4)
-    if (visible.length === 0) return null
+    // สินค้าที่ปิดรับพรีออเดอร์แล้วยังโชว์อยู่ พร้อมป้ายบอกสถานะบนการ์ด — เหมือนหน้าร้าน
+    if (products.length === 0) return null
 
     return (
         <section className="border-t border-line bg-paper">
@@ -120,7 +120,7 @@ async function ShopStrip() {
                     linkLabel="ดูสินค้าทั้งหมด"
                 />
                 <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-                    {visible.map((p) => <ProductCard key={p.id} product={p} compact />)}
+                    {products.map((p) => <ProductCard key={p.id} product={p} compact />)}
                 </div>
             </div>
         </section>
