@@ -96,9 +96,6 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     const available = options.filter((o) => invite || !o.maxSlots || o.taken < o.maxSlots)
     const [selected, setSelected] = useState<Option | null>(available.length === 1 ? available[0] : null)
 
-    // มีชื่อในโปรไฟล์ แต่เป็นอังกฤษล้วน — ต้องบอกเหตุผลที่ช่องว่าง ไม่งั้นดูเหมือนระบบลืมเติม
-    const droppedLatinName = !!defaults.fullName.trim() && !THAI_LETTER.test(defaults.fullName)
-
     const isVirtual = event.type === "VIRTUAL"
     const base = isVirtual ? `/virtual/${event.id}` : `/events/${event.id}`
 
@@ -405,11 +402,7 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                             label="Full Name / ชื่อ-นามสกุล" name="fullName" required
                             value={details.fullName} onChange={set("fullName")}
                             placeholder="ชื่อ-นามสกุล ภาษาไทย"
-                            helper={
-                                droppedLatinName
-                                    ? `ชื่อในบัญชีของคุณ (${defaults.fullName}) เป็นภาษาอังกฤษ จึงไม่ได้เติมให้ — กรุณากรอกชื่อภาษาไทยที่ใช้จ่าหน้าพัสดุและรับของที่ระลึก`
-                                    : "ชื่อที่ใช้จ่าหน้าพัสดุและรับของที่ระลึก"
-                            }
+                            helper="กรุณากรอกชื่อภาษาไทยที่ใช้จ่าหน้าพัสดุและรับของที่ระลึก กรณีชาวต่างชาติใช้ชื่อนามสกุล ภาษาอังกฤษ และที่อยู่ภายในประเทศ"
                         />
 
                         <div>
