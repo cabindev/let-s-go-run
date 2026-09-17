@@ -57,6 +57,24 @@ interface Details {
     medicalConditionDetail: string
 }
 
+/** ช่วงอักษรไทยใน Unicode — ใช้ดูว่าชื่อที่กรอกไว้ในโปรไฟล์เป็นภาษาไทยหรือไม่ */
+const THAI_LETTER = /[\u0E00-\u0E7F]/
+
+/**
+ * ชื่อจากโปรไฟล์ที่ไม่มีอักษรไทยเลย จะไม่ถูกเติมลงช่องให้
+ *
+ * ชื่อบัญชีมาจากตอนสมัครสมาชิก (หรือจาก Google) ซึ่งหลายคนกรอกเป็นอังกฤษ เช่น
+ * "yongyut yodjarn" พอระบบเติมให้อัตโนมัติ ผู้สมัครก็กดผ่านไปโดยไม่แก้ สุดท้าย
+ * ชื่อบนใบสมัครเป็นอังกฤษล้วน — เอาไปจ่าหน้าพัสดุส่งไปรษณีย์ไทยไม่ได้
+ * (ในไฟล์ส่งออกจริงเจอ 9 จาก 24 รายการเป็นแบบนี้)
+ *
+ * ปล่อยว่างไว้พร้อม placeholder ภาษาไทย ผู้สมัครจะได้พิมพ์ชื่อไทยเอง
+ * ส่วนคนที่ชื่อโปรไฟล์เป็นไทยอยู่แล้วยังได้ความสะดวกเหมือนเดิม
+ */
+function thaiPrefill(name: string) {
+    return THAI_LETTER.test(name) ? name : ""
+}
+
 export function RegisterWizard({ event, options, defaults }: Props) {
     const router = useRouter()
     const [step, setStep] = useState(0)
@@ -78,11 +96,14 @@ export function RegisterWizard({ event, options, defaults }: Props) {
     const available = options.filter((o) => invite || !o.maxSlots || o.taken < o.maxSlots)
     const [selected, setSelected] = useState<Option | null>(available.length === 1 ? available[0] : null)
 
+    // มีชื่อในโปรไฟล์ แต่เป็นอังกฤษล้วน — ต้องบอกเหตุผลที่ช่องว่าง ไม่งั้นดูเหมือนระบบลืมเติม
+    const droppedLatinName = !!defaults.fullName.trim() && !THAI_LETTER.test(defaults.fullName)
+
     const isVirtual = event.type === "VIRTUAL"
     const base = isVirtual ? `/virtual/${event.id}` : `/events/${event.id}`
 
     const [details, setDetails] = useState<Details>({
-        fullName: defaults.fullName,
+        fullName: thaiPrefill(defaults.fullName),
         phone: defaults.phone,
         shirtSize: "M",
         address: "",
@@ -383,7 +404,12 @@ export function RegisterWizard({ event, options, defaults }: Props) {
                         <Field
                             label="Full Name / ชื่อ-นามสกุล" name="fullName" required
                             value={details.fullName} onChange={set("fullName")}
-                            placeholder="ชื่อที่ใช้ในการรับของที่ระลึก"
+                            placeholder="ชื่อ-นามสกุล ภาษาไทย"
+                            helper={
+                                droppedLatinName
+                                    ? `ชื่อในบัญชีของคุณ (${defaults.fullName}) เป็นภาษาอังกฤษ จึงไม่ได้เติมให้ — กรุณากรอกชื่อภาษาไทยที่ใช้จ่าหน้าพัสดุและรับของที่ระลึก`
+                                    : "ชื่อที่ใช้จ่าหน้าพัสดุและรับของที่ระลึก"
+                            }
                         />
 
                         <div>
