@@ -1,4 +1,5 @@
 import type { Event, RaceCategory } from "@prisma/client"
+import { discountedPrice } from "@/lib/invite-codes"
 
 /** ประเภทการแข่งขันที่ใช้จริง — ถ้างานยังไม่ได้สร้างประเภท ให้ใช้ค่าของงานเป็นประเภทเดียว */
 export interface Option {
@@ -165,6 +166,27 @@ export const SHIPPING_FEE = 55
 /** ยอดที่ต้องจ่ายจริง — บวกค่าส่งไปรษณีย์เพิ่มถ้าเลือกรับทางไปรษณีย์ */
 export function registrationAmount(basePrice: number, deliveryMethod: string | null) {
     return basePrice + (deliveryMethod === "SHIPPING" ? SHIPPING_FEE : 0)
+}
+
+/**
+ * ยอดที่ใบสมัครใบนี้ต้องจ่าย — แหล่งความจริงเดียวของทั้งระบบ
+ *
+ * ต้องคิดส่วนลดจากโค้ดสิทธิพิเศษด้วยเสมอ ก่อนหน้านี้หน้าชำระเงินกับตัวสร้าง Stripe session
+ * ต่างคนต่างคำนวณเอง โดยอ่านแค่ราคาของประเภท/งาน ไม่ได้แตะโค้ดเลย คนถือโค้ดลด 50%
+ * จึงถูกเรียกเก็บเต็มราคา (โค้ดลด 100% ไม่โดน เพราะยอดเป็นศูนย์ ระบบข้ามหน้าชำระเงินไปเลย
+ * บั๊กจึงซ่อนอยู่จนกว่าจะมีคนออกโค้ดลดบางส่วนใบแรก)
+ *
+ * ทุกที่ที่ต้องรู้ "ต้องจ่ายเท่าไหร่" ให้เรียกฟังก์ชันนี้ อย่าคำนวณเอง
+ */
+export function registrationDue(reg: {
+    event: { price: number }
+    category: { price: number } | null
+    inviteCode: { discountPercent: number } | null
+    deliveryMethod: string | null
+}) {
+    const base = reg.category?.price ?? reg.event.price
+    const price = reg.inviteCode ? discountedPrice(base, reg.inviteCode.discountPercent) : base
+    return registrationAmount(price, reg.deliveryMethod)
 }
 
 /** ข้อความ PDPA เริ่มต้น — ใช้เป็นแม่แบบตอนสร้างงานใหม่ และเป็นข้อความสำรองถ้างานไม่ได้กรอกไว้ */

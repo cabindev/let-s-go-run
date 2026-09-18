@@ -13,7 +13,7 @@ import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { cancelRegistration } from "@/app/actions/registration"
 import { isAwaitingPayment, isExpired, PAYMENT_WINDOW_HOURS } from "@/lib/expiry"
 import { Stepper, REGISTER_STEPS } from "@/components/events/Stepper"
-import { eventHref, registrationAmount, SHIPPING_FEE } from "@/lib/events"
+import { eventHref, registrationDue, SHIPPING_FEE } from "@/lib/events"
 import { generateCheckinQr } from "@/lib/checkin-qr"
 import { formatDate, formatPrice, formatTime } from "@/lib/utils"
 
@@ -33,15 +33,14 @@ export default async function PaymentPage({
 
     const registration = await prisma.registration.findUnique({
         where: { id },
-        include: { event: true, category: true },
+        include: { event: true, category: true, inviteCode: true },
     })
 
     if (!registration) notFound()
     if (registration.userId !== user.id) redirect("/profile")
 
-    // ยอดที่ต้องชำระ — ยึดตามประเภทที่เลือก ถ้าไม่มีให้ใช้ค่าของงาน บวกค่าส่งไปรษณีย์ถ้าเลือกไว้
-    const basePrice = registration.category?.price ?? registration.event.price
-    const amount = registrationAmount(basePrice, registration.deliveryMethod)
+    // ยอดที่ต้องชำระ — คิดส่วนลดจากโค้ด ราคาประเภท และค่าส่งไปรษณีย์ ที่เดียวกับที่ Stripe ใช้
+    const amount = registrationDue(registration)
     if (amount <= 0) redirect(eventHref(registration.event))
 
     const checkinQr = registration.status === "PAID" && registration.bib

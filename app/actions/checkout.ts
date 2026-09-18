@@ -6,7 +6,7 @@ import { stripe } from "@/lib/stripe"
 import { requireUserAction } from "@/lib/auth-helpers"
 import { isExpired, PAYABLE_STATUS } from "@/lib/expiry"
 import { amountWithFee, FEE_LABEL, type PaymentMethodChoice } from "@/lib/checkout-fees"
-import { registrationAmount } from "@/lib/events"
+import { registrationDue } from "@/lib/events"
 import type { ActionResult } from "./registration"
 
 /** ป้ายกำกับสุ่ม 8 ตัวอักษร — ใช้แยก session ในการดู/เทียบ checkout flow บน Stripe Dashboard */
@@ -27,15 +27,14 @@ export async function createCheckoutSession(registrationId: string, method: Paym
 
         const reg = await prisma.registration.findUnique({
             where: { id: registrationId },
-            include: { event: true, category: true },
+            include: { event: true, category: true, inviteCode: true },
         })
 
         if (!reg || reg.userId !== user.id) return { ok: false, error: "ไม่พบรายการลงทะเบียน" }
         if (!PAYABLE_STATUS.includes(reg.status)) return { ok: false, error: "รายการนี้ชำระเงินไม่ได้แล้ว" }
         if (isExpired(reg)) return { ok: false, error: "หมดเวลาชำระเงินแล้ว กรุณาสมัครใหม่อีกครั้ง" }
 
-        const basePrice = reg.category?.price ?? reg.event.price
-        const amount = registrationAmount(basePrice, reg.deliveryMethod)
+        const amount = registrationDue(reg)
         if (amount <= 0) return { ok: false, error: "รายการนี้ไม่มีค่าใช้จ่าย" }
 
         const total = amountWithFee(amount, method)

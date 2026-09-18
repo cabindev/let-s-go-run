@@ -2,13 +2,14 @@
 
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Copy, Download } from "lucide-react"
+import { Check, Copy, Download, Pencil } from "lucide-react"
 import type { InviteCode } from "@prisma/client"
 import {
     createInviteCodes,
     deleteInviteCode,
     deleteInviteCodeGroup,
     toggleInviteCode,
+    updateInviteCodeGroupExpiry,
     updateInviteCodeQuota,
 } from "@/app/actions/admin"
 import { Button, Spinner } from "@/components/ui/Button"
@@ -17,7 +18,7 @@ import { Card } from "@/components/ui/Card"
 import { Field, Select, TextArea, inputClass } from "@/components/ui/Field"
 import { ConfirmAction } from "@/components/ui/ConfirmAction"
 import { discountLabel } from "@/lib/invite-codes"
-import { cn, formatDate } from "@/lib/utils"
+import { cn, formatDate, formatDateInput } from "@/lib/utils"
 
 /**
  * โค้ดหนึ่งใบ พร้อมจำนวนที่ใช้จริงซึ่งนับมาจากใบสมัคร
@@ -68,6 +69,8 @@ export function InviteCodeManager({
     const [mode, setMode] = useState<"PER_PERSON" | "SINGLE">("PER_PERSON")
     const [copied, setCopied] = useState<string | null>(null)
     const [expanded, setExpanded] = useState<string | null>(null)
+    // กลุ่มที่กำลังเปิดฟอร์มแก้วันหมดอายุ (null = ไม่มี)
+    const [editingGroup, setEditingGroup] = useState<string | null>(null)
 
     const run = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => {
         setError(null)
@@ -298,6 +301,18 @@ export function InviteCodeManager({
                                         </>
                                     )}
                                 </button>
+                                {/* แก้วันหมดอายุทั้งกลุ่ม — งานเลื่อนแล้วโค้ดที่แจกไปต้องเลื่อนตาม
+                                    ไม่งั้นต้องลบทิ้งแล้วออกใหม่ ซึ่งแปลว่าต้องแจกโค้ดใหม่ให้ทุกคน */}
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingGroup(editingGroup === groupName ? null : groupName)}
+                                    aria-expanded={editingGroup === groupName}
+                                    className="eyebrow text-ink-soft hover:text-ink transition-colors inline-flex items-center gap-1.5"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                    แก้ไข
+                                </button>
+
                                 {/* ลบทั้งกลุ่ม — ทางออกตอนออกโค้ดผิด (ชื่อผิด ส่วนลดผิด จำนวนผิด)
                                     จะได้ไม่ต้องกดลบทีละใบ 20 ครั้งก่อนสร้างใหม่ */}
                                 {groupUsed < groupIssued && (
@@ -318,6 +333,55 @@ export function InviteCodeManager({
                                 )}
                             </div>
                         </div>
+
+                        {editingGroup === groupName && (
+                            <form
+                                className="mt-5 rounded-2xl border border-line bg-paper-2 p-4 sm:p-5 flex flex-wrap items-end gap-3"
+                                onSubmit={(e) => {
+                                    e.preventDefault()
+                                    const value = new FormData(e.currentTarget).get("expiresAt")
+                                    run(async () => {
+                                        const res = await updateInviteCodeGroupExpiry(
+                                            eventId,
+                                            groupName,
+                                            typeof value === "string" && value ? value : null
+                                        )
+                                        if (res.ok) setEditingGroup(null)
+                                        return res
+                                    })
+                                }}
+                            >
+                                <div className="flex-1 min-w-[12rem]">
+                                    <label htmlFor={`exp-${groupName}`} className="eyebrow block mb-2">
+                                        วันหมดอายุของโค้ดทั้งกลุ่ม ({list.length} ใบ)
+                                    </label>
+                                    <input
+                                        id={`exp-${groupName}`}
+                                        name="expiresAt"
+                                        type="date"
+                                        defaultValue={list[0].expiresAt ? formatDateInput(list[0].expiresAt) : ""}
+                                        className={`${inputClass} h-11`}
+                                    />
+                                    <p className="text-[11px] text-ink-mute mt-2">
+                                        เว้นว่างไว้ = ใช้ได้ไม่มีกำหนด · มีผลกับโค้ดทุกใบในกลุ่มนี้พร้อมกัน
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <Button type="submit" size="sm" disabled={pending}>
+                                        {pending ? <Spinner /> : "บันทึก"}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setEditingGroup(null)}
+                                        disabled={pending}
+                                    >
+                                        ยกเลิก
+                                    </Button>
+                                </div>
+                            </form>
+                        )}
 
                         {/* แถบความคืบหน้า — ตอบคำถาม "เหลือกี่สิทธิ์" ได้โดยไม่ต้องอ่านตัวเลข */}
                         <div className="mt-4 h-1.5 rounded-full bg-paper-3 overflow-hidden">

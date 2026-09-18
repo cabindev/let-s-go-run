@@ -852,6 +852,54 @@ export async function updateInviteCodeQuota(id: string, maxUses: number): Promis
 }
 
 /**
+ * เลื่อน/ยกเลิกวันหมดอายุของโค้ดทั้งกลุ่ม
+ *
+ * แก้ที่ระดับกลุ่มไม่ใช่รายใบ เพราะโค้ดถูกออกเป็นชุดด้วยค่าเดียวกันทั้งกลุ่มอยู่แล้ว
+ * (หน้าจอก็โชว์วันหมดอายุของกลุ่มจาก list[0]) ถ้าให้แก้ทีละใบ กลุ่มละ 20 ใบต้องกด 20 ครั้ง
+ * และพลาดง่ายจนวันหมดอายุในกลุ่มเดียวกันไม่ตรงกัน
+ *
+ * ส่งค่าว่างมา = ยกเลิกวันหมดอายุ (ใช้ได้ไม่มีกำหนด) ซึ่งเป็นกรณีที่เกิดจริงตอนงานเลื่อน
+ *
+ * ไม่เปิดให้แก้ส่วนลดหรือชื่อกลุ่มที่นี่โดยตั้งใจ — ส่วนลดที่เปลี่ยนย้อนหลังจะทำให้มูลค่า
+ * ที่นั่งที่แจกไปแล้วเพี้ยนทั้งกอง ส่วนชื่อกลุ่มถูก snapshot ไว้ใน Registration.inviteGroupName
+ * ตั้งแต่ตอนใช้สิทธิ์ เปลี่ยนตรงนี้อย่างเดียวจะทำให้รายงานเก่ากับใหม่คนละชื่อ
+ * ถ้าออกโค้ดผิดจริง ๆ ให้ลบทั้งกลุ่มแล้วออกใหม่ (ปุ่มลบทั้งกลุ่มเก็บใบที่ถูกใช้ไปแล้วไว้ให้)
+ */
+export async function updateInviteCodeGroupExpiry(
+    eventId: string,
+    groupName: string,
+    expiresAt: string | null
+): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+
+        let value: Date | null = null
+        if (expiresAt) {
+            const d = new Date(expiresAt)
+            if (Number.isNaN(d.getTime())) return { ok: false, error: "รูปแบบวันที่ไม่ถูกต้อง" }
+            value = d
+        }
+
+        const res = await prisma.inviteCode.updateMany({
+            where: { eventId, groupName },
+            data: { expiresAt: value },
+        })
+        if (res.count === 0) return { ok: false, error: "ไม่พบโค้ดของกลุ่มนี้" }
+
+        revalidatePath(`/admin/invite-codes/${eventId}`)
+        revalidatePath("/admin/invite-codes")
+        return {
+            ok: true,
+            message: value
+                ? `เลื่อนวันหมดอายุของ ${res.count} ใบแล้ว`
+                : `ยกเลิกวันหมดอายุของ ${res.count} ใบแล้ว ใช้ได้ไม่มีกำหนด`,
+        }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
+    }
+}
+
+/**
  * ลบโค้ดที่ยังไม่มีใครใช้ — ใช้ไปแล้วให้ปิดการใช้งานแทน จะได้ตามที่มาของที่นั่งฟรีได้ตลอด
  *
  * ตัดสินจาก "มีใบสมัครอ้างถึงโค้ดนี้ไหม" ไม่ใช่จาก usedCount เพราะ usedCount เป็นตัวจอง
