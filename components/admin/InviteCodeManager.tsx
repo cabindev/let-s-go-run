@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Copy, Download, Pencil } from "lucide-react"
+import { Check, Copy, Download, SquarePen } from "lucide-react"
 import type { InviteCode } from "@prisma/client"
 import {
     createInviteCodes,
@@ -309,7 +309,7 @@ export function InviteCodeManager({
                                     aria-expanded={editingGroup === groupName}
                                     className="eyebrow text-ink-soft hover:text-ink transition-colors inline-flex items-center gap-1.5"
                                 >
-                                    <Pencil className="w-3.5 h-3.5" strokeWidth={2.2} />
+                                    <SquarePen className="w-3.5 h-3.5" strokeWidth={2.2} />
                                     แก้ไข
                                 </button>
 
