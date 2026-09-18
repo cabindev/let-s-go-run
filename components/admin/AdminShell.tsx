@@ -17,6 +17,7 @@ const LINKS = [
     { href: "/admin/submissions", label: "ผลวิ่ง VR" },
     { href: "/admin/products", label: "สินค้า" },
     { href: "/admin/orders", label: "ออเดอร์" },
+    { href: "/admin/revenue", label: "รายได้" },
     { href: "/admin/users", label: "ผู้ใช้งาน" },
     { href: "/admin/achievements", label: "ความสำเร็จ" },
 ]

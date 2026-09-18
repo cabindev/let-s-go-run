@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { heldSeatWhere } from "@/lib/expiry"
+import { registrationBreakdown } from "@/lib/events"
 import { Card, SectionTitle, MoreLink } from "@/components/ui/Card"
 import { Avatar } from "@/components/ui/Avatar"
 import { Stat } from "@/components/ui/Stat"
@@ -22,7 +23,13 @@ export default async function AdminDashboard() {
             prisma.registration.count({ where: { status: "PENDING" } }),
             prisma.registration.findMany({
                 where: { status: "PAID" },
-                select: { event: { select: { price: true } }, category: { select: { price: true } } },
+                select: {
+                    paidEntry: true,
+                    deliveryMethod: true,
+                    event: { select: { price: true } },
+                    category: { select: { price: true } },
+                    inviteCode: { select: { discountPercent: true } },
+                },
             }),
             prisma.registration.findMany({
                 take: 8,
@@ -40,8 +47,11 @@ export default async function AdminDashboard() {
             }),
         ])
 
-    // ยอดจริงต่อรายการคือราคาของประเภทที่เลือก ถ้าไม่มีประเภทค่อยใช้ราคาของงาน
-    const totalRevenue = revenue.reduce((s, r) => s + (r.category?.price ?? r.event.price), 0)
+    // ยอดที่เก็บได้จริง (ไม่รวมค่าส่ง) — ใบเก่าที่ยังไม่มี paidEntry ค่อยคำนวณย้อนหลังให้
+    const totalRevenue = revenue.reduce(
+        (s, r) => s + (r.paidEntry ?? registrationBreakdown(r).entry),
+        0
+    )
 
     return (
         <div className="space-y-16">
@@ -50,10 +60,14 @@ export default async function AdminDashboard() {
                 <h1 className="display text-3xl sm:text-4xl mt-2">ภาพรวม</h1>
             </div>
 
-            <section>
-                <p className="eyebrow">รายได้จากค่าสมัคร (ยืนยันแล้ว)</p>
-                <p className="numeral text-4xl sm:text-5xl mt-2">{formatBaht(totalRevenue)}</p>
-            </section>
+            {/* ยอดรวมก้อนเดียวตอบไม่ได้ว่าเงินมาจากงานไหน จึงลิงก์ต่อไปหน้าที่แยกให้ */}
+            <Link href="/admin/revenue" className="block group">
+                <p className="eyebrow">รายได้จากค่าสมัคร (ยืนยันแล้ว) · ทุกงานรวมกัน</p>
+                <p className="numeral text-4xl sm:text-5xl mt-2 group-hover:text-ink-soft transition-colors">
+                    {formatBaht(totalRevenue)}
+                </p>
+                <p className="eyebrow mt-2">ดูแยกตามงานและตามสินค้า</p>
+            </Link>
 
             <section className="grid grid-cols-2 sm:grid-cols-4 gap-y-9 gap-x-6">
                 <Stat label="ผู้ใช้งาน" value={formatNumber(userCount)} href="/admin/users" />
