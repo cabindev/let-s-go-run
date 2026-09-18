@@ -197,6 +197,27 @@ export async function getRevenueReport(): Promise<RevenueReport> {
         byProduct.set(key, p)
     }
 
+    /*
+     * ชื่อที่แสดงยึดชื่อปัจจุบันของสินค้า ไม่ใช่ชื่อที่ snapshot ไว้
+     *
+     * snapshot เก็บชื่อ ณ วันที่ขาย ซึ่งเป็นสิ่งที่ถูกสำหรับใบเสร็จ แต่ผิดสำหรับรายงาน —
+     * สินค้าที่เคยเปลี่ยนชื่อจะถูกเรียกด้วยชื่อของรายการที่เจอก่อน กลายเป็นว่ารายงาน
+     * ขึ้นชื่อเก่าอย่าง "TEST" ทั้งที่วันนี้สินค้าชื่อ "เสื้อรันลัดโต้ง ครั้งที่ 8" ไปแล้ว
+     * (เจอกับของจริงบน production) สินค้าที่ถูกลบไปแล้วค่อยใช้ชื่อจาก snapshot ตามเดิม
+     */
+    const slugs = [...byProduct.values()].map((p) => p.slug).filter((s): s is string => !!s)
+    if (slugs.length > 0) {
+        const current = await prisma.product.findMany({
+            where: { slug: { in: slugs } },
+            select: { slug: true, name: true },
+        })
+        const nameBySlug = new Map(current.map((c) => [c.slug, c.name]))
+        for (const p of byProduct.values()) {
+            const name = p.slug ? nameBySlug.get(p.slug) : undefined
+            if (name) p.name = name
+        }
+    }
+
     const products = [...byProduct.values()].sort((a, b) => b.revenue - a.revenue)
     for (const p of products) p.variants.sort((a, b) => b.quantity - a.quantity)
 
