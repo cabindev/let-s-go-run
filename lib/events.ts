@@ -178,15 +178,28 @@ export function registrationAmount(basePrice: number, deliveryMethod: string | n
  *
  * ทุกที่ที่ต้องรู้ "ต้องจ่ายเท่าไหร่" ให้เรียกฟังก์ชันนี้ อย่าคำนวณเอง
  */
-export function registrationDue(reg: {
+export function registrationDue(reg: DueInput) {
+    return registrationBreakdown(reg).total
+}
+
+interface DueInput {
     event: { price: number }
     category: { price: number } | null
     inviteCode: { discountPercent: number } | null
     deliveryMethod: string | null
-}) {
+}
+
+/**
+ * แยกยอดเป็นค่าสมัครกับค่าส่ง — ใช้ตอนบันทึกลง Registration.paidEntry / paidShipping
+ *
+ * รายงานรายได้ต้องแยกสองก้อนนี้ออกจากกัน ค่าส่งเป็นเงินที่เก็บมาจ่ายไปรษณีย์ต่อ
+ * ถ้ารวมอยู่ในรายได้จะอ่านว่าผู้จัดงานได้เงินมากกว่าความจริง
+ */
+export function registrationBreakdown(reg: DueInput) {
     const base = reg.category?.price ?? reg.event.price
-    const price = reg.inviteCode ? discountedPrice(base, reg.inviteCode.discountPercent) : base
-    return registrationAmount(price, reg.deliveryMethod)
+    const entry = reg.inviteCode ? discountedPrice(base, reg.inviteCode.discountPercent) : base
+    const shipping = reg.deliveryMethod === "SHIPPING" ? SHIPPING_FEE : 0
+    return { entry, shipping, total: entry + shipping }
 }
 
 /** ข้อความ PDPA เริ่มต้น — ใช้เป็นแม่แบบตอนสร้างงานใหม่ และเป็นข้อความสำรองถ้างานไม่ได้กรอกไว้ */

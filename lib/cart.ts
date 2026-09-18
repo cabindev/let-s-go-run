@@ -29,6 +29,8 @@ export interface CartLine {
     variantId: string
     productId: string
     slug: string
+    /** รหัสตัวเลือก (ไซส์) — null ได้ เพราะสินค้าเก่ายังไม่ได้กรอก sku */
+    sku: string | null
     productName: string
     variantName: string
     type: ProductType
@@ -84,6 +86,7 @@ export function buildCartLines(cart: CartWithItems, now: Date = new Date()): Car
             variantId: variant.id,
             productId: product.id,
             slug: product.slug,
+            sku: variant.sku,
             productName: product.name,
             variantName: variant.name,
             type: product.type,

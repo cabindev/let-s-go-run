@@ -203,6 +203,10 @@ export async function placeOrder(formData: FormData): Promise<PlaceOrderResult> 
                                 variantId: l.variantId,
                                 productName: l.productName,
                                 variantName: l.variantName,
+                                // snapshot รหัสสินค้าไว้ด้วย — ลบสินค้าทิ้งหรือเปลี่ยนชื่อทีหลัง
+                                // รายงานยอดขายยังจัดกลุ่มรายการเก่าได้ถูกตัว
+                                productSlug: l.slug,
+                                variantSku: l.sku,
                                 unitPrice: l.unitPrice,
                                 quantity: l.quantity,
                                 lineTotal: l.lineTotal,

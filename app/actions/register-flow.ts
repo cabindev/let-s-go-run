@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { publicSeatWhere, expireStaleRegistrations, paymentDeadline } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
-import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN, registrationAmount } from "@/lib/events"
+import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN, registrationAmount, SHIPPING_FEE } from "@/lib/events"
 import { discountedPrice, inviteCodeState, normalizeInviteCode } from "@/lib/invite-codes"
 import { sendRegistrationPlacedEmail, sendRegistrationPaidEmail } from "@/lib/mail"
 import { formString } from "@/lib/utils"
@@ -176,6 +176,10 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
             pdpaConsentAt: new Date(),
             note: null,
             paidAt: needsPayment ? null : new Date(),
+            // จ่ายผ่าน Stripe จะถูกบันทึกตอน webhook ยืนยัน ส่วนใบที่ไม่ต้องจ่าย (งานฟรี
+            // หรือโค้ดลด 100%) ถือว่าจบตั้งแต่ตรงนี้ เก็บยอดศูนย์ไว้เลยจะได้ไม่ต้องเดาทีหลัง
+            paidEntry: needsPayment ? null : price,
+            paidShipping: needsPayment ? null : (deliveryMethod === "SHIPPING" ? SHIPPING_FEE : 0),
             inviteCodeId: invite?.id ?? null,
             inviteGroupName: invite?.groupName ?? null,
         } as const
