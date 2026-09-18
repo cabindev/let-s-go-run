@@ -13,7 +13,7 @@ import { PickupStatusEditor } from "@/components/admin/PickupStatusEditor"
 import { Pagination } from "@/components/admin/Pagination"
 import { RegistrationFilters } from "@/components/admin/RegistrationFilters"
 import { REGISTRATION_STATUSES, buildRegistrationWhere } from "@/lib/admin-registrations-query"
-import { eventHref, GENDER_OPTIONS, registrationAmount } from "@/lib/events"
+import { eventHref, GENDER_OPTIONS, registrationDue } from "@/lib/events"
 import { expireStaleRegistrations, formatTimeLeft, isAwaitingPayment, timeLeft } from "@/lib/expiry"
 import { cn, formatDate, formatPrice, maskNationalId } from "@/lib/utils"
 
@@ -51,6 +51,7 @@ export default async function AdminRegistrationsPage({
                 user: { select: { name: true, email: true, image: true, dateOfBirth: true } },
                 event: { select: { id: true, title: true, type: true, price: true } },
                 category: { select: { name: true, price: true, distance: true } },
+                inviteCode: { select: { discountPercent: true } },
             },
         }),
         prisma.registration.count({ where }),
@@ -144,7 +145,7 @@ export default async function AdminRegistrationsPage({
                     </p>
                     <ul className="divide-y divide-line">
                         {registrations.map((r) => {
-                            const amount = registrationAmount(r.category?.price ?? r.event.price, r.deliveryMethod)
+                            const amount = registrationDue(r)
                             const days = Math.floor((now - r.registeredAt.getTime()) / 86400000)
                             const left = timeLeft(r, new Date(now))
                             const overdue = isAwaitingPayment(r.status) && left !== null && left < 3600_000

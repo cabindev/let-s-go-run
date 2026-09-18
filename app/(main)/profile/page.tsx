@@ -16,7 +16,7 @@ import { LevelIcon } from "@/components/ui/LevelIcon"
 import { ButtonLink } from "@/components/ui/Button"
 import { ProfileEditDialog } from "@/components/profile/ProfileEditDialog"
 import SignOutButton from "@/components/auth/SignOutButton"
-import { eventHref, isEventOver } from "@/lib/events"
+import { eventHref, isEventOver, registrationDue } from "@/lib/events"
 import { expireStaleRegistrations, isAwaitingPayment, isExpired, formatTimeLeft, timeLeft } from "@/lib/expiry"
 import { cn, formatDate, formatDateRange, formatNumber, formatPrice, formatTime } from "@/lib/utils"
 
@@ -35,7 +35,11 @@ export default async function ProfilePage() {
         getAchievementBoard(sessionUser.id),
         prisma.registration.findMany({
             where: { userId: sessionUser.id },
-            include: { event: true, category: { select: { price: true } } },
+            include: {
+                event: true,
+                category: { select: { price: true } },
+                inviteCode: { select: { discountPercent: true } },
+            },
             orderBy: [{ event: { date: "desc" } }],
         }),
     ])
@@ -239,7 +243,7 @@ function RegGroup({
     title, regs, past,
 }: {
     title: string
-    regs: (Registration & { event: Event; category: { price: number } | null })[]
+    regs: (Registration & { event: Event; category: { price: number } | null; inviteCode: { discountPercent: number } | null })[]
     past?: boolean
 }) {
     return (
@@ -252,7 +256,7 @@ function RegGroup({
     )
 }
 
-function RegRow({ reg, past }: { reg: Registration & { event: Event; category: { price: number } | null }; past?: boolean }) {
+function RegRow({ reg, past }: { reg: Registration & { event: Event; category: { price: number } | null; inviteCode: { discountPercent: number } | null }; past?: boolean }) {
     const expired = isExpired(reg)
     const needsPayment = isAwaitingPayment(reg.status) && !past && !expired
     const isVirtual = reg.event.type === "VIRTUAL"
@@ -272,7 +276,7 @@ function RegRow({ reg, past }: { reg: Registration & { event: Event; category: {
                         {isVirtual
                             ? `สะสมระยะ ${formatDateRange(reg.event.date, reg.event.endDate)}`
                             : `${formatDate(reg.event.date)} · ${formatTime(reg.event.date)}`}
-                        {` · ${formatPrice(reg.category?.price ?? reg.event.price)}`}
+                        {` · ${formatPrice(registrationDue(reg))}`}
                     </p>
                     {needsPayment && left !== null && (
                         <p className="text-[12px] text-danger mt-1 tnum">

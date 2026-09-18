@@ -15,7 +15,7 @@ import {
     sendRegistrationIssueCustomerEmail,
     type MailOrder,
 } from "@/lib/mail"
-import { registrationAmount } from "@/lib/events"
+import { registrationBreakdown, registrationDue } from "@/lib/events"
 
 export const dynamic = "force-dynamic"
 
@@ -65,6 +65,7 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
             user: { select: { email: true } },
             event: { select: { title: true, date: true, price: true } },
             category: { select: { name: true, price: true } },
+            inviteCode: { select: { discountPercent: true } },
         },
     })
     if (!reg) return
@@ -80,7 +81,7 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
         if (reg.status === "PAID" || reg.paymentIssueAt) return
 
         const { method, receiptUrl: rUrl } = await resolvePayment(paymentIntentId)
-        const amount = registrationAmount(reg.category?.price ?? reg.event.price, reg.deliveryMethod)
+        const amount = registrationDue(reg)
 
         await prisma.registration.update({
             where: { id: registrationId },
@@ -108,12 +109,18 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
 
     const { method: paymentMethod, receiptUrl } = await resolvePayment(paymentIntentId)
 
+    // ล็อกยอดที่เก็บได้จริงไว้ตรงนี้ ตอนที่เงินเข้าแล้ว — ต่อจากนี้ราคาประเภทจะขึ้นลงยังไง
+    // รายได้ของใบนี้ก็ไม่เปลี่ยนตาม (ดูคอมเมนต์ที่ Registration.paidEntry)
+    const paid = registrationBreakdown(reg)
+
     const issuedBib = await withBib(reg.eventId, reg.bib, async (bib) => {
         await prisma.registration.update({
             where: { id: registrationId },
             data: {
                 status: "PAID",
                 paidAt: new Date(),
+                paidEntry: paid.entry,
+                paidShipping: paid.shipping,
                 note: null,
                 bib,
                 expiresAt: null,
@@ -136,7 +143,7 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
             eventTitle: reg.event.title,
             eventDate: reg.event.date,
             categoryName: reg.category?.name ?? null,
-            amount: registrationAmount(reg.category?.price ?? reg.event.price, reg.deliveryMethod),
+            amount: registrationDue(reg),
             bib: issuedBib,
             deliveryMethod: reg.deliveryMethod,
         },

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/auth-helpers"
 import { buildRegistrationWhere } from "@/lib/admin-registrations-query"
 import { REG_STATUS } from "@/components/ui/Badge"
-import { GENDER_OPTIONS, registrationAmount } from "@/lib/events"
+import { GENDER_OPTIONS, registrationDue } from "@/lib/events"
 
 export const dynamic = "force-dynamic"
 
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
             user: { select: { name: true, email: true, dateOfBirth: true } },
             event: { select: { title: true, price: true } },
             category: { select: { name: true, price: true, distance: true } },
+            inviteCode: { select: { discountPercent: true } },
         },
     })
 
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
             event: r.event.title,
             category: r.category ? `${r.category.name} (${r.category.distance} กม.)` : "",
             status: REG_STATUS[r.status]?.label ?? r.status,
-            amount: registrationAmount(r.category?.price ?? r.event.price, r.deliveryMethod),
+            amount: registrationDue(r),
             paymentMethod: r.paymentMethod ? (PAYMENT_METHOD_LABEL[r.paymentMethod] ?? r.paymentMethod) : "",
             shirtSize: r.shirtSize || "",
             deliveryMethod: r.deliveryMethod === "SHIPPING" ? "ส่งไปรษณีย์" : r.deliveryMethod === "PICKUP" ? "รับที่งาน" : "",
