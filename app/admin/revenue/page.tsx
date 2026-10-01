@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { requireAdminPage } from "@/lib/auth-helpers"
 import { getRevenueReport } from "@/lib/revenue"
+import { getPayoutSummary, type PayoutSummary } from "@/lib/payouts"
 import { Card } from "@/components/ui/Card"
-import { Badge, Notice } from "@/components/ui/Badge"
+import { Badge, Notice, type Tone } from "@/components/ui/Badge"
 import { EmptyState } from "@/components/ui/EmptyState"
 import { formatBaht, formatDate, formatNumber } from "@/lib/utils"
 
@@ -11,7 +12,14 @@ export const metadata = { title: "รายได้ · RunLudtong" }
 
 export default async function AdminRevenuePage() {
     await requireAdminPage()
-    const r = await getRevenueReport()
+    // Stripe ล่มหรือคีย์ผิดต้องไม่ทำให้รายงานรายได้ทั้งหน้าพัง — แสดงข้อความแทนเฉพาะส่วนนี้
+    const [r, payouts] = await Promise.all([
+        getRevenueReport(),
+        getPayoutSummary().catch((err: unknown) => {
+            console.error("[revenue] โหลดข้อมูลการโอนเงินจาก Stripe ไม่สำเร็จ", err)
+            return null
+        }),
+    ])
 
     return (
         <div className="space-y-10">
@@ -169,7 +177,92 @@ export default async function AdminRevenuePage() {
                     </Card>
                 )}
             </section>
+
+            <PayoutSection payouts={payouts} />
         </div>
+    )
+}
+
+const PAYOUT_STATUS: Record<string, { label: string; tone: Tone }> = {
+    paid: { label: "เข้าบัญชีแล้ว", tone: "lime" },
+    in_transit: { label: "กำลังโอน", tone: "sky" },
+    pending: { label: "รอโอน", tone: "ink" },
+    failed: { label: "โอนไม่สำเร็จ", tone: "danger" },
+    canceled: { label: "ยกเลิก", tone: "outline" },
+}
+
+function PayoutSection({ payouts }: { payouts: PayoutSummary | null }) {
+    return (
+        <section className="space-y-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h2 className="display text-lg">เงินเข้าบัญชีธนาคาร</h2>
+                <p className="text-[13px] text-ink-mute">ดึงสดจาก Stripe · หักค่าธรรมเนียมแล้ว จึงน้อยกว่ายอดด้านบน</p>
+            </div>
+
+            {!payouts ? (
+                <Notice tone="danger" title="โหลดข้อมูลจาก Stripe ไม่ได้">
+                    ตัวเลขรายได้ด้านบนยังถูกต้อง แต่ตอนนี้ดูสถานะการโอนเงินไม่ได้ ลองรีเฟรชอีกครั้ง
+                    หรือตรวจสอบที่ Stripe Dashboard
+                </Notice>
+            ) : (
+                <>
+                    {payouts.testMode && (
+                        <Notice tone="move" title="กำลังใช้คีย์ทดสอบของ Stripe">
+                            ตัวเลขส่วนนี้มาจากโหมดทดสอบ ไม่ใช่เงินจริง — บนเซิร์ฟเวอร์จริงจะแสดงยอดโอนจริง
+                        </Notice>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <Card className="raise p-5">
+                            <p className="eyebrow">โอนเข้าบัญชีแล้ว</p>
+                            <p className="numeral text-2xl sm:text-3xl mt-1.5">{formatBaht(payouts.paidTotal)}</p>
+                            <p className="text-[12px] text-ink-mute mt-1 tnum">
+                                จาก {formatNumber(payouts.payouts.length)} รายการล่าสุด
+                            </p>
+                        </Card>
+                        <Card className="raise p-5">
+                            <p className="eyebrow">พร้อมโอน</p>
+                            <p className="numeral text-2xl sm:text-3xl mt-1.5">{formatBaht(payouts.available)}</p>
+                            <p className="text-[12px] text-ink-mute mt-1">รอรอบโอนอัตโนมัติถัดไป</p>
+                        </Card>
+                        <Card className="raise p-5 bg-paper-2">
+                            <p className="eyebrow">กำลังเข้ามา</p>
+                            <p className="numeral text-2xl sm:text-3xl mt-1.5 text-ink-soft">{formatBaht(payouts.incoming)}</p>
+                            <p className="text-[12px] text-ink-mute mt-1">ลูกค้าจ่ายแล้ว Stripe ยังกันไว้</p>
+                        </Card>
+                    </div>
+
+                    {payouts.payouts.length === 0 ? (
+                        <Card className="raise">
+                            <EmptyState title="ยังไม่มีการโอนเงิน" description="เมื่อ Stripe โอนเงินเข้าบัญชีธนาคารจะแสดงที่นี่" />
+                        </Card>
+                    ) : (
+                        <Card className="raise overflow-hidden">
+                            <ul className="divide-y divide-line">
+                                {payouts.payouts.map((p) => {
+                                    const s = PAYOUT_STATUS[p.status] ?? { label: p.status, tone: "neutral" as Tone }
+                                    return (
+                                        <li key={p.id} className="px-5 sm:px-6 py-4">
+                                            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                                <div className="min-w-0 flex items-center gap-2">
+                                                    <span className="font-semibold tracking-tight tnum">{formatDate(p.arrivalDate)}</span>
+                                                    <Badge tone={s.tone}>{s.label}</Badge>
+                                                </div>
+                                                <p className="numeral text-base shrink-0">{formatBaht(p.amount)}</p>
+                                            </div>
+                                            <p className="text-[12px] text-ink-mute mt-1 tnum">
+                                                {[p.bankName, p.last4 && `บัญชี ••••${p.last4}`].filter(Boolean).join(" · ") || "บัญชีธนาคาร"}
+                                            </p>
+                                            {p.failureMessage && <p className="text-[12px] text-danger mt-1">{p.failureMessage}</p>}
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+                        </Card>
+                    )}
+                </>
+            )}
+        </section>
     )
 }
 
