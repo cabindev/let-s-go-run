@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Card } from "@/components/ui/Card"
 import { Button, Spinner } from "@/components/ui/Button"
 import { Notice, Badge } from "@/components/ui/Badge"
-import { confirmPickupAdmin, lookupRegistrationForCheckin, type CheckinInfo } from "@/app/actions/admin"
+import { confirmPickupGroup, lookupCheckinByPhone, lookupRegistrationForCheckin, type CheckinInfo } from "@/app/actions/admin"
 import { cn, formatDate, formatTime } from "@/lib/utils"
 
 const READER_ID = "checkin-qr-reader"
@@ -19,7 +19,12 @@ const PICKUP_LABEL: Record<string, string> = {
 
 export function CheckinScanner() {
     const [mode, setMode] = useState<Mode>("scan")
-    const [data, setData] = useState<CheckinInfo | null>(null)
+    // ผลค้นหา — QR ได้ 1 ใบเสมอ, เบอร์โทรอาจได้หลายใบ (คนเดียวสมัครให้ทั้งกลุ่ม)
+    const [results, setResults] = useState<CheckinInfo[]>([])
+    const [selected, setSelected] = useState<Set<string>>(new Set())
+    const [source, setSource] = useState<"qr" | "phone">("qr")
+    const [phone, setPhone] = useState("")
+    const [pickupByName, setPickupByName] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [pending, setPending] = useState(false)
     const [cameraError, setCameraError] = useState<string | null>(null)
@@ -87,13 +92,44 @@ export function CheckinScanner() {
             setTimeout(() => { lastScannedRef.current = null }, 1500)
             return
         }
-        setData(res.data)
+        showResults([res.data], "qr")
+    }
+
+    async function searchPhone(e: React.FormEvent) {
+        e.preventDefault()
+        if (pending) return
+        setPending(true)
+        setError(null)
+        const res = await lookupCheckinByPhone(phone)
+        setPending(false)
+        if (!res.ok) return setError(res.error)
+        showResults(res.data, "phone")
+    }
+
+    function showResults(list: CheckinInfo[], from: "qr" | "phone") {
+        setResults(list)
+        setSource(from)
+        // เลือกไว้ก่อนเฉพาะคนที่ยังไม่รับ — กันเผลอยืนยันซ้ำคนที่รับไปแล้ว
+        const pendingIds = list.filter((r) => r.pickupStatus === "PENDING").map((r) => r.id)
+        setSelected(new Set(pendingIds.length > 0 || list.length !== 1 ? pendingIds : [list[0].id]))
         setMode("review")
+    }
+
+    function toggle(id: string) {
+        setSelected((prev) => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
     }
 
     /** กลับไปสแกนคนถัดไป */
     function scanNext() {
-        setData(null)
+        setResults([])
+        setSelected(new Set())
+        setPhone("")
+        setPickupByName("")
         setMode("scan")
         setError(null)
         setSuccessSignature(null)
@@ -101,6 +137,10 @@ export function CheckinScanner() {
     }
 
     function goToSignature() {
+        if (selected.size === 0) return setError("เลือกผู้สมัครอย่างน้อย 1 คน")
+        setError(null)
+        // เดาชื่อผู้รับเป็นคนแรกที่เลือกไว้ — ถ้ามีคนอื่นมารับแทน เจ้าหน้าที่แก้ชื่อได้
+        if (!pickupByName) setPickupByName(results.find((r) => selected.has(r.id))?.fullName ?? "")
         setMode("signature")
         hasSignatureRef.current = false
         requestAnimationFrame(() => {
@@ -148,8 +188,9 @@ export function CheckinScanner() {
     }
 
     async function submitPickedUp() {
-        if (!data) return
-        if (!hasSignatureRef.current) return setError("กรุณาให้ผู้สมัครเซ็นด้วยนิ้วก่อนยืนยัน")
+        if (selected.size === 0) return
+        if (!pickupByName.trim()) return setError("กรอกชื่อคนที่มารับ")
+        if (!hasSignatureRef.current) return setError("กรุณาให้ผู้รับเซ็นด้วยนิ้วก่อนยืนยัน")
         setPending(true)
         setError(null)
 
@@ -158,15 +199,15 @@ export function CheckinScanner() {
         const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"))
 
         const fd = new FormData()
-        fd.set("registrationId", data.id)
-        fd.set("method", "PICKED_UP")
+        for (const id of selected) fd.append("registrationIds", id)
+        fd.set("pickupByName", pickupByName.trim())
         if (blob) fd.set("signature", new File([blob], "signature.png", { type: "image/png" }))
 
-        const res = await confirmPickupAdmin(fd)
+        const res = await confirmPickupGroup(fd)
         setPending(false)
         if (!res.ok) return setError(res.error)
 
-        setData(res.data)
+        setResults(res.data)
         setSuccessSignature(signatureDataUrl)
         setMode("success")
     }
@@ -191,56 +232,112 @@ export function CheckinScanner() {
                 <p className="text-[12px] text-ink-mute text-center">ยื่น QR ให้อยู่ในกรอบกล้อง</p>
             </Card>
 
-            {data && mode === "review" && (
+            {/* ทางเลือกสำหรับคนที่ไม่มี QR (เช่นข้อมูลอิมพอร์ตจากชีท ไม่มีบัญชีให้ล็อกอิน) */}
+            <Card className={cn("p-4 space-y-3", mode !== "scan" && "hidden")}>
+                <p className="eyebrow">หรือค้นด้วยเบอร์โทร</p>
+                <form onSubmit={searchPhone} className="flex gap-3">
+                    <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="08x-xxx-xxxx"
+                        className="flex-1 h-11 px-3 rounded-xl border border-line text-[15px] bg-transparent focus:outline-none focus:border-ink"
+                    />
+                    <Button type="submit" disabled={pending || !phone.trim()}>
+                        {pending ? <Spinner /> : "ค้นหา"}
+                    </Button>
+                </form>
+            </Card>
+
+            {mode === "review" && results.length > 0 && (
                 <Card className="p-5 sm:p-6 space-y-5">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <p className="eyebrow">ผู้สมัคร</p>
-                            <h2 className="display text-xl mt-1">{data.fullName || "-"}</h2>
-                        </div>
-                        <Badge tone={data.pickupStatus === "PICKED_UP" ? "lime" : data.pickupStatus === "SHIPPED" ? "sky" : "outline"}>
-                            {PICKUP_LABEL[data.pickupStatus] ?? data.pickupStatus}
-                        </Badge>
+                    <div>
+                        <p className="eyebrow">{source === "phone" ? `เบอร์ ${phone} · ${results.length} ใบสมัคร` : "ผู้สมัคร"}</p>
+                        <p className="text-sm text-ink-soft mt-1">เลือกคนที่จะรับของรอบนี้</p>
                     </div>
 
-                    <dl className="grid grid-cols-2 gap-4 text-sm">
-                        <Field label="BIB" value={data.bib || "-"} />
-                        <Field label="ไซส์เสื้อ" value={data.shirtSize || "-"} />
-                        <Field label="งาน" value={data.eventTitle} className="col-span-2" />
-                        <Field label="ประเภท" value={data.categoryName || "-"} className="col-span-2" />
-                        {data.pickupAt && (
-                            <Field
-                                label="เวลาที่บันทึกล่าสุด"
-                                value={`${formatDate(data.pickupAt)} ${formatTime(data.pickupAt)}`}
-                                className="col-span-2"
-                            />
-                        )}
-                        {data.shippingTrackingNo && <Field label="เลขพัสดุ" value={data.shippingTrackingNo} className="col-span-2" />}
-                    </dl>
-
-                    {data.pickupStatus !== "PENDING" && (
-                        <Notice tone="sky">รายการนี้ยืนยันไปแล้ว — ยืนยันซ้ำได้ถ้าจำเป็น</Notice>
+                    {source === "phone" && (
+                        <Notice tone="sky">ใครรู้เบอร์ก็ค้นได้ — ถามชื่อผู้สมัครหรือดูบัตรประชาชนก่อนส่งของ</Notice>
                     )}
 
-                    <Button onClick={goToSignature} disabled={pending} className="w-full">
-                        ยืนยันรับที่บูธ
+                    <div className="space-y-2">
+                        {results.map((r) => (
+                            <label
+                                key={r.id}
+                                className={cn(
+                                    "flex items-start gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-colors",
+                                    selected.has(r.id) ? "border-ink bg-paper-2" : "border-line"
+                                )}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={selected.has(r.id)}
+                                    onChange={() => toggle(r.id)}
+                                    className="mt-1"
+                                />
+                                <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="font-medium tracking-tight">{r.fullName || "-"}</p>
+                                        <Badge tone={r.pickupStatus === "PICKED_UP" ? "lime" : r.pickupStatus === "SHIPPED" ? "sky" : "outline"}>
+                                            {PICKUP_LABEL[r.pickupStatus] ?? r.pickupStatus}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-[13px] text-ink-soft">
+                                        BIB {r.bib || "-"} · ไซส์ {r.shirtSize || "-"}
+                                    </p>
+                                    <p className="text-[12px] text-ink-mute">
+                                        {r.eventTitle}{r.categoryName && ` · ${r.categoryName}`}
+                                    </p>
+                                    {r.pickupAt && r.pickupStatus !== "PENDING" && (
+                                        <p className="text-[12px] text-ink-mute">
+                                            บันทึกเมื่อ {formatDate(r.pickupAt)} {formatTime(r.pickupAt)}
+                                            {r.pickupByName && ` · ${r.pickupByName} รับ`}
+                                            {r.shippingTrackingNo && ` · พัสดุ ${r.shippingTrackingNo}`}
+                                        </p>
+                                    )}
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+
+                    {results.some((r) => selected.has(r.id) && r.pickupStatus !== "PENDING") && (
+                        <Notice tone="sky">มีรายการที่ยืนยันไปแล้วถูกเลือกอยู่ — จะบันทึกทับด้วยลายเซ็นใหม่</Notice>
+                    )}
+
+                    <Button onClick={goToSignature} disabled={pending || selected.size === 0} className="w-full">
+                        ยืนยันรับที่บูธ ({selected.size} คน)
                     </Button>
 
                     <Button variant="ghost" size="sm" onClick={scanNext} className="w-full" disabled={pending}>
-                        ยกเลิก / สแกนใหม่
+                        ยกเลิก / ค้นหาใหม่
                     </Button>
                 </Card>
             )}
 
-            {data && mode === "signature" && (
+            {mode === "signature" && selected.size > 0 && (
                 <Card className="p-5 sm:p-6 space-y-4">
                     <div>
-                        <p className="eyebrow">ยืนยันรับที่บูธ</p>
-                        <p className="text-sm text-ink-soft mt-1">{data.fullName} · BIB {data.bib}</p>
+                        <p className="eyebrow">ยืนยันรับที่บูธ · {selected.size} คน</p>
+                        <ul className="text-sm text-ink-soft mt-1 space-y-0.5">
+                            {results.filter((r) => selected.has(r.id)).map((r) => (
+                                <li key={r.id}>{r.fullName || "-"} · BIB {r.bib || "-"}</li>
+                            ))}
+                        </ul>
                     </div>
 
                     <div>
-                        <p className="text-[12px] text-ink-mute mb-2">ให้ผู้สมัครเซ็นด้วยนิ้วในกรอบด้านล่าง เป็นหลักฐานการรับของ</p>
+                        <label htmlFor="pickupByName" className="text-[12px] text-ink-mute mb-2 block">ชื่อคนที่มารับ</label>
+                        <input
+                            id="pickupByName"
+                            value={pickupByName}
+                            onChange={(e) => setPickupByName(e.target.value)}
+                            className="w-full h-11 px-3 rounded-xl border border-line text-[15px] bg-transparent focus:outline-none focus:border-ink"
+                        />
+                    </div>
+
+                    <div>
+                        <p className="text-[12px] text-ink-mute mb-2">ให้ผู้รับเซ็นด้วยนิ้วในกรอบด้านล่าง เป็นหลักฐานการรับของ</p>
                         <canvas
                             ref={canvasRef}
                             width={600}
@@ -268,23 +365,21 @@ export function CheckinScanner() {
                 </Card>
             )}
 
-            {data && mode === "success" && (
+            {mode === "success" && results.length > 0 && (
                 <Card className="p-5 sm:p-6 space-y-5">
                     <Notice tone="lime" title="บันทึกสำเร็จ">
-                        {data.fullName} · BIB {data.bib} — {PICKUP_LABEL[data.pickupStatus] ?? data.pickupStatus}
+                        {results[0].pickupByName} รับของ {results.length} ใบ
+                        {results[0].pickupAt && ` · ${formatDate(results[0].pickupAt)} ${formatTime(results[0].pickupAt)}`}
                     </Notice>
 
-                    <dl className="grid grid-cols-2 gap-4 text-sm">
-                        <Field label="งาน" value={data.eventTitle} className="col-span-2" />
-                        {data.pickupAt && (
-                            <Field
-                                label="เวลาที่ยืนยัน"
-                                value={`${formatDate(data.pickupAt)} ${formatTime(data.pickupAt)}`}
-                                className="col-span-2"
-                            />
-                        )}
-                        {data.shippingTrackingNo && <Field label="เลขพัสดุ" value={data.shippingTrackingNo} className="col-span-2" />}
-                    </dl>
+                    <ul className="text-sm space-y-1">
+                        {results.map((r) => (
+                            <li key={r.id} className="flex justify-between gap-3">
+                                <span>{r.fullName || "-"}</span>
+                                <span className="text-ink-mute">BIB {r.bib || "-"}</span>
+                            </li>
+                        ))}
+                    </ul>
 
                     {successSignature && (
                         <div>
@@ -299,15 +394,6 @@ export function CheckinScanner() {
                     </Button>
                 </Card>
             )}
-        </div>
-    )
-}
-
-function Field({ label, value, className }: { label: string; value: string; className?: string }) {
-    return (
-        <div className={className}>
-            <dt className="text-[11px] text-ink-mute">{label}</dt>
-            <dd className="font-medium tracking-tight mt-0.5">{value}</dd>
         </div>
     )
 }

@@ -11,6 +11,7 @@ import { recalculateUserStats } from "@/lib/stats"
 import { releaseInviteSeat } from "@/lib/expiry"
 import { generateInviteCode } from "@/lib/invite-codes"
 import { formString } from "@/lib/utils"
+import { phoneKey } from "@/lib/phone"
 import type { ActionResult } from "./registration"
 
 const eventSchema = z.object({
@@ -579,11 +580,12 @@ export async function cancelRegistrationAsAdmin(id: string): Promise<ActionResul
     }
 }
 
-// ───────────── เช็คอินรับเสื้อหน้างาน (สแกน QR ด้วยมือถือ) ─────────────
+// ───────────── เช็คอินรับเสื้อหน้างาน (สแกน QR หรือค้นด้วยเบอร์โทร) ─────────────
 
 export interface CheckinInfo {
     id: string
     fullName: string | null
+    phone: string | null
     bib: string | null
     shirtSize: string | null
     registrationStatus: string
@@ -591,17 +593,25 @@ export interface CheckinInfo {
     categoryName: string | null
     pickupStatus: string
     pickupAt: string | null
+    pickupByName: string | null
     shippingTrackingNo: string | null
 }
+
+const CHECKIN_INCLUDE = {
+    event: { select: { title: true } },
+    category: { select: { name: true, distance: true } },
+} as const
 
 function serializeCheckin(reg: {
     id: string
     fullName: string | null
+    phone: string | null
     bib: string | null
     shirtSize: string | null
     status: string
     pickupStatus: string
     pickupAt: Date | null
+    pickupByName: string | null
     shippingTrackingNo: string | null
     event: { title: string }
     category: { name: string; distance: number } | null
@@ -609,6 +619,7 @@ function serializeCheckin(reg: {
     return {
         id: reg.id,
         fullName: reg.fullName,
+        phone: reg.phone,
         bib: reg.bib,
         shirtSize: reg.shirtSize,
         registrationStatus: reg.status,
@@ -616,6 +627,7 @@ function serializeCheckin(reg: {
         categoryName: reg.category ? `${reg.category.name} (${reg.category.distance} กม.)` : null,
         pickupStatus: reg.pickupStatus,
         pickupAt: reg.pickupAt?.toISOString() ?? null,
+        pickupByName: reg.pickupByName,
         shippingTrackingNo: reg.shippingTrackingNo,
     }
 }
@@ -629,13 +641,101 @@ export async function lookupRegistrationForCheckin(
 
         const reg = await prisma.registration.findUnique({
             where: { id: registrationId },
-            include: { event: { select: { title: true } }, category: { select: { name: true, distance: true } } },
+            include: CHECKIN_INCLUDE,
         })
         if (!reg) return { ok: false, error: "ไม่พบรายการลงทะเบียนนี้ — QR อาจไม่ถูกต้อง" }
 
         return { ok: true, data: serializeCheckin(reg) }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "ค้นหาไม่สำเร็จ" }
+    }
+}
+
+/**
+ * ค้นใบสมัครที่ชำระแล้วจากเบอร์โทร — สำหรับคนที่ไม่มี QR (เช่นข้อมูลที่อิมพอร์ตจากชีท ซึ่งไม่มีบัญชีให้ล็อกอิน)
+ * เบอร์เดียวอาจได้หลายใบ เพราะคนเดียวมักสมัครให้ทั้งครอบครัว/กลุ่ม
+ *
+ * เทียบด้วย phoneKey() ฝั่งแอป ไม่ใช่ `contains` ใน SQL เพราะเบอร์ที่เก็บไว้มีขีด/เว้นวรรค/+66
+ * ปนอยู่ ดึงแค่ id+phone ของใบที่จ่ายแล้วมากรอง ซึ่งเล็กพอสำหรับงานวิ่งระดับหลักพันคน
+ */
+export async function lookupCheckinByPhone(
+    phone: string
+): Promise<{ ok: true; data: CheckinInfo[] } | { ok: false; error: string }> {
+    try {
+        await requireAdminAction()
+
+        const key = phoneKey(phone)
+        if (!key) return { ok: false, error: "กรอกเบอร์โทรให้ครบ 10 หลัก" }
+
+        const candidates = await prisma.registration.findMany({
+            where: { status: "PAID", phone: { not: null } },
+            select: { id: true, phone: true },
+        })
+        const ids = candidates.filter((c) => phoneKey(c.phone) === key).map((c) => c.id)
+        if (ids.length === 0) return { ok: false, error: "ไม่พบใบสมัครที่ชำระแล้วของเบอร์นี้" }
+
+        const regs = await prisma.registration.findMany({
+            where: { id: { in: ids } },
+            include: CHECKIN_INCLUDE,
+            // คนที่ยังไม่รับขึ้นก่อน แล้วเรียงตามงาน/BIB ให้เจ้าหน้าที่หาของบนชั้นง่าย
+            orderBy: [{ pickupStatus: "asc" }, { eventId: "asc" }, { bib: "asc" }],
+        })
+        return { ok: true, data: regs.map(serializeCheckin) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ค้นหาไม่สำเร็จ" }
+    }
+}
+
+/**
+ * ยืนยันรับที่บูธทีละหลายใบด้วยลายเซ็นเดียว — คนเดียวมารับแทนทั้งกลุ่ม
+ * ทุกใบจะชี้ไปที่รูปลายเซ็นเดียวกัน และเก็บชื่อคนที่มาเซ็นรับไว้ใน pickupByName
+ * formData: registrationIds (ซ้ำได้หลายค่า), pickupByName, signature (ไฟล์ PNG จาก canvas)
+ */
+export async function confirmPickupGroup(
+    formData: FormData
+): Promise<{ ok: true; data: CheckinInfo[] } | { ok: false; error: string }> {
+    try {
+        await requireAdminAction()
+
+        const ids = [...new Set(formData.getAll("registrationIds").map(String).filter(Boolean))]
+        if (ids.length === 0) return { ok: false, error: "เลือกผู้สมัครอย่างน้อย 1 คน" }
+
+        const pickupByName = formString(formData, "pickupByName").trim().slice(0, 191)
+        if (!pickupByName) return { ok: false, error: "กรอกชื่อคนที่มารับ" }
+
+        const signatureFile = formData.get("signature")
+        if (!(signatureFile instanceof File) || signatureFile.size === 0) {
+            return { ok: false, error: "กรุณาให้ผู้รับเซ็นก่อนยืนยัน" }
+        }
+
+        const regs = await prisma.registration.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } })
+        if (regs.length !== ids.length) return { ok: false, error: "ไม่พบบางรายการ — ค้นหาใหม่อีกครั้ง" }
+        if (regs.some((r) => r.status !== "PAID")) return { ok: false, error: "มีรายการที่ยังไม่ยืนยันการชำระเงิน" }
+
+        const signatureUrl = (await saveImage(signatureFile, "signatures")).url
+        const now = new Date()
+
+        await prisma.registration.updateMany({
+            where: { id: { in: ids } },
+            data: {
+                pickupStatus: "PICKED_UP",
+                pickupAt: now,
+                pickupByName,
+                pickupSignatureUrl: signatureUrl,
+                shippingTrackingNo: null,
+            },
+        })
+
+        const updated = await prisma.registration.findMany({
+            where: { id: { in: ids } },
+            include: CHECKIN_INCLUDE,
+            orderBy: [{ eventId: "asc" }, { bib: "asc" }],
+        })
+
+        revalidatePath("/admin/registrations")
+        return { ok: true, data: updated.map(serializeCheckin) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
     }
 }
 
@@ -676,8 +776,10 @@ export async function confirmPickupAdmin(
                 pickupAt: method === "PENDING" ? null : new Date(),
                 shippingTrackingNo: method === "SHIPPED" ? (String(formData.get("trackingNo") ?? "").trim() || null) : null,
                 ...(signatureUrl !== undefined ? { pickupSignatureUrl: signatureUrl } : {}),
+                // ชื่อผู้รับมาคู่กับลายเซ็นเสมอ — ล้างพร้อมกันเมื่อเปลี่ยนเป็นสถานะอื่น
+                ...(method !== "PICKED_UP" ? { pickupByName: null } : {}),
             },
-            include: { event: { select: { title: true } }, category: { select: { name: true, distance: true } } },
+            include: CHECKIN_INCLUDE,
         })
 
         revalidatePath("/admin/registrations")

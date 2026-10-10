@@ -168,7 +168,9 @@ export default async function AdminRegistrationsPage({
                                                 </Badge>
                                             )}
                                             {r.bib && <span className="text-[11px] text-ink-mute tnum">BIB {r.bib}</span>}
-                                            {r.pickupStatus === "PICKED_UP" && <Badge tone="lime">รับที่บูธแล้ว</Badge>}
+                                            {r.pickupStatus === "PICKED_UP" && (
+                                                <Badge tone="lime">รับที่บูธแล้ว{r.pickupByName && r.pickupByName !== r.fullName && ` · ${r.pickupByName} รับแทน`}</Badge>
+                                            )}
                                             {r.pickupStatus === "SHIPPED" && <Badge tone="sky">ส่งไปรษณีย์แล้ว</Badge>}
                                             {needsShipping && <Badge tone="danger">รอส่งไปรษณีย์</Badge>}
                                             {r.paymentIssueAt && <Badge tone="danger">เงินเข้าแต่ใบสมัครไม่สมบูรณ์</Badge>}

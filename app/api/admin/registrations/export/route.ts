@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
         { header: "ยินยอม PDPA เมื่อ", key: "pdpaConsentAt", width: 18 },
         { header: "สถานะรับเสื้อ", key: "pickupStatus", width: 14 },
         { header: "เลขพัสดุ", key: "shippingTrackingNo", width: 18 },
+        { header: "ผู้มารับ", key: "pickupByName", width: 22 },
         { header: "ลายเซ็นผู้รับ", key: "pickupSignature", width: 16 },
         { header: "วันที่รับ/ส่ง", key: "pickupAt", width: 18 },
         { header: "วันที่สมัคร", key: "registeredAt", width: 18 },
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest) {
             pdpaConsentAt: r.pdpaConsentAt ?? null,
             pickupStatus: PICKUP_STATUS_LABEL[r.pickupStatus],
             shippingTrackingNo: r.shippingTrackingNo || "",
+            pickupByName: r.pickupByName || "",
             pickupSignature: r.pickupSignatureUrl
                 ? { text: "ดูลายเซ็น", hyperlink: `${origin}${r.pickupSignatureUrl}` }
                 : "",
