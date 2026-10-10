@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react"
 import { Card } from "@/components/ui/Card"
 import { Button, Spinner } from "@/components/ui/Button"
 import { Notice, Badge } from "@/components/ui/Badge"
-import { confirmPickupGroup, lookupCheckinByPhone, lookupRegistrationForCheckin, type CheckinInfo } from "@/app/actions/admin"
+import { confirmPickupGroup, lookupCheckinByNationalId, lookupCheckinByPhone, lookupRegistrationForCheckin, type CheckinInfo } from "@/app/actions/admin"
 import { cn, formatDate, formatTime } from "@/lib/utils"
 
 const READER_ID = "checkin-qr-reader"
+
+type Source = "qr" | "phone" | "nationalId"
 
 type Mode = "scan" | "review" | "signature" | "success"
 
@@ -22,8 +24,9 @@ export function CheckinScanner() {
     // ผลค้นหา — QR ได้ 1 ใบเสมอ, เบอร์โทรอาจได้หลายใบ (คนเดียวสมัครให้ทั้งกลุ่ม)
     const [results, setResults] = useState<CheckinInfo[]>([])
     const [selected, setSelected] = useState<Set<string>>(new Set())
-    const [source, setSource] = useState<"qr" | "phone">("qr")
+    const [source, setSource] = useState<Source>("qr")
     const [phone, setPhone] = useState("")
+    const [nationalId, setNationalId] = useState("")
     const [pickupByName, setPickupByName] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [pending, setPending] = useState(false)
@@ -95,18 +98,18 @@ export function CheckinScanner() {
         showResults([res.data], "qr")
     }
 
-    async function searchPhone(e: React.FormEvent) {
+    async function search(e: React.FormEvent, from: "phone" | "nationalId") {
         e.preventDefault()
         if (pending) return
         setPending(true)
         setError(null)
-        const res = await lookupCheckinByPhone(phone)
+        const res = from === "phone" ? await lookupCheckinByPhone(phone) : await lookupCheckinByNationalId(nationalId)
         setPending(false)
         if (!res.ok) return setError(res.error)
-        showResults(res.data, "phone")
+        showResults(res.data, from)
     }
 
-    function showResults(list: CheckinInfo[], from: "qr" | "phone") {
+    function showResults(list: CheckinInfo[], from: Source) {
         setResults(list)
         setSource(from)
         // เลือกไว้ก่อนเฉพาะคนที่ยังไม่รับ — กันเผลอยืนยันซ้ำคนที่รับไปแล้ว
@@ -129,6 +132,7 @@ export function CheckinScanner() {
         setResults([])
         setSelected(new Set())
         setPhone("")
+        setNationalId("")
         setPickupByName("")
         setMode("scan")
         setError(null)
@@ -235,16 +239,34 @@ export function CheckinScanner() {
             {/* ทางเลือกสำหรับคนที่ไม่มี QR (เช่นข้อมูลอิมพอร์ตจากชีท ไม่มีบัญชีให้ล็อกอิน) */}
             <Card className={cn("p-4 space-y-3", mode !== "scan" && "hidden")}>
                 <p className="eyebrow">หรือค้นด้วยเบอร์โทร</p>
-                <form onSubmit={searchPhone} className="flex gap-3">
+                <form onSubmit={(e) => search(e, "phone")} className="flex gap-3">
                     <input
                         type="tel"
                         inputMode="numeric"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="08x-xxx-xxxx"
-                        className="flex-1 h-11 px-3 rounded-xl border border-line text-[15px] bg-transparent focus:outline-none focus:border-ink"
+                        className="flex-1 min-w-0 h-11 px-3 rounded-xl border border-line text-[15px] bg-transparent focus:outline-none focus:border-ink"
                     />
                     <Button type="submit" disabled={pending || !phone.trim()}>
+                        {pending ? <Spinner /> : "ค้นหา"}
+                    </Button>
+                </form>
+            </Card>
+
+            <Card className={cn("p-4 space-y-3", mode !== "scan" && "hidden")}>
+                <p className="eyebrow">หรือค้นด้วยเลขบัตรประชาชน</p>
+                <form onSubmit={(e) => search(e, "nationalId")} className="flex gap-3">
+                    <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={nationalId}
+                        onChange={(e) => setNationalId(e.target.value)}
+                        placeholder="13 หลัก"
+                        className="flex-1 min-w-0 h-11 px-3 rounded-xl border border-line text-[15px] bg-transparent focus:outline-none focus:border-ink"
+                    />
+                    <Button type="submit" disabled={pending || !nationalId.trim()}>
                         {pending ? <Spinner /> : "ค้นหา"}
                     </Button>
                 </form>
@@ -253,12 +275,16 @@ export function CheckinScanner() {
             {mode === "review" && results.length > 0 && (
                 <Card className="p-5 sm:p-6 space-y-5">
                     <div>
-                        <p className="eyebrow">{source === "phone" ? `เบอร์ ${phone} · ${results.length} ใบสมัคร` : "ผู้สมัคร"}</p>
+                        <p className="eyebrow">
+                            {source === "phone" ? `เบอร์ ${phone} · ${results.length} ใบสมัคร`
+                                : source === "nationalId" ? `บัตร ${nationalId} · ${results.length} ใบสมัคร`
+                                : "ผู้สมัคร"}
+                        </p>
                         <p className="text-sm text-ink-soft mt-1">เลือกคนที่จะรับของรอบนี้</p>
                     </div>
 
                     {source === "phone" && (
-                        <Notice tone="sky">ใครรู้เบอร์ก็ค้นได้ — ถามชื่อผู้สมัครหรือดูบัตรประชาชนก่อนส่งของ</Notice>
+                        <Notice tone="sky">ถามชื่อผู้สมัครและเทียบเลขบัตรกับบัตรจริงก่อนส่งของ</Notice>
                     )}
 
                     <div className="space-y-2">
@@ -285,6 +311,9 @@ export function CheckinScanner() {
                                     </div>
                                     <p className="text-[13px] text-ink-soft">
                                         BIB {r.bib || "-"} · ไซส์ {r.shirtSize || "-"}
+                                    </p>
+                                    <p className="text-[13px] text-ink-soft tnum">
+                                        บัตร {r.nationalId || "ไม่มีข้อมูล"}{r.phone && ` · โทร ${r.phone}`}
                                     </p>
                                     <p className="text-[12px] text-ink-mute">
                                         {r.eventTitle}{r.categoryName && ` · ${r.categoryName}`}

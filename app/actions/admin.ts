@@ -11,7 +11,7 @@ import { recalculateUserStats } from "@/lib/stats"
 import { releaseInviteSeat } from "@/lib/expiry"
 import { generateInviteCode } from "@/lib/invite-codes"
 import { formString } from "@/lib/utils"
-import { phoneKey } from "@/lib/phone"
+import { formatNationalId, nationalIdKey, phoneKey } from "@/lib/phone"
 import type { ActionResult } from "./registration"
 
 const eventSchema = z.object({
@@ -586,6 +586,7 @@ export interface CheckinInfo {
     id: string
     fullName: string | null
     phone: string | null
+    nationalId: string | null // จัดรูปแบบแล้ว ไว้เทียบกับบัตรจริงตอนรับของ
     bib: string | null
     shirtSize: string | null
     registrationStatus: string
@@ -606,6 +607,7 @@ function serializeCheckin(reg: {
     id: string
     fullName: string | null
     phone: string | null
+    nationalId: string | null
     bib: string | null
     shirtSize: string | null
     status: string
@@ -620,6 +622,7 @@ function serializeCheckin(reg: {
         id: reg.id,
         fullName: reg.fullName,
         phone: reg.phone,
+        nationalId: formatNationalId(reg.nationalId),
         bib: reg.bib,
         shirtSize: reg.shirtSize,
         registrationStatus: reg.status,
@@ -678,6 +681,38 @@ export async function lookupCheckinByPhone(
             where: { id: { in: ids } },
             include: CHECKIN_INCLUDE,
             // คนที่ยังไม่รับขึ้นก่อน แล้วเรียงตามงาน/BIB ให้เจ้าหน้าที่หาของบนชั้นง่าย
+            orderBy: [{ pickupStatus: "asc" }, { eventId: "asc" }, { bib: "asc" }],
+        })
+        return { ok: true, data: regs.map(serializeCheckin) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "ค้นหาไม่สำเร็จ" }
+    }
+}
+
+/**
+ * ค้นใบสมัครที่ชำระแล้วจากเลขบัตรประชาชน — ทางที่สามต่อจาก QR และเบอร์โทร
+ * มีค่าเฉพาะงานที่เปิดเก็บเลขบัตร (Event.collectNationalId) หรือข้อมูลที่อิมพอร์ตมาพร้อมเลขบัตร
+ * คนเดียวอาจมีหลายใบถ้าสมัครหลายงาน เลยคืนเป็นรายการเหมือนการค้นด้วยเบอร์
+ */
+export async function lookupCheckinByNationalId(
+    nationalId: string
+): Promise<{ ok: true; data: CheckinInfo[] } | { ok: false; error: string }> {
+    try {
+        await requireAdminAction()
+
+        const key = nationalIdKey(nationalId)
+        if (!key) return { ok: false, error: "กรอกเลขบัตรประชาชนให้ครบ 13 หลัก" }
+
+        const candidates = await prisma.registration.findMany({
+            where: { status: "PAID", nationalId: { not: null } },
+            select: { id: true, nationalId: true },
+        })
+        const ids = candidates.filter((c) => nationalIdKey(c.nationalId) === key).map((c) => c.id)
+        if (ids.length === 0) return { ok: false, error: "ไม่พบใบสมัครที่ชำระแล้วของเลขบัตรนี้ — งานที่ไม่ได้เก็บเลขบัตรให้ค้นด้วยเบอร์โทรแทน" }
+
+        const regs = await prisma.registration.findMany({
+            where: { id: { in: ids } },
+            include: CHECKIN_INCLUDE,
             orderBy: [{ pickupStatus: "asc" }, { eventId: "asc" }, { bib: "asc" }],
         })
         return { ok: true, data: regs.map(serializeCheckin) }
