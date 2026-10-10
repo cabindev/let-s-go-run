@@ -284,7 +284,8 @@ model Registration {
   submissions RunSubmission[]
 
   @@unique([userId, eventId])
-  @@unique([eventId, bib])
+  // เลข BIB ซ้ำกันได้ถ้าคนละระยะ — ผู้จัดพิมพ์ BIB แยกชุดต่อระยะ (M-001 ของ 3.3 กับ 8.8 เป็นคนละใบ)
+  @@unique([eventId, categoryId, bib])
   @@index([userId])
   @@index([eventId])
   @@index([categoryId])
