@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/EmptyState"
 import { EventSearch } from "@/components/events/EventSearch"
 import { EventListCard } from "@/components/events/EventListCard"
 import { EventTabs } from "@/components/events/EventTabs"
+import { RunnerLookup } from "@/components/events/RunnerLookup"
+import { hasRunnerLookup } from "@/lib/runner-lookup"
 import { ProductCard } from "@/components/shop/ProductCard"
 import { SHOP_NAME } from "@/lib/shop"
 import { cn } from "@/lib/utils"
@@ -30,6 +32,9 @@ export default async function HomePage({
     })
 
     const hasSearch = !!(sp.q || sp.province || sp.distance || sp.type)
+
+    // กล่องเช็ครายชื่อโผล่เฉพาะช่วงที่มีงานวิ่งหน้างานที่ยังไม่จบและมีคนสมัครแล้ว
+    const showRunnerLookup = await hasRunnerLookup()
 
     return (
         <>
@@ -59,6 +64,19 @@ export default async function HomePage({
                     </div>
                 </div>
             </section>
+
+            {/* ───── เช็ครายชื่อนักวิ่ง ───── */}
+            {showRunnerLookup && (
+                <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-7 sm:pt-9">
+                    <Card className="p-5 sm:p-6 space-y-4">
+                        <SectionHeading
+                            title="เช็ครายชื่อนักวิ่ง"
+                            description="ใส่เบอร์โทรหรือเลขบัตรประชาชนที่ใช้สมัคร เพื่อดูเลข BIB ระยะ และไซส์เสื้อของคุณ"
+                        />
+                        <RunnerLookup />
+                    </Card>
+                </section>
+            )}
 
             {/* ───── รายการงานวิ่ง ───── */}
             <section className="max-w-6xl mx-auto px-5 sm:px-8 py-7 sm:py-9 space-y-5">
