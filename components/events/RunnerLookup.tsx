@@ -6,8 +6,8 @@ import { Badge, Notice } from "@/components/ui/Badge"
 import { lookupRunner, type RunnerLookupResult } from "@/app/actions/runner-lookup"
 
 const PICKUP: Record<RunnerLookupResult["pickupStatus"], { label: string; tone: "outline" | "lime" | "sky" }> = {
-    PENDING: { label: "ยังไม่รับของ", tone: "outline" },
-    PICKED_UP: { label: "รับของแล้ว", tone: "lime" },
+    PENDING: { label: "ยังไม่รับ BIB", tone: "outline" },
+    PICKED_UP: { label: "รับ BIB แล้ว", tone: "lime" },
     SHIPPED: { label: "ส่งไปรษณีย์แล้ว", tone: "sky" },
 }
 
