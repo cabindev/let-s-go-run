@@ -9,6 +9,7 @@ import { registerState, toOptions, SHIRT_SIZES, NATIONAL_ID_PATTERN, registratio
 import { discountedPrice, inviteCodeState, normalizeInviteCode } from "@/lib/invite-codes"
 import { sendRegistrationPlacedEmail, sendRegistrationPaidEmail } from "@/lib/mail"
 import { formString } from "@/lib/utils"
+import { issueBibTx } from "@/lib/bib"
 import type { ActionResult } from "./registration"
 
 const schema = z.object({
@@ -240,26 +241,17 @@ export async function submitRegistration(formData: FormData): Promise<SubmitResu
                 }
             }
 
-            // งานฟรียืนยันทันที จึงออก BIB ให้เลย — เพิ่มเลขในทรานแซกชันเดียวกัน (ไม่เรียก issueBib
-            // เพราะมันเปิด connection แยก จะไปรอแถว Event ที่ทรานแซกชันนี้ล็อกไว้เองจนเดดล็อก)
-            let bib: string | null = null
-            if (!needsPayment) {
-                if (existing?.bib) {
-                    bib = existing.bib
-                } else {
-                    const updated = await tx.event.update({
-                        where: { id: d.eventId },
-                        data: { bibCounter: { increment: 1 } },
-                        select: { bibCounter: true },
-                    })
-                    bib = String(updated.bibCounter).padStart(4, "0")
-                }
-            }
+            // งานฟรียืนยันทันที จึงออก BIB ให้เลย — ออกในทรานแซกชันเดียวกัน (ไม่ใช้ withBib
+            // เพราะมันเปิดทรานแซกชันแยก จะไปรอแถว Event ที่ทรานแซกชันนี้ล็อกไว้เองจนเดดล็อก)
+            //
+            // ใบเดิมที่เคยได้เลขแล้ว (ยกเลิกแล้วสมัครใหม่) เลขติดตัวคนนั้นไป — ไม่เขียนทับ ไม่ล้างเป็น null
+            // (trigger Registration_bib_guard ก็จะปฏิเสธอยู่แล้ว)
+            const bib = existing?.bib ?? (needsPayment ? null : await issueBibTx(tx, d.eventId, chosen.id))
 
             const reg = existing
                 ? await tx.registration.update({
                     where: { id: existing.id },
-                    data: { ...baseData, bib, registeredAt: new Date() },
+                    data: { ...baseData, ...(existing.bib ? {} : { bib }), registeredAt: new Date() },
                 })
                 : await tx.registration.create({
                     data: { ...baseData, bib, userId: user.id, eventId: d.eventId },

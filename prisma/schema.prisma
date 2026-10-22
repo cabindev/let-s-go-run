@@ -18,42 +18,46 @@ enum EventStatus {
   CANCELLED
 }
 
-/** วิ่งในงาน (มีสถานที่จริง) หรือ วิ่งที่ไหนก็ได้ (virtual) */
+/**
+ * วิ่งในงาน (มีสถานที่จริง) หรือ วิ่งที่ไหนก็ได้ (virtual)
+ */
 enum EventType {
   ONSITE
   VIRTUAL
 }
 
-/** สถานะรับเสื้อ/ของที่ระลึกหน้างาน — ยืนยันผ่านระบบสแกน QR แยกต่างหาก */
+/**
+ * สถานะรับเสื้อ/ของที่ระลึกหน้างาน — ยืนยันผ่านระบบสแกน QR แยกต่างหาก
+ */
 enum PickupStatus {
-  PENDING    // ยังไม่รับ
-  PICKED_UP  // รับที่บูธแล้ว
-  SHIPPED    // ส่งไปรษณีย์แทน
+  PENDING // ยังไม่รับ
+  PICKED_UP // รับที่บูธแล้ว
+  SHIPPED // ส่งไปรษณีย์แทน
 }
 
 enum RegistrationStatus {
-  PENDING   // ลงทะเบียนแล้ว รอชำระเงิน
-  PAID      // ยืนยันการชำระเงินแล้ว (ผ่าน Stripe เท่านั้น)
-  EXPIRED   // ไม่ชำระเงินภายในเวลาที่กำหนด ระบบคืนที่นั่งอัตโนมัติ
+  PENDING // ลงทะเบียนแล้ว รอชำระเงิน
+  PAID // ยืนยันการชำระเงินแล้ว (ผ่าน Stripe เท่านั้น)
+  EXPIRED // ไม่ชำระเงินภายในเวลาที่กำหนด ระบบคืนที่นั่งอัตโนมัติ
   CANCELLED // ผู้สมัครยกเลิกเอง หรือผู้ดูแลระบบยกเลิกให้
 }
 
 // เกณฑ์ปลดล็อกความสำเร็จ
 enum AchievementType {
-  EVENT_COUNT    // เข้าร่วมกิจกรรมครบ N ครั้ง
+  EVENT_COUNT // เข้าร่วมกิจกรรมครบ N ครั้ง
   TOTAL_DISTANCE // ระยะทางสะสมครบ N กม.
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String?
-  image         String?
-  role          Role      @default(USER)
-  dateOfBirth   DateTime?
-  phone         String?
-  bio           String?   @db.Text
+  id          String    @id @default(cuid())
+  name        String?
+  email       String    @unique
+  password    String?
+  image       String?
+  role        Role      @default(USER)
+  dateOfBirth DateTime?
+  phone       String?
+  bio         String?   @db.Text
 
   // ลืมรหัสผ่าน — เก็บ hash ของ token (ไม่เก็บ token ดิบ เหมือนหลัก practice ของ password)
   // null = ไม่มีคำขอรีเซ็ตค้างอยู่
@@ -61,50 +65,50 @@ model User {
   resetTokenExpiresAt DateTime?
 
   // Stats (คำนวณใหม่ทุกครั้งที่มีการยืนยันการชำระเงิน)
-  totalDistance Float     @default(0)
+  totalDistance Float @default(0)
 
   registrations Registration[]
   achievements  UserAchievement[]
 
   // ร้านค้า — ตะกร้ามีได้คนละใบเดียว ออเดอร์มีได้หลายใบ
-  cart          Cart?
-  orders        Order[]
+  cart   Cart?
+  orders Order[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Event {
-  id              String      @id @default(cuid())
-  title           String
-  description     String      @db.Text
-  date            DateTime                  // วันและ "เวลาเริ่ม" ของกิจกรรม
-  endDate         DateTime?                 // วัน/เวลาสิ้นสุด (ถ้ามี)
-  location        String
-  province        String?                   // ใช้กรองในหน้าแรก
-  organizer       String?                   // "จัดโดย ..."
-  type            EventType   @default(ONSITE)
+  id          String    @id @default(cuid())
+  title       String
+  description String    @db.Text
+  date        DateTime // วันและ "เวลาเริ่ม" ของกิจกรรม
+  endDate     DateTime? // วัน/เวลาสิ้นสุด (ถ้ามี)
+  location    String
+  province    String? // ใช้กรองในหน้าแรก
+  organizer   String? // "จัดโดย ..."
+  type        EventType @default(ONSITE)
 
   // ค่าเริ่มต้นของงาน — ใช้เมื่อยังไม่ได้สร้างประเภทการแข่งขัน
   distance        Float
   price           Float
-  maxParticipants Int?                      // จำนวนรับสมัครรวมทั้งงาน (null = ไม่จำกัด)
+  maxParticipants Int? // จำนวนรับสมัครรวมทั้งงาน (null = ไม่จำกัด)
 
   // ช่วงเปิดรับสมัคร (null = ยึดตามสถานะและวันจัดงาน)
   registerOpenAt  DateTime?
   registerCloseAt DateTime?
 
-  image           String?                   // รูปปก (แบนเนอร์)
-  status          EventStatus @default(OPEN)
+  image  String? // รูปปก (แบนเนอร์)
+  status EventStatus @default(OPEN)
 
   // ตัวนับ BIB ล่าสุดของงานนี้ — เพิ่มค่าแบบ atomic (increment) ตอนออกเลข กันเลขชนกันแม้มีคน
   // ยืนยันการชำระเงินพร้อมกันหลายคน (เผื่อเกิดช่องว่างในลำดับได้ถ้ามีรายการที่ออกเลขแล้วแต่บันทึกไม่สำเร็จ)
-  bibCounter      Int         @default(0)
+  bibCounter Int @default(0)
 
   // ข้อมูลเสริมที่พบบนหน้างานจริง
-  rewards         String?     @db.Text       // สิ่งที่ผู้สมัครจะได้รับ (เสื้อ/เหรียญ/ของที่ระลึก)
-  contactUrl      String?                    // ลิงก์ติดตามรายละเอียด (เพจ/เว็บผู้จัด)
-  announceAt      DateTime?                  // วันประกาศผล
+  rewards    String?   @db.Text // สิ่งที่ผู้สมัครจะได้รับ (เสื้อ/เหรียญ/ของที่ระลึก)
+  contactUrl String? // ลิงก์ติดตามรายละเอียด (เพจ/เว็บผู้จัด)
+  announceAt DateTime? // วันประกาศผล
 
   // เปิด/ปิดฟิลด์ข้อมูลเสริมในฟอร์มสมัคร — แต่ละงานเลือกเก็บได้ไม่เหมือนกัน (ค่าเริ่มต้นปิดหมด
   // เพื่อไม่กระทบงานเก่า)
@@ -123,24 +127,26 @@ model Event {
   images        EventImage[]
   categories    RaceCategory[]
   registrations Registration[]
-  products      Product[]              // สินค้าในร้านที่ผูกกับงานนี้ (เช่น เสื้อของงาน) — ไม่ผูกก็ได้
-  inviteCodes   InviteCode[]           // โควตาสิทธิพิเศษ (สปอนเซอร์/แขกผู้จัด) — อยู่นอก maxParticipants
+  products      Product[] // สินค้าในร้านที่ผูกกับงานนี้ (เช่น เสื้อของงาน) — ไม่ผูกก็ได้
+  inviteCodes   InviteCode[] // โควตาสิทธิพิเศษ (สปอนเซอร์/แขกผู้จัด) — อยู่นอก maxParticipants
 
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status, date])
   @@index([province])
 }
 
-/** หมวดของรูปประกอบ — ใช้จัดกลุ่มทั้งตอนอัปโหลดและตอนแสดงผล */
+/**
+ * หมวดของรูปประกอบ — ใช้จัดกลุ่มทั้งตอนอัปโหลดและตอนแสดงผล
+ */
 enum ImageCategory {
-  SHIRT       // เสื้อ (แนะนำหน้า–หลัง)
-  MEDAL       // เหรียญ
-  ROUTE       // แผนที่เส้นทาง
-  SIZE_GUIDE  // ตารางไซส์
-  ATMOSPHERE  // บรรยากาศงาน
-  OTHER       // อื่น ๆ
+  SHIRT // เสื้อ (แนะนำหน้า–หลัง)
+  MEDAL // เหรียญ
+  ROUTE // แผนที่เส้นทาง
+  SIZE_GUIDE // ตารางไซส์
+  ATMOSPHERE // บรรยากาศงาน
+  OTHER // อื่น ๆ
 }
 
 /**
@@ -156,8 +162,8 @@ model EventImage {
   sortOrder Int           @default(0)
 
   // ขนาดจริงของไฟล์ — ใช้จองพื้นที่ก่อนรูปโหลด กันหน้ากระโดด
-  width     Int?
-  height    Int?
+  width  Int?
+  height Int?
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
@@ -167,15 +173,27 @@ model EventImage {
   @@index([eventId, category])
 }
 
-/** ประเภทการแข่งขันของงานหนึ่ง ๆ เช่น "Early Bird 10 กม." / "Fuji Solo" */
+/**
+ * ประเภทการแข่งขันของงานหนึ่ง ๆ เช่น "Early Bird 10 กม." / "Fuji Solo"
+ */
 model RaceCategory {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   eventId   String
   name      String
   distance  Float
   price     Float
-  maxSlots  Int?                  // จำนวนรับของประเภทนี้ (null = ไม่จำกัด)
-  sortOrder Int     @default(0)
+  maxSlots  Int? // จำนวนรับของประเภทนี้ (null = ไม่จำกัด)
+  sortOrder Int    @default(0)
+
+  // ช่วงเลข BIB ของระยะนี้ (แบบงานวิ่งสากล: แยกระยะด้วยช่วงเลข/ตัวอักษรนำ แต่เลขไม่ซ้ำกันทั้งงาน)
+  // เช่น 10 กม. = 1001–1999, 21 กม. = 2001–2999 หรือ A0001–, B0001–
+  // null = ใช้ตัวนับรวมของงาน (Event.bibCounter) ออกเลข 0001, 0002, ...
+  // ห้ามใส่ความหมายเรื่องเพศในเลข — ตั้ง/แก้ได้เฉพาะก่อนออกเลขใบแรกของระยะนี้ (ดู lib/bib.ts)
+  bibPrefix  String? @db.VarChar(3) // ตัวอักษร A–Z นำหน้า 0–3 ตัว
+  bibStart   Int?
+  bibEnd     Int?
+  // เลขล่าสุดที่ออกในช่วงนี้ (0 = ยังไม่เคยออก) — เพิ่มแบบ atomic เหมือน Event.bibCounter
+  bibCounter Int     @default(0)
 
   event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations Registration[]
@@ -190,10 +208,16 @@ model Registration {
   id           String             @id @default(cuid())
   userId       String
   eventId      String
-  categoryId   String?                      // ประเภทที่เลือก (null = ใช้ค่าของงาน)
-  bib          String?                      // ออกให้อัตโนมัติเมื่อยืนยันการชำระเงิน
+  categoryId   String? // ประเภทที่เลือก (null = ใช้ค่าของงาน)
+  // ออกให้อัตโนมัติเมื่อยืนยันการชำระเงิน แล้ว "ห้ามเปลี่ยน" — เลขผูกกับคนตลอดไป ใช้ต่อในผลวิ่ง/รูป/ชิปจับเวลา
+  // ฐานข้อมูลมี trigger กันแก้ (Registration_bib_guard) และบันทึกทุกการเปลี่ยนลง BibChangeLog
+  // ยกเลิกแล้วเลขไม่ถูกนำกลับมาใช้ใหม่
+  bib          String?
+  // ขอบเขตที่เลข BIB ต้องไม่ซ้ำ: "" = ทั้งงาน (มาตรฐาน — ทุกใบที่ระบบออกใหม่เป็นแบบนี้)
+  // มีค่าเป็น categoryId เฉพาะงานเก่าที่พิมพ์ BIB แยกชุดต่อระยะไปแล้ว (รันลัดโต้ง #8) — ตั้งโดย migration เท่านั้น
+  bibScope     String             @default("") @db.VarChar(32)
   status       RegistrationStatus @default(PENDING)
-  note         String?            @db.Text  // ข้อความจากระบบ เช่น เหตุผลที่หมดเวลาชำระอัตโนมัติ
+  note         String?            @db.Text // ข้อความจากระบบ เช่น เหตุผลที่หมดเวลาชำระอัตโนมัติ
   registeredAt DateTime           @default(now())
   paidAt       DateTime?
 
@@ -206,34 +230,31 @@ model Registration {
 
   // กำหนดเวลาที่ต้องชำระเงินให้เสร็จ — เลยเวลานี้ระบบคืนที่นั่งอัตโนมัติ
   // null = ไม่มีกำหนด (จ่ายแล้ว)
-  expiresAt    DateTime?
+  expiresAt DateTime?
 
   // ข้อมูลผู้สมัคร ณ เวลาที่สมัคร (แยกจากโปรไฟล์ เพราะอาจสมัครแทนคนอื่น/เปลี่ยนภายหลัง)
   fullName       String?
   phone          String?
   shirtSize      String?
-  address        String?  @db.Text
+  address        String? @db.Text
   emergencyName  String?
   emergencyPhone String?
 
   // ฟิลด์เสริม — มีค่าเฉพาะงานที่เปิดเก็บ (ดู Event.collect*) ที่เหลือเป็น null เสมอ
-  gender                String?  // "MALE" | "FEMALE" (ค่าเก่า "LGBTQ" อาจยังพบได้ในเรคคอร์ดก่อนหน้า)
-  bloodType             String?  // "O" | "A" | "B" | "AB"
-  nationalId            String?  // เลขบัตรประชาชน 13 หลัก — ใช้เพื่อสิทธิ์ประกันอุบัติเหตุ
-  hasParticipatedBefore Boolean?
+  gender                 String? // "MALE" | "FEMALE" (ค่าเก่า "LGBTQ" อาจยังพบได้ในเรคคอร์ดก่อนหน้า)
+  bloodType              String? // "O" | "A" | "B" | "AB"
+  nationalId             String? // เลขบัตรประชาชน 13 หลัก — ใช้เพื่อสิทธิ์ประกันอุบัติเหตุ
+  hasParticipatedBefore  Boolean?
   hasMedicalCondition    Boolean? // มีโรคประจำตัวหรือไม่ — มีค่าเฉพาะงานที่เปิด Event.collectBloodType
   medicalConditionDetail String?  @db.Text // รายละเอียดโรคประจำตัว — มีค่าเฉพาะเมื่อ hasMedicalCondition = true
 
   /**
    * ยอดเงินที่เก็บได้จริงจากใบนี้ บันทึกตอนยืนยันการชำระเงิน (null = ยังไม่จ่าย/ข้อมูลเก่า)
-   *
    * ต้องเก็บเป็นตัวเลขนิ่ง ไม่ใช่คำนวณย้อนหลังจากราคาปัจจุบัน เพราะราคาประเภทแก้ได้ตลอด
    * ถ้าคำนวณใหม่ทุกครั้ง การขึ้นราคาวันนี้จะทำให้รายได้ของงานเมื่อปีที่แล้วเปลี่ยนตามไปด้วย
    * และส่วนลดจากโค้ดสิทธิพิเศษก็จะหายไปจากตัวเลข
-   *
    * แยกค่าสมัครกับค่าส่งออกจากกัน เพราะค่าส่งเป็นเงินที่เก็บมาจ่ายไปรษณีย์ต่อ ไม่ใช่รายได้
    * ของผู้จัดงาน รายงานต้องแสดงคนละบรรทัด
-   *
    * ค่าธรรมเนียม Stripe ไม่ได้เก็บไว้ — ผู้จ่ายเป็นคนรับภาระแยกต่างหาก (ดู amountWithFee)
    * และคำนวณย้อนกลับได้จาก paymentMethod ถ้าต้องกระทบยอดกับ Stripe
    */
@@ -246,7 +267,6 @@ model Registration {
   /**
    * ตั้งค่าเมื่อ Stripe แจ้งว่าจ่ายเงินสำเร็จ แต่ใบสมัครไม่อยู่ในสถานะที่รับเงินได้แล้ว
    * (หมดเวลาชำระ หรือถูกยกเลิก — ที่นั่งถูกคืนให้คนอื่นไปแล้ว)
-   *
    * เงินเข้าจริงแต่ผู้สมัครไม่ได้ที่นั่ง ห้ามปล่อยเงียบ ต้องมีคนตามเรื่อง
    * (กติกาเดียวกับ Order.paymentIssueAt ของฝั่งร้านค้า)
    */
@@ -260,32 +280,30 @@ model Registration {
   pickupStatus       PickupStatus @default(PENDING)
   pickupAt           DateTime?
   shippingTrackingNo String?
-  pickupSignatureUrl String?  @db.Text // ลายเซ็นนิ้วบนจอตอนรับที่บูธ — เป็นหลักฐานยืนยัน
+  pickupSignatureUrl String?      @db.Text // ลายเซ็นนิ้วบนจอตอนรับที่บูธ — เป็นหลักฐานยืนยัน
   // ชื่อคนที่มาเซ็นรับจริง — อาจไม่ใช่เจ้าของใบสมัคร เพราะคนเดียวรับแทนทั้งกลุ่มที่ใช้เบอร์เดียวกันได้
   // (หลายใบจะชี้ไปที่ลายเซ็นรูปเดียวกัน)
   pickupByName       String?
 
   /**
    * โค้ดสิทธิพิเศษที่ใช้สมัคร (null = สมัครแบบปกติ เสียเงินเอง)
-   *
    * มีค่าเมื่อไหร่ ที่นั่งใบนี้จะ **ไม่ถูกนับในโควตาสาธารณะ** ของงาน (ดู publicSeatWhere())
    * เพราะสิทธิพิเศษถูกออกแบบให้อยู่นอกจำนวนรับสมัครที่ประกาศไว้
-   *
    * `inviteGroupName` เก็บซ้ำโดยตั้งใจ (snapshot แบบเดียวกับ OrderItem) — ลบโค้ดทิ้งแล้ว
    * ยังต้องตอบได้ว่าที่นั่งฟรีใบนี้มาจากกลุ่มไหน
    */
   inviteCodeId    String?
   inviteGroupName String?
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  category    RaceCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  inviteCode  InviteCode?        @relation(fields: [inviteCodeId], references: [id], onDelete: SetNull)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event       Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category    RaceCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  inviteCode  InviteCode?     @relation(fields: [inviteCodeId], references: [id], onDelete: SetNull)
   submissions RunSubmission[]
 
   @@unique([userId, eventId])
-  // เลข BIB ซ้ำกันได้ถ้าคนละระยะ — ผู้จัดพิมพ์ BIB แยกชุดต่อระยะ (M-001 ของ 3.3 กับ 8.8 เป็นคนละใบ)
-  @@unique([eventId, categoryId, bib])
+  // เลข BIB ไม่ซ้ำกันทั้งงาน (bibScope = "") — ยกเว้นงานเก่าที่ bibScope แยกตามระยะ
+  @@unique([eventId, bibScope, bib])
   @@index([userId])
   @@index([eventId])
   @@index([categoryId])
@@ -298,24 +316,21 @@ model Registration {
 
 /**
  * โค้ดสิทธิพิเศษของงาน — สปอนเซอร์, แขกผู้จัดงาน, ทีมงาน
- *
  * ที่นั่งจากโค้ดอยู่ **นอกโควตารับสมัครที่ประกาศไว้** ทั้งยอดรวมของงานและโควตารายรุ่น
  * (รับ 400 + โค้ด 40 = 440 คนจริง) แอดมินเป็นคนประเมินของ/เสื้อ/ประกันจากยอดรวมนั้นเอง
  * ส่วนเกินมีเพดานตายตัวเสมอ = จำนวนสิทธิ์ที่ออกไว้ ไม่มีทางบานปลายเกินนั้น
- *
  * รองรับสองรูปแบบด้วยตารางเดียว ต่างกันแค่ maxUses:
- *   - โค้ดเดียวแจกทั้งกลุ่ม → 1 แถว maxUses = 20
- *   - โค้ดใช้ครั้งเดียวรายคน → 20 แถว maxUses = 1 (groupName เดียวกัน)
+ * - โค้ดเดียวแจกทั้งกลุ่ม → 1 แถว maxUses = 20
+ * - โค้ดใช้ครั้งเดียวรายคน → 20 แถว maxUses = 1 (groupName เดียวกัน)
  */
 model InviteCode {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   eventId   String
-  code      String  @unique          // ระบบสุ่มให้ ไม่ให้แอดมินตั้งเอง (โค้ดที่คนตั้งเองเดาง่าย)
-  groupName String                   // "วิริยะประกันภัย" / "แขกผู้จัดงาน" — ใช้จัดกลุ่มและรายงาน
+  code      String @unique // ระบบสุ่มให้ ไม่ให้แอดมินตั้งเอง (โค้ดที่คนตั้งเองเดาง่าย)
+  groupName String // "วิริยะประกันภัย" / "แขกผู้จัดงาน" — ใช้จัดกลุ่มและรายงาน
 
   /**
    * ส่วนลดเป็นเปอร์เซ็นต์เท่านั้น (100 = ฟรี)
-   *
    * ไม่รองรับลดเป็นบาทโดยตั้งใจ — แต่ละรุ่นราคาไม่เท่ากัน ลดเป็นบาทเท่ากันจะกลายเป็น
    * เปอร์เซ็นต์ไม่เท่ากัน (฿100 จาก ฿400 = 25% แต่จาก ฿700 = 14%) ซึ่งอธิบายยากเมื่อ
    * คนในกลุ่มเดียวกันเทียบตัวเลขกัน
@@ -323,9 +338,9 @@ model InviteCode {
   discountPercent Int @default(100)
 
   maxUses   Int       @default(1)
-  usedCount Int       @default(0)     // เพิ่มแบบมีเงื่อนไขในทรานแซกชัน กันแย่งสิทธิ์พร้อมกัน
-  expiresAt DateTime?                 // null = ไม่มีกำหนด (ยังติดวันปิดรับสมัครของงานอยู่ดี)
-  active    Boolean   @default(true)  // ปิดชั่วคราวได้โดยไม่ต้องลบ (ลบแล้วเสียประวัติ)
+  usedCount Int       @default(0) // เพิ่มแบบมีเงื่อนไขในทรานแซกชัน กันแย่งสิทธิ์พร้อมกัน
+  expiresAt DateTime? // null = ไม่มีกำหนด (ยังติดวันปิดรับสมัครของงานอยู่ดี)
+  active    Boolean   @default(true) // ปิดชั่วคราวได้โดยไม่ต้องลบ (ลบแล้วเสียประวัติ)
   note      String?   @db.Text
 
   event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -346,9 +361,9 @@ model InviteCode {
 model RunSubmission {
   id             String   @id @default(cuid())
   registrationId String
-  distance       Float                 // ระยะทางของการวิ่งครั้งนี้ (กม.)
-  runDate        DateTime              // วันที่วิ่งจริง
-  evidenceUrl    String?               // ภาพจากนาฬิกา/แอปวิ่ง
+  distance       Float // ระยะทางของการวิ่งครั้งนี้ (กม.)
+  runDate        DateTime // วันที่วิ่งจริง
+  evidenceUrl    String? // ภาพจากนาฬิกา/แอปวิ่ง
   note           String?
   createdAt      DateTime @default(now())
 
@@ -364,12 +379,12 @@ model Achievement {
   description String?
   icon        String?
   type        AchievementType @default(EVENT_COUNT)
-  threshold   Float           @default(1)   // ค่าที่ต้องถึงจึงปลดล็อก
+  threshold   Float           @default(1) // ค่าที่ต้องถึงจึงปลดล็อก
 
-  users       UserAchievement[]
+  users UserAchievement[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([type])
 }
@@ -380,8 +395,8 @@ model UserAchievement {
   achievementId String
   unlockedAt    DateTime @default(now())
 
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId])
@@ -396,33 +411,37 @@ model UserAchievement {
 // มีจำนวนไม่ได้ ส่วนตรงนี้ใช้ User / Stripe / ระบบ auth ร่วมกับของเดิม
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** สินค้าพร้อมส่ง (ตัดสต็อกจริง) หรือ พรีออเดอร์ (ผลิตหลังปิดรอบ) — คนละรอบจัดส่ง จึงแยกออเดอร์กัน */
+/**
+ * สินค้าพร้อมส่ง (ตัดสต็อกจริง) หรือ พรีออเดอร์ (ผลิตหลังปิดรอบ) — คนละรอบจัดส่ง จึงแยกออเดอร์กัน
+ */
 enum ProductType {
   STOCK
   PREORDER
 }
 
 enum ProductStatus {
-  DRAFT   // ยังไม่เผยแพร่ — เห็นเฉพาะแอดมิน
-  ACTIVE  // ขายอยู่
-  HIDDEN  // ซ่อนชั่วคราว (ของเก่าที่ขายไปแล้วยังอ้างอิงได้)
+  DRAFT // ยังไม่เผยแพร่ — เห็นเฉพาะแอดมิน
+  ACTIVE // ขายอยู่
+  HIDDEN // ซ่อนชั่วคราว (ของเก่าที่ขายไปแล้วยังอ้างอิงได้)
 }
 
 enum OrderStatus {
-  PENDING    // สั่งแล้ว รอชำระเงิน (จองสต็อกไว้แล้ว)
-  PAID       // ชำระเงินแล้ว รอจัดเตรียม
-  PREPARING  // กำลังจัดเตรียม/รอผลิต (พรีออเดอร์)
-  SHIPPED    // จัดส่งแล้ว (มีเลขพัสดุ)
-  COMPLETED  // ผู้ซื้อรับของแล้ว
-  CANCELLED  // ยกเลิก — คืนสต็อกแล้ว
-  EXPIRED    // ไม่ชำระเงินตามกำหนด ระบบคืนสต็อกอัตโนมัติ
-  REFUNDED   // คืนเงินแล้ว
+  PENDING // สั่งแล้ว รอชำระเงิน (จองสต็อกไว้แล้ว)
+  PAID // ชำระเงินแล้ว รอจัดเตรียม
+  PREPARING // กำลังจัดเตรียม/รอผลิต (พรีออเดอร์)
+  SHIPPED // จัดส่งแล้ว (มีเลขพัสดุ)
+  COMPLETED // ผู้ซื้อรับของแล้ว
+  CANCELLED // ยกเลิก — คืนสต็อกแล้ว
+  EXPIRED // ไม่ชำระเงินตามกำหนด ระบบคืนสต็อกอัตโนมัติ
+  REFUNDED // คืนเงินแล้ว
 }
 
-/** วิธีรับของของออเดอร์ร้านค้า (แยกจาก Registration.deliveryMethod ที่เป็น String) */
+/**
+ * วิธีรับของของออเดอร์ร้านค้า (แยกจาก Registration.deliveryMethod ที่เป็น String)
+ */
 enum ShopDelivery {
-  PICKUP    // มารับเอง
-  SHIPPING  // ส่งไปรษณีย์ (+ค่าส่ง)
+  PICKUP // มารับเอง
+  SHIPPING // ส่งไปรษณีย์ (+ค่าส่ง)
 }
 
 /**
@@ -430,31 +449,31 @@ enum ShopDelivery {
  * FRONT กับ BACK บังคับต้องมีก่อนเปิดขาย (ดู REQUIRED_PRODUCT_IMAGE_GROUPS)
  */
 enum ProductImageCategory {
-  FRONT       // ด้านหน้า
-  BACK        // ด้านหลัง
-  MODEL       // ใส่จริงบนนายแบบ/นางแบบ
-  DETAIL      // รายละเอียดเนื้อผ้า/งานพิมพ์
-  SIZE_GUIDE  // ตารางไซส์
+  FRONT // ด้านหน้า
+  BACK // ด้านหลัง
+  MODEL // ใส่จริงบนนายแบบ/นางแบบ
+  DETAIL // รายละเอียดเนื้อผ้า/งานพิมพ์
+  SIZE_GUIDE // ตารางไซส์
   OTHER
 }
 
 model Product {
   id          String        @id @default(cuid())
-  slug        String        @unique          // ใช้เป็น URL /shop/[slug]
+  slug        String        @unique // ใช้เป็น URL /shop/[slug]
   name        String
   description String        @db.Text
   type        ProductType   @default(STOCK)
   status      ProductStatus @default(DRAFT)
-  price       Float                          // ราคาตั้งต้น — variant override ได้
+  price       Float // ราคาตั้งต้น — variant override ได้
 
   // ผูกกับงานวิ่ง (ไม่บังคับ) — null = สินค้าทั่วไปที่ไม่เกี่ยวกับงานไหน
   eventId String?
   event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   // เฉพาะสินค้าพรีออเดอร์
-  preorderCloseAt DateTime?                  // ปิดรับพรีออเดอร์
-  estimatedShipAt DateTime?                  // กำหนดจัดส่งโดยประมาณ
-  preorderNote    String?   @db.Text         // เงื่อนไข/รอบผลิต บอกผู้ซื้อก่อนตัดสินใจ
+  preorderCloseAt DateTime? // ปิดรับพรีออเดอร์
+  estimatedShipAt DateTime? // กำหนดจัดส่งโดยประมาณ
+  preorderNote    String?   @db.Text // เงื่อนไข/รอบผลิต บอกผู้ซื้อก่อนตัดสินใจ
 
   // วิธีรับของที่สินค้านี้อนุญาต
   allowPickup   Boolean @default(true)
@@ -478,7 +497,6 @@ model Product {
 
 /**
  * ตัวเลือกของสินค้า เช่น ไซส์เสื้อ
- *
  * สินค้าทุกตัวต้องมีอย่างน้อย 1 variant — ของที่ไม่มีไซส์ให้สร้างตัวชื่อ "มาตรฐาน"
  * เพื่อให้ราคา/สต็อก/ตะกร้าใช้ตรรกะเดียวกันหมด และเลี่ยงปัญหา MySQL ที่ยอมให้
  * ค่า NULL ซ้ำกันได้ใน unique index (ถ้าปล่อยให้ variantId เป็น null ในตะกร้า)
@@ -486,10 +504,10 @@ model Product {
 model ProductVariant {
   id        String  @id @default(cuid())
   productId String
-  name      String                  // เช่น "M (รอบอก 38 นิ้ว)" หรือ "มาตรฐาน"
+  name      String // เช่น "M (รอบอก 38 นิ้ว)" หรือ "มาตรฐาน"
   sku       String? @unique
-  price     Float?                  // null = ใช้ราคาของสินค้า
-  stock     Int?                    // null = ไม่จำกัด (ใช้กับพรีออเดอร์) / 0 = หมด
+  price     Float? // null = ใช้ราคาของสินค้า
+  stock     Int? // null = ไม่จำกัด (ใช้กับพรีออเดอร์) / 0 = หมด
   active    Boolean @default(true)
   sortOrder Int     @default(0)
 
@@ -524,7 +542,9 @@ model ProductImage {
   @@index([productId, category])
 }
 
-/** ตะกร้าค้างไว้ได้ข้ามเครื่อง เพราะผูกกับบัญชี ไม่ได้เก็บใน localStorage */
+/**
+ * ตะกร้าค้างไว้ได้ข้ามเครื่อง เพราะผูกกับบัญชี ไม่ได้เก็บใน localStorage
+ */
 model Cart {
   id     String @id @default(cuid())
   userId String @unique
@@ -554,10 +574,10 @@ model CartItem {
 
 model Order {
   id      String      @id @default(cuid())
-  orderNo String      @unique          // เลขที่อ่านง่ายสำหรับคุยกับลูกค้า เช่น RL-260906-0007
+  orderNo String      @unique // เลขที่อ่านง่ายสำหรับคุยกับลูกค้า เช่น RL-260906-0007
   userId  String
   status  OrderStatus @default(PENDING)
-  type    ProductType                  // ออเดอร์ใบนี้เป็นของพร้อมส่ง หรือ พรีออเดอร์
+  type    ProductType // ออเดอร์ใบนี้เป็นของพร้อมส่ง หรือ พรีออเดอร์
 
   // ยอดทั้งหมดเป็น snapshot ณ เวลาสั่ง — ห้ามคำนวณใหม่จากราคาสินค้าปัจจุบัน
   // เพราะแอดมินแก้ราคาทีหลังได้ ออเดอร์เก่าต้องคงยอดเดิมไว้เป็นหลักฐาน
@@ -597,7 +617,6 @@ model Order {
   /**
    * ตั้งค่าเมื่อ Stripe แจ้งว่าจ่ายเงินสำเร็จ แต่ออเดอร์ไม่อยู่ในสถานะ PENDING แล้ว
    * (หมดเวลาชำระ หรือถูกยกเลิกไปก่อน — สต็อกถูกคืนให้คนอื่นไปแล้ว)
-   *
    * เคสนี้เงินเข้าจริงแต่ลูกค้าไม่ได้ของ ห้ามปล่อยเงียบ ต้องมีคนตามเรื่อง
    * จึงบันทึกไว้ให้หน้าแอดมินเด้งเตือน พร้อมเก็บ payment intent ไว้ใช้คืนเงิน/ตามรอย
    */
@@ -628,11 +647,9 @@ model OrderItem {
 
   /**
    * รหัสสินค้า ณ เวลาสั่ง — ใช้จัดกลุ่มในรายงานยอดขาย
-   *
    * productId เป็น SetNull พอลบสินค้าทิ้งแล้วรายการขายเก่าจะตามกลับไปหาสินค้าไม่ได้
    * เหลือแค่ชื่อเป็นข้อความ ซึ่งจัดกลุ่มไม่ได้จริงเพราะชื่อสินค้าเปลี่ยนได้ตลอด
    * (เปลี่ยนชื่อครั้งเดียว ประวัติการขายแตกเป็นสองก้อนทันที)
-   *
    * slug เป็น unique และไม่เปลี่ยนตามชื่อที่แสดง จึงเป็นรหัสที่ยึดได้จริง
    * sku เก็บไว้ด้วยสำหรับแยกยอดรายไซส์ (null ได้ เพราะสินค้าเก่ายังไม่ได้กรอก sku)
    */
@@ -651,13 +668,30 @@ model OrderItem {
   @@index([variantId])
 }
 
-/** ตั้งค่าร้าน — มีแถวเดียวเสมอ (id = "default") แอดมินแก้ได้ในหน้าตั้งค่า */
+/**
+ * ตั้งค่าร้าน — มีแถวเดียวเสมอ (id = "default") แอดมินแก้ได้ในหน้าตั้งค่า
+ */
 model ShopSetting {
   id                   String  @id @default("default")
-  shippingBaseFee      Float   @default(55)  // ค่าส่งชิ้นแรก
-  shippingExtraPerItem Float   @default(10)  // ชิ้นถัดไปบวกชิ้นละ
-  pickupLocation       String? @db.Text      // จุดรับของ แสดงตอนเลือก "รับเอง"
-  announcement         String? @db.Text      // ประกาศบนหน้าร้าน
+  shippingBaseFee      Float   @default(55) // ค่าส่งชิ้นแรก
+  shippingExtraPerItem Float   @default(10) // ชิ้นถัดไปบวกชิ้นละ
+  pickupLocation       String? @db.Text // จุดรับของ แสดงตอนเลือก "รับเอง"
+  announcement         String? @db.Text // ประกาศบนหน้าร้าน
 
   updatedAt DateTime @updatedAt
+}
+
+// ประวัติการเปลี่ยนเลข BIB — เขียนโดย trigger Registration_bib_log ในฐานข้อมูลเท่านั้น (แอปไม่เขียนเอง)
+// รวมถึงการแก้ตรงผ่าน phpMyAdmin ซึ่งต้อง SET @allow_bib_change = 1 ก่อน ไม่งั้น trigger ปฏิเสธ
+model BibChangeLog {
+  id             Int      @id @default(autoincrement())
+  registrationId String
+  eventId        String
+  oldBib         String?
+  newBib         String?
+  dbUser         String? // ผู้ใช้ MySQL ที่แก้ (CURRENT_USER())
+  changedAt      DateTime @default(now())
+
+  @@index([registrationId])
+  @@index([eventId])
 }

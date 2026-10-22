@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type Stripe from "stripe"
 import { stripe } from "@/lib/stripe"
 import { prisma } from "@/lib/prisma"
-import { withBib } from "@/lib/vr"
+import { withBib } from "@/lib/bib"
 import { recalculateUserStats } from "@/lib/stats"
 import { unlockAchievements } from "@/lib/achievements"
 import { PAYABLE_STATUS } from "@/lib/expiry"
@@ -113,8 +113,8 @@ async function markRegistrationPaid(registrationId: string, session: Stripe.Chec
     // รายได้ของใบนี้ก็ไม่เปลี่ยนตาม (ดูคอมเมนต์ที่ Registration.paidEntry)
     const paid = registrationBreakdown(reg)
 
-    const issuedBib = await withBib(reg.eventId, reg.bib, async (bib) => {
-        await prisma.registration.update({
+    const issuedBib = await withBib(registrationId, async (tx, bib) => {
+        await tx.registration.update({
             where: { id: registrationId },
             data: {
                 status: "PAID",

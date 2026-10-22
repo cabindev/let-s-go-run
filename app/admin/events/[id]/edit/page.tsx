@@ -15,14 +15,17 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
     const event = await prisma.event.findUnique({ where: { id } })
     if (!event) notFound()
 
-    const [categories, images] = await Promise.all([
+    const [categories, images, issued] = await Promise.all([
         prisma.raceCategory.findMany({
             where: { eventId: id },
             orderBy: [{ sortOrder: "asc" }, { price: "asc" }],
             include: { _count: { select: { registrations: true } } },
         }),
         prisma.eventImage.findMany({ where: { eventId: id }, orderBy: { sortOrder: "asc" } }),
+        // จำนวน BIB ที่ออกแล้วต่อระยะ — ออกแล้วล็อกช่วงเลข
+        prisma.registration.groupBy({ by: ["categoryId"], where: { eventId: id, bib: { not: null } }, _count: true }),
     ])
+    const issuedByCategory = Object.fromEntries(issued.map((g) => [g.categoryId ?? "", g._count]))
 
     return (
         <div className="max-w-2xl mx-auto space-y-12">
@@ -39,7 +42,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
                 </div>
             </div>
 
-            <CategoryManager eventId={event.id} categories={categories} />
+            <CategoryManager eventId={event.id} categories={categories} issuedBibs={issuedByCategory} />
 
             <div className="border-t border-line pt-10">
                 <GalleryManager eventId={event.id} images={images} />

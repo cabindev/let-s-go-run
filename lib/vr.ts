@@ -7,29 +7,7 @@ import type { Event, RaceCategory } from "@prisma/client"
  * VIRTUAL : วิ่งสะสมระยะ — ต้องส่งผลเอง ระยะสะสมมาจากผลที่ส่งเท่านั้น
  */
 
-/**
- * ออกเลข BIB ถัดไปของงาน — เพิ่มค่า `Event.bibCounter` แบบ atomic (single UPDATE ... SET x = x + 1)
- * รับประกันไม่ซ้ำแม้มีคนยืนยันการชำระเงินพร้อมกันจำนวนมาก โดยไม่ต้อง retry
- * (เดิมอ่านเลขล่าสุดจาก MAX(bib) แล้ว +1 ซึ่งไม่ atomic — พลาดได้ถ้าแข่งกันเยอะ เปลี่ยนมาใช้ตัวนับแทน)
- */
-export async function issueBib(eventId: string): Promise<string> {
-    const event = await prisma.event.update({
-        where: { id: eventId },
-        data: { bibCounter: { increment: 1 } },
-        select: { bibCounter: true },
-    })
-    return String(event.bibCounter).padStart(4, "0")
-}
-
-/** ออกเลข BIB แล้วบันทึกผ่าน `update` — ใช้เลขเดิมถ้ามีอยู่แล้ว ไม่งั้นออกใหม่ */
-export async function withBib<T>(
-    eventId: string,
-    existingBib: string | null,
-    update: (bib: string) => Promise<T>
-): Promise<T> {
-    const bib = existingBib ?? (await issueBib(eventId))
-    return update(bib)
-}
+// การออกเลข BIB อยู่ที่ lib/bib.ts
 
 /** ระยะเป้าหมายของผู้สมัคร (ประเภทที่เลือก หรือค่าของงาน) */
 export function targetOf(reg: { category: { distance: number } | null; event: { distance: number } }) {

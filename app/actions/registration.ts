@@ -2,58 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { publicSeatWhere, releaseInviteSeat } from "@/lib/expiry"
+import { releaseInviteSeat } from "@/lib/expiry"
 import { requireUserAction } from "@/lib/auth-helpers"
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; error: string }
 
-/** ลงทะเบียนเข้าร่วมกิจกรรม */
-export async function registerForEvent(eventId: string): Promise<ActionResult> {
-    try {
-        const user = await requireUserAction()
-
-        const event = await prisma.event.findUnique({
-            where: { id: eventId },
-            include: { _count: { select: { registrations: { where: publicSeatWhere() } } } },
-        })
-
-        if (!event) return { ok: false, error: "ไม่พบกิจกรรมนี้" }
-        if (event.status !== "OPEN") return { ok: false, error: "กิจกรรมนี้ปิดรับสมัครแล้ว" }
-        if (event.date < new Date()) return { ok: false, error: "กิจกรรมนี้จัดไปแล้ว" }
-        if (event.maxParticipants && event._count.registrations >= event.maxParticipants) {
-            return { ok: false, error: "จำนวนผู้สมัครเต็มแล้ว" }
-        }
-
-        const existing = await prisma.registration.findUnique({
-            where: { userId_eventId: { userId: user.id, eventId } },
-        })
-
-        if (existing && !["CANCELLED", "EXPIRED"].includes(existing.status)) {
-            return { ok: false, error: "คุณลงทะเบียนกิจกรรมนี้ไว้แล้ว" }
-        }
-
-        // กิจกรรมฟรี = ยืนยันทันที / มีค่าสมัคร = รอชำระเงิน
-        const status = event.price > 0 ? "PENDING" : "PAID"
-
-        if (existing) {
-            await prisma.registration.update({
-                where: { id: existing.id },
-                data: { status, note: null, paidAt: status === "PAID" ? new Date() : null, registeredAt: new Date() },
-            })
-        } else {
-            await prisma.registration.create({
-                data: { userId: user.id, eventId, status, paidAt: status === "PAID" ? new Date() : null },
-            })
-        }
-
-        revalidatePath(`/events/${eventId}`)
-        revalidatePath("/profile")
-        revalidatePath("/")
-        return { ok: true, message: event.price > 0 ? "ลงทะเบียนแล้ว กรุณาชำระเงิน" : "ลงทะเบียนสำเร็จ" }
-    } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : "เกิดข้อผิดพลาด" }
-    }
-}
+// การสมัครทั้งหมดผ่าน app/actions/register-flow.ts (ตัวเดียวที่เช็คโควตา/ประเภท/PDPA และออกเลข BIB)
 
 /** ยกเลิกการลงทะเบียน */
 export async function cancelRegistration(registrationId: string): Promise<ActionResult> {

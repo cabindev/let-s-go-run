@@ -11,6 +11,7 @@ import { recalculateUserStats } from "@/lib/stats"
 import { releaseInviteSeat } from "@/lib/expiry"
 import { generateInviteCode } from "@/lib/invite-codes"
 import { formString } from "@/lib/utils"
+import { validateBibRange } from "@/lib/bib"
 import { formatNationalId, nationalIdKey, phoneKey } from "@/lib/phone"
 import type { ActionResult } from "./registration"
 
@@ -445,6 +446,57 @@ export async function createCategory(formData: FormData): Promise<ActionResult> 
         return { ok: true, message: "เพิ่มประเภทแล้ว" }
     } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "เพิ่มไม่สำเร็จ" }
+    }
+}
+
+/**
+ * ตั้งช่วงเลข BIB ของระยะ — ตั้ง/แก้ได้เฉพาะก่อนออกเลขใบแรกของระยะนี้
+ * ออกไปแล้วเปลี่ยนไม่ได้ เพราะเลขที่ออกไปต้องอยู่ในช่วงเดียวกันทั้งระยะ (และห้ามเปลี่ยนเลขย้อนหลัง)
+ */
+export async function updateCategoryBibRange(id: string, formData: FormData): Promise<ActionResult> {
+    try {
+        await requireAdminAction()
+
+        const category = await prisma.raceCategory.findUnique({
+            where: { id },
+            select: {
+                eventId: true,
+                maxSlots: true,
+                event: { select: { categories: { where: { id: { not: id } }, select: { name: true, bibPrefix: true, bibStart: true, bibEnd: true } } } },
+            },
+        })
+        if (!category) return { ok: false, error: "ไม่พบประเภทนี้" }
+
+        const issued = await prisma.registration.count({ where: { categoryId: id, bib: { not: null } } })
+        if (issued > 0) return { ok: false, error: `ออกเลข BIB ของระยะนี้ไปแล้ว ${issued} ใบ — เปลี่ยนช่วงเลขไม่ได้` }
+
+        const num = (key: string) => {
+            const v = String(formData.get(key) ?? "").trim()
+            return v ? Number(v) : null
+        }
+        const input = {
+            prefix: String(formData.get("bibPrefix") ?? "").trim().toUpperCase(),
+            start: num("bibStart"),
+            end: num("bibEnd"),
+        }
+        const error = validateBibRange(input, category.maxSlots, category.event.categories)
+        if (error) return { ok: false, error }
+
+        await prisma.raceCategory.update({
+            where: { id },
+            data: {
+                bibPrefix: input.start != null ? input.prefix || null : null,
+                bibStart: input.start,
+                bibEnd: input.start != null ? input.end : null,
+                // ตัวนับชี้ "เลขล่าสุดที่ออก" — เริ่มที่ start - 1 เลขแรกที่ออกจึงเป็น start
+                bibCounter: input.start != null ? input.start - 1 : 0,
+            },
+        })
+
+        revalidatePath(`/admin/events/${category.eventId}/edit`)
+        return { ok: true, message: input.start != null ? "บันทึกช่วงเลข BIB แล้ว" : "ใช้เลขรวมของงานแล้ว" }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "บันทึกไม่สำเร็จ" }
     }
 }
 
