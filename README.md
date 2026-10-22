@@ -4,6 +4,8 @@
 
 **ขึ้นใช้งานจริงแล้วที่ [runludtong.com](https://runludtong.com)** — deploy บน Plesk VPS (14.207.143.39) ผ่าน `server.js` (custom Express server เพราะ Passenger ต้องการ entry file ที่เรียก `.listen()` เอง)
 
+**วิธี deploy:** ดู [DEPLOY.md](DEPLOY.md) — คำสั่งเดียว ดึงโค้ด → ติดตั้ง → migrate → build → รีสตาร์ท
+
 ## Stack
 
 | ส่วน | ใช้ | หมายเหตุ |

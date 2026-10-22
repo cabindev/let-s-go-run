@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# dump ฐานข้อมูล — ห้ามขึ้น git (Plesk คัดลอกทุกไฟล์ใน repo ลง httpdocs)
+/*.sql
